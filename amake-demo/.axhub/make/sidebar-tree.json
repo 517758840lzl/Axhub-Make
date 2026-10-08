@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "updatedAt": "2026-09-30T05:56:32.513Z",
+  "prototypes": [
+    {
+      "id": "item-prototypes-loan-calculator",
+      "kind": "item",
+      "title": "loan calculator",
+      "itemKey": "prototypes/loan-calculator"
+    },
+    {
+      "id": "item:prototypes:annotation-demo",
+      "kind": "item",
+      "title": "标注演示",
+      "itemKey": "prototypes/annotation-demo"
+    },
+    {
+      "id": "item:prototypes:beginner-guide",
+      "kind": "item",
+      "title": "新手指导",
+      "itemKey": "prototypes/beginner-guide"
+    },
+    {
+      "id": "item:prototypes:touch-and-talk-annotation-demo",
+      "kind": "item",
+      "title": "批注演示",
+      "itemKey": "prototypes/touch-and-talk-annotation-demo"
+    }
+  ],
+  "docs": [],
+  "themesTree": [
+    {
+      "id": "item-themes-binance-mobile",
+      "kind": "item",
+      "title": "binance mobile",
+      "itemKey": "themes/binance-mobile"
+    },
+    {
+      "id": "item-themes-revolut-mobile",
+      "kind": "item",
+      "title": "revolut mobile",
+      "itemKey": "themes/revolut-mobile"
+    },
+    {
+      "id": "item-themes-cash-app-mobile",
+      "kind": "item",
+      "title": "cash app mobile",
+      "itemKey": "themes/cash-app-mobile"
+    }
+  ],
+  "themes": [],
+  "data": [],
+  "templates": [
+    "prd-template.md"
+  ],
+  "components": [],
+  "canvas": []
+}

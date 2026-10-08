@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "format": "axhub-published-source",
+  "sourceRoot": "source",
+  "entry": "index.tsx",
+  "files": [
+    {
+      "path": "components/CurrencyPicker.tsx",
+      "kind": "source"
+    },
+    {
+      "path": "components/Donut.tsx",
+      "kind": "source"
+    },
+    {
+      "path": "context.tsx",
+      "kind": "source"
+    },
+    {
+      "path": "index.tsx",
+      "kind": "entry"
+    },
+    {
+      "path": "lib/calc.ts",
+      "kind": "source"
+    },
+    {
+      "path": "lib/currencies.ts",
+      "kind": "source"
+    },
+    {
+      "path": "lib/format.ts",
+      "kind": "source"
+    },
+    {
+      "path": "lib/storage.ts",
+      "kind": "source"
+    },
+    {
+      "path": "lib/types.ts",
+      "kind": "source"
+    },
+    {
+      "path": "style.css",
+      "kind": "source"
+    }
+  ]
+}
