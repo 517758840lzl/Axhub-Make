@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 3,
+  "kind": "document-edit-comments",
+  "resource": {
+    "id": "c1654828cf9657f8f8ec87726c5531087b75200283623ef4f5eebac54bc863f7",
+    "targetPath": "src/prototypes/loan-calculator/.spec/spec.html",
+    "filePath": ".axhub/make/comments/c1654828cf9657f8f8ec87726c5531087b75200283623ef4f5eebac54bc863f7.json"
+  },
+  "comments": [],
+  "images": [],
+  "documentPath": "src/prototypes/loan-calculator/.spec/spec.html"
+}

@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>贷款计算器 · 主规格</title>
+  <style>
+    :root {
+      font-family:
+        ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      --brand: #008f5d;
+      --brand-ink: #007a50;
+      --brand-soft: #e6f5ef;
+      --brand-surface: #f2faf7;
+      --brand-border: #b7ddcf;
+      --text: #222832;
+      --text-secondary: #4b5565;
+      --text-muted: #6f7888;
+      --text-placeholder: #8b94a3;
+      color: var(--text);
+      background: #f5f7fb;
+      scrollbar-gutter: stable;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 20px 64px;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 24px;
+      width: min(1200px, 100%);
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 32px;
+      padding: 18px 14px;
+      border: 1px solid #dfe4ee;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .sidebar-title {
+      margin: 0 8px 10px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .page-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .page-nav button {
+      width: 100%;
+      padding: 8px 10px;
+      border: 0;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      background: transparent;
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .page-nav button:hover,
+    .page-nav button[aria-current="page"] {
+      color: var(--brand-ink);
+      background: var(--brand-soft);
+    }
+
+    .page-nav button[aria-current="page"] { font-weight: 600; }
+
+    main {
+      min-width: 0;
+      padding: 40px;
+      border: 1px solid #dfe4ee;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 4px 16px rgb(30 45 75 / 6%);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.3;
+    }
+
+    h2 {
+      margin: 44px 0 20px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e7eaf0;
+      font-size: 21px;
+      line-height: 1.55;
+    }
+
+    h3 {
+      margin: 28px 0 12px;
+      font-size: 17px;
+      line-height: 1.5;
+    }
+
+    p,
+    li {
+      font-size: 15px;
+      line-height: 2;
+    }
+
+    p { margin: 20px 0; }
+
+    td,
+    th {
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .definition {
+      margin: 16px 0 0;
+      padding: 14px 16px;
+      border-left: 3px solid var(--brand);
+      color: var(--text-secondary);
+      background: var(--brand-surface);
+    }
+
+    .hint { color: var(--text-muted); }
+
+    ul {
+      margin: 10px 0 20px;
+      padding-left: 22px;
+    }
+
+    .placeholder-list { padding-left: 0; }
+
+    .placeholder-list li {
+      list-style: none;
+      color: var(--text-placeholder);
+    }
+
+    .placeholder-list li::before {
+      margin-right: 8px;
+      color: #b2bac6;
+      content: "—";
+    }
+
+    table {
+      width: 100%;
+      margin-top: 14px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      min-width: 120px;
+      padding: 10px 12px;
+      border: 1px solid #dfe4ee;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #f6f8fb; }
+
+    td:empty::after {
+      content: "待补充";
+      color: var(--text-placeholder);
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: #eef1f6;
+    }
+
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      margin: 12px 0 0;
+      padding: 16px;
+      overflow-x: auto;
+      border: 1px solid var(--brand-border);
+      border-radius: 8px;
+      background: var(--brand-surface);
+    }
+
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .spec-page[hidden] { display: none; }
+
+    @media (max-width: 720px) {
+      body { padding: 0 8px 40px; }
+      .shell { display: block; }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        margin: 0 -8px 12px;
+        padding: 10px 8px;
+        border-width: 0 0 1px;
+        border-radius: 0;
+      }
+
+      .sidebar-title {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+      }
+
+      .page-nav {
+        flex-direction: row;
+        gap: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+
+      .page-nav::-webkit-scrollbar { display: none; }
+
+      .page-nav button {
+        width: auto;
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+
+      main {
+        padding: 24px 18px;
+        border-radius: 8px;
+      }
+
+      .table-wrap { overflow: visible; }
+
+      table,
+      tbody,
+      tr,
+      td {
+        display: block;
+        width: 100%;
+      }
+
+      thead { display: none; }
+
+      tbody {
+        display: grid;
+        gap: 12px;
+      }
+
+      tr {
+        overflow: hidden;
+        border: 1px solid #dfe4ee;
+        border-radius: 6px;
+        background: #fff;
+      }
+
+      td {
+        display: grid;
+        grid-template-columns: minmax(96px, 36%) minmax(0, 1fr);
+        gap: 12px;
+        min-width: 0;
+        padding: 10px 12px;
+        border: 0;
+        border-bottom: 1px solid #e7eaf0;
+      }
+
+      td:last-child { border-bottom: 0; }
+
+      td::before {
+        content: attr(data-label);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.5;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <p class="sidebar-title">目录</p>
+      <nav class="page-nav" aria-label="规格文档页面">
+        <button type="button" data-page-target="overview" aria-current="page">当前方案</button>
+        <button type="button" data-page-target="flows-data">流程与本地数据</button>
+      </nav>
+    </aside>
+
+    <main>
+      <article class="spec-page" data-spec-page="overview">
+        <h1>贷款计算器</h1>
+        <p class="definition">手机端优先的离线贷款计算与轻量储蓄目标工具：等额本息 / 等额本金、摊还明细、历史与个人中心闭环；数据仅存本地，不对接服务器。视觉以 Revolut Mobile 设计基底（深色驾驶舱 + 紫蓝渐变强调 + 环形分析）为准。</p>
+
+        <section id="current-plan">
+          <h2>当前方案</h2>
+          <ul>
+            <li><strong>原型意图：</strong>作为后续贷款类 App 的参考原型，演示完整用户闭环与常见计算能力。</li>
+            <li><strong>目标用户：</strong>有房贷、车贷或消费贷规划需求的个人用户；希望在手机上快速试算并保存方案。</li>
+            <li><strong>核心体验：</strong>底部四 Tab（计算 / 储蓄 / 记账 / 我的）；大数字结果、渐变主操作、储蓄进度环；记账含标签筛选与手收支；全程离线可用。</li>
+            <li><strong>参考产品（结构参考，非 UI 抄袭）：</strong>Google Play EMI Calculator（Lnkup）、Savings Goal Tracker（Cash247）、Simple Budget Planner（CashMe）。</li>
+          </ul>
+        </section>
+
+        <section id="facts-inputs">
+          <h2>事实与输入</h2>
+          <h3>用户确认事实</h3>
+          <ul>
+            <li>范围：<strong>贷款为主 + 轻量储蓄目标</strong>（可为月供/某笔贷款设缓冲金），不做完整预算记账。</li>
+            <li>端形态：<strong>手机端优先</strong>（约 390×844 视口，底部 Tab，单手操作）。</li>
+            <li>计算模式：<strong>等额本息</strong>、<strong>等额本金</strong>；结果页含<strong>摊还明细</strong>（按月）。</li>
+            <li>双方案对比：<strong>本轮不做</strong>（二期）。</li>
+            <li>个人中心：昵称/头像（本地）、记账与收藏、货币/小数/主题偏好、JSON 导出与清空、关于与隐私（强调离线）。</li>
+            <li>数据：<strong>仅 localStorage</strong>，无登录、无网络 API。</li>
+            <li>设计基底：<strong>Revolut Mobile</strong>（<code>src/themes/revolut-mobile/DESIGN.md</code>）。</li>
+          </ul>
+          <h3>参考资料</h3>
+          <ul>
+            <li>Play Store 三款金融工具（EMI / 储蓄 / 预算）— 功能范围与离线隐私表述参考。</li>
+            <li>主题色板对照：<code>src/resources/loan-calc-theme-colors.html</code>。</li>
+            <li>Make 主题预览：<code>?projectId=amake-demo&amp;theme=revolut-mobile</code>。</li>
+          </ul>
+          <h3>当前假设</h3>
+          <ul>
+            <li>默认货币 CNY（¥）；支持 12 种常用货币，仅在「我的 → 偏好设置」切换；全站金额按 Intl 格式化（仅改显示符号与格式，不做汇率换算）。</li>
+            <li>示例种子数据：首次安装可预置 1～2 条示例计算与 1 个储蓄目标，便于验收（可在设置中清空）。</li>
+            <li>期限输入支持「年 + 月」或统一折算为月数内部计算。</li>
+          </ul>
+        </section>
+
+        <section id="prototype-scope">
+          <h2>原型范围</h2>
+          <h3>本次呈现</h3>
+          <ul>
+            <li>多页面单原型（hash 路由）：计算首页、结果/摊还、储蓄列表与详情、历史列表与详情、个人中心及子页（偏好、数据管理、关于）。</li>
+            <li>等额本息 / 等额本金公式与摊还表（前端计算，精度与常见银行计算器一致即可）。</li>
+            <li>保存计算到记账（带标签）、收藏、标签筛选与搜索；手动的「记一笔」收支；从结果页「为这笔月供设储蓄目标」跳转并预填金额。</li>
+            <li>储蓄：目标 CRUD、存入/取出、进度环与简单统计。</li>
+            <li>Revolut 浅色 UI：画布 <code>#F4F4F8</code>、白卡片、紫蓝渐变 CTA、tabular 金额、环形图展示本金/利息或储蓄进度。</li>
+          </ul>
+          <h3>本次不呈现</h3>
+          <ul>
+            <li>服务器同步、账号体系、真实 KYC/放款流程。</li>
+            <li>双贷款方案对比、提前还款试算、反推利率/期限（二期）。</li>
+            <li>完整预算记账、多账户银行流水。</li>
+            <li>Push 通知（可预留「提醒」开关 UI，不实现系统通知）。</li>
+          </ul>
+        </section>
+
+        <section id="pages-content">
+          <h2>页面与内容方案</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>页面/视图</th><th>页面作用</th><th>主要模块与内容</th><th>示例数据或素材</th><th>与其他页面的关系</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="页面/视图">计算 · 首页（<code>#page=calc</code>）</td>
+                  <td data-label="页面作用">输入贷款参数并发起计算。</td>
+                  <td data-label="主要模块与内容">模式切换（等额本息/等额本金）；本金、年利率、期限；贷款类型标签（房贷/车贷/消费贷等，仅分类）；渐变「计算」CTA。</td>
+                  <td data-label="示例数据或素材">预填 100 万、4.2%、30 年。</td>
+                  <td data-label="与其他页面的关系">→ 结果页；Tab 切换至储蓄/历史/我的。</td>
+                </tr>
+                <tr>
+                  <td data-label="页面/视图">计算 · 结果（<code>#page=calc-result</code>）</td>
+                  <td data-label="页面作用">展示汇总与可视化。</td>
+                  <td data-label="主要模块与内容">Hero 月供/首月还款；总利息、还款总额；环形图本金 vs 利息；保存/收藏；入口「摊还明细」「设储蓄目标」。</td>
+                  <td data-label="示例数据或素材">由输入实时计算。</td>
+                  <td data-label="与其他页面的关系">→ 摊还表；→ 储蓄新建；→ 历史写入。</td>
+                </tr>
+                <tr>
+                  <td data-label="页面/视图">计算 · 摊还明细（<code>#page=amortization</code>）</td>
+                  <td data-label="页面作用">按月列出本金/利息/余额。</td>
+                  <td data-label="主要模块与内容">可切换按月/按年汇总；列表 monospace 数字；顶部摘要条。</td>
+                  <td data-label="示例数据或素材">与当前结果绑定。</td>
+                  <td data-label="与其他页面的关系">返回结果页。</td>
+                </tr>
+                <tr>
+                  <td data-label="页面/视图">储蓄 · 列表（<code>#page=savings</code>）</td>
+                  <td data-label="页面作用">管理轻量储蓄目标。</td>
+                  <td data-label="主要模块与内容">目标卡片（进度环）；每目标下「智能提示」：达标预测（按存入节奏）、3～6 个月月供缓冲建议（关联方案时）；FAB 新建。</td>
+                  <td data-label="示例数据或素材">示例「月供缓冲金」。</td>
+                  <td data-label="与其他页面的关系">→ 目标详情/编辑。</td>
+                </tr>
+                <tr>
+                  <td data-label="页面/视图">储蓄 · 详情（<code>#page=savings-detail</code>）</td>
+                  <td data-label="页面作用">记录存入/取出。</td>
+                  <td data-label="主要模块与内容">当前额/目标额；流水列表；编辑目标。</td>
+                  <td data-label="示例数据或素材">本地流水。</td>
+                  <td data-label="与其他页面的关系">← 列表；可从计算结果预填目标金额。</td>
+                </tr>
+                <tr>
+                  <td data-label="页面/视图">记账（<code>#page=ledger</code>）</td>
+                  <td data-label="页面作用">贷款方案与收支一览，按标签管理。</td>
+                  <td data-label="主要模块与内容">统计条；记一笔；标签筛选；贷款试算区（收藏/删除）；收支明细区。</td>
+                  <td data-label="示例数据或素材">方案 + 手收支 + 标签。</td>
+                  <td data-label="与其他页面的关系">→ 方案详情 / 收支详情 / 记一笔。</td>
+                </tr>
+                <tr>
+                  <td data-label="页面/视图">记一笔（<code>#page=ledger-new</code>）</td>
+                  <td data-label="页面作用">新增收支。</td>
+                  <td data-label="主要模块与内容">支出/收入切换；标题、金额、标签、备注。</td>
+                  <td data-label="示例数据或素材">—</td>
+                  <td data-label="与其他页面的关系">← 记账 Tab。</td>
+                </tr>
+                <tr>
+                  <td data-label="页面/视图">我的（<code>#page=profile</code>）</td>
+                  <td data-label="页面作用">资料与设置入口。</td>
+                  <td data-label="主要模块与内容">头像昵称；偏好；数据导出/清空；关于与隐私。</td>
+                  <td data-label="示例数据或素材">默认昵称「借款人」。</td>
+                  <td data-label="与其他页面的关系">子页 hash 或栈内面板。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="interaction-states">
+          <h2>交互与状态方案</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>对象/场景</th><th>前置状态</th><th>用户操作</th><th>原型表现</th><th>后续状态</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="对象/场景">提交计算</td>
+                  <td data-label="前置状态">必填项完整且数值合法。</td>
+                  <td data-label="用户操作">点击「计算」。</td>
+                  <td data-label="原型表现">跳转结果页，播放环形图 draw 动画（约 700ms）。</td>
+                  <td data-label="后续状态">可保存或查看摊还。</td>
+                </tr>
+                <tr>
+                  <td data-label="对象/场景">校验失败</td>
+                  <td data-label="前置状态">本金≤0、利率非法或期限为 0。</td>
+                  <td data-label="用户操作">点击「计算」。</td>
+                  <td data-label="原型表现">字段高亮 <code>#FF5A6A</code>，不跳转。</td>
+                  <td data-label="后续状态">修正输入。</td>
+                </tr>
+                <tr>
+                  <td data-label="对象/场景">保存计算</td>
+                  <td data-label="前置状态">结果页已展示。</td>
+                  <td data-label="用户操作">保存 / 收藏。</td>
+                  <td data-label="原型表现">写入 localStorage；Toast「已保存」。</td>
+                  <td data-label="后续状态">记账列表可见。</td>
+                </tr>
+                <tr>
+                  <td data-label="对象/场景">设储蓄目标</td>
+                  <td data-label="前置状态">结果页有有效月供。</td>
+                  <td data-label="用户操作">选择「为月供储蓄」。</td>
+                  <td data-label="原型表现">跳转储蓄新建，目标金额预填为 3× 月供（可改）。</td>
+                  <td data-label="后续状态">储蓄 Tab 出现新目标。</td>
+                </tr>
+                <tr>
+                  <td data-label="对象/场景">空状态</td>
+                  <td data-label="前置状态">无记账 / 无储蓄目标。</td>
+                  <td data-label="用户操作">进入对应 Tab。</td>
+                  <td data-label="原型表现">Revolut 式空状态文案 + 渐变 CTA 引导。</td>
+                  <td data-label="后续状态">—</td>
+                </tr>
+                <tr>
+                  <td data-label="对象/场景">导出 / 清空</td>
+                  <td data-label="前置状态">我的 → 数据管理。</td>
+                  <td data-label="用户操作">导出 JSON 或确认清空。</td>
+                  <td data-label="原型表现">下载文件 / 二次确认后 wipe 本地 key。</td>
+                  <td data-label="后续状态">列表清空，偏好可保留（待确认实现为全部清空或分项）。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">主流程：</p>
+          <pre class="mermaid">flowchart TB
+  subgraph calc [计算 Tab]
+    A[输入参数] --> B[结果页]
+    B --> C[摊还明细]
+    B --> D[保存到记账]
+    B --> E[设储蓄目标]
+  end
+  subgraph sav [储蓄 Tab]
+    F[目标列表] --> G[存入/取出]
+  end
+  subgraph rest [记账 / 我的]
+    H[记账复看] --> B
+    I[偏好与导出]
+  end
+  D --> H
+  E --> F</pre>
+        </section>
+
+        <section id="design-basis">
+          <h2>设计基底与原型特有调整</h2>
+          <ul>
+            <li>采用的 <code>DESIGN.md</code>：<code>src/themes/revolut-mobile/DESIGN.md</code></li>
+            <li>继承方式：浅色优先（<code>#F4F4F8</code> 画布、白卡片、渐变 CTA <code>#5B6BFF→#9C6BFF</code>、tabular 金额、环形分析组件气质）。</li>
+            <li>本原型特有调整：将「Spend Donut」语义用于（1）贷款结果本金/利息占比；（2）储蓄目标完成度；不实现金属卡 3D 翻转等 Revolut 签名动效。</li>
+            <li>字体：Inter 作为 Aeonik 替代（与 DESIGN.md 建议一致）。</li>
+          </ul>
+          <p class="hint">只记录用户针对当前原型确认的偏离或加强项，不复制 DESIGN.md 已有规则。</p>
+        </section>
+
+        <section id="open-questions">
+          <h2>当前待确认事项</h2>
+          <ul>
+            <li class="hint">（已实现）清空数据：分项清空，保留偏好。</li>
+            <li class="hint">（已实现）首次打开注入示例计算与储蓄目标，可在数据管理中清空。</li>
+          </ul>
+        </section>
+
+        <section id="decision-history">
+          <h2>用户重要决策与变更</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>日期</th><th>用户决策或变更</th><th>对当前原型的影响</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="日期">2026-09-30</td>
+                  <td data-label="用户决策或变更">设计基底定为 Revolut Mobile（放弃 Binance 仪表风）。</td>
+                  <td data-label="对当前原型的影响">深色冷黑底 + 紫蓝渐变强调 + 环形进度/分析；实现时引用 revolut 主题 token。</td>
+                </tr>
+                <tr>
+                  <td data-label="日期">2026-09-30</td>
+                  <td data-label="用户决策或变更">范围 B；计算 A+B；个人中心全量；手机优先；摊还明细入 v1；对比二期。</td>
+                  <td data-label="对当前原型的影响">四 Tab IA 与本地存储 schema 按本规格实现。</td>
+                </tr>
+                <tr>
+                  <td data-label="日期">2026-09-30</td>
+                  <td data-label="用户决策或变更">第三 Tab「历史」改为「记账」，增加标签与手收支「记一笔」。</td>
+                  <td data-label="对当前原型的影响">路由 ledger*；localStorage ledger-entries；PRD 同步。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">只记录会改变页面范围、结构、流程、内容口径或设计表达的重要决定，不保存完整讨论过程。</p>
+        </section>
+      </article>
+
+      <article class="spec-page" data-spec-page="flows-data" hidden>
+        <h1>流程与本地数据</h1>
+        <p class="definition">所有业务数据写入浏览器 localStorage，键名前缀 <code>loan-calc:</code>；无加密要求，导出为 UTF-8 JSON 文件。</p>
+
+        <section>
+          <h2>localStorage 结构（草案）</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>键</th><th>内容</th></tr></thead>
+              <tbody>
+                <tr><td data-label="键"><code>loan-calc:profile</code></td><td data-label="内容">昵称、头像（emoji 或 preset id）、创建时间。</td></tr>
+                <tr><td data-label="键"><code>loan-calc:settings</code></td><td data-label="内容">货币符号、小数位、主题（dark/light/system，默认 dark）。</td></tr>
+                <tr><td data-label="键"><code>loan-calc:calculations</code></td><td data-label="内容">贷款方案数组：id、模式、输入、输出、摊还、收藏、tags[]、createdAt。</td></tr>
+                <tr><td data-label="键"><code>loan-calc:ledger-entries</code></td><td data-label="内容">手收支数组：id、title、amount、direction、tags[]、note、createdAt。</td></tr>
+                <tr><td data-label="键"><code>loan-calc:savings-goals</code></td><td data-label="内容">目标数组：id、名称、target、current、deadline、linkedCalcId、transactions[]。</td></tr>
+                <tr><td data-label="键"><code>loan-calc:meta</code></td><td data-label="内容">schemaVersion、是否已注入种子数据。</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section>
+          <h2>验收重点</h2>
+          <ul>
+            <li>四 Tab 均可达，计算 → 结果 → 摊还 → 保存 → 记账复看闭环可走通；标签筛选与记一笔可用。</li>
+            <li>储蓄目标可新建、存入、进度环数值正确；从结果页跳转预填生效。</li>
+            <li>刷新页面后数据仍在；导出 JSON 可再导入（若实现导入则一并验收，否则仅导出）。</li>
+            <li>视觉符合 Revolut 深色与渐变 CTA，金额 tabular 对齐。</li>
+            <li>离线：断网后功能不受影响（无网络请求）。</li>
+          </ul>
+        </section>
+      </article>
+    </main>
+  </div>
+
+  <script>
+    const navItems = [...document.querySelectorAll('[data-page-target]')];
+    const pages = [...document.querySelectorAll('[data-spec-page]')];
+
+    const showPage = (pageId) => {
+      for (const navItem of navItems) {
+        const isCurrent = navItem.dataset.pageTarget === pageId;
+        if (isCurrent) {
+          navItem.setAttribute('aria-current', 'page');
+        } else {
+          navItem.removeAttribute('aria-current');
+        }
+      }
+
+      for (const page of pages) {
+        page.hidden = page.dataset.specPage !== pageId;
+      }
+    };
+
+    for (const navItem of navItems) {
+      navItem.addEventListener('click', () => showPage(navItem.dataset.pageTarget));
+    }
+  </script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#e6f5ef',
+        primaryTextColor: '#222832',
+        primaryBorderColor: '#008f5d',
+        lineColor: '#008f5d',
+        secondaryColor: '#f2faf7',
+        tertiaryColor: '#ffffff',
+        edgeLabelBackground: '#ffffff',
+        fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      },
+    });
+  </script>
+</body>
+</html>

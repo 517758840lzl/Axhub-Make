@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>贷款计算器 · 三主题色板对照</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      background: #f4f4f6;
+      color: #111;
+      padding: 24px 16px 48px;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 8px; }
+    p.lead { margin: 0 0 24px; color: #555; font-size: 0.95rem; line-height: 1.5; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1100px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid #e5e5ea;
+    }
+    .card h2 { margin: 0 0 4px; font-size: 1.1rem; }
+    .tag { font-size: 0.75rem; color: #666; margin-bottom: 16px; }
+    .swatches { display: flex; flex-direction: column; gap: 10px; }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85rem;
+    }
+    .chip {
+      width: 56px;
+      height: 40px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+    .links { margin-top: 16px; font-size: 0.85rem; }
+    .links a { color: #2563eb; }
+    .mock {
+      margin-top: 16px;
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 100px;
+    }
+    .mock .num {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin: 8px 0;
+    }
+    .mock button {
+      margin-top: 12px;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <h1>Design Knowledge · 三主题色板（贷款计算器候选）</h1>
+  <p class="lead">
+    聊天里的 <code>#F0B90B</code> 只是文字，不会自动上色。请在本页看色块，或打开下方「完整主题预览」链接（含手机 mock + 色板条）。
+  </p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>1 · Binance Mobile</h2>
+      <p class="tag">推荐 · 精密金融仪表（深底 + 等宽数字 + 黄/绿/红语义）</p>
+      <div class="swatches">
+        <div class="row"><span class="chip" style="background:#0B0E11"></span><span>画布 #0B0E11</span></div>
+        <div class="row"><span class="chip" style="background:#181A20"></span><span>卡片 #181A20</span></div>
+        <div class="row"><span class="chip" style="background:#F0B90B"></span><span>主色/CTA #F0B90B</span></div>
+        <div class="row"><span class="chip" style="background:#0ECB81"></span><span>正向/本金 #0ECB81</span></div>
+        <div class="row"><span class="chip" style="background:#F6465D"></span><span>利息/支出 #F6465D</span></div>
+      </div>
+      <div class="mock" style="background:#0B0E11;color:#EAECEF">
+        <div style="font-size:12px;color:#848E9C">月供（等额本息）</div>
+        <div class="num" style="color:#F0B90B">¥ 4,286.50</div>
+        <button style="background:#F0B90B;color:#0B0E11">开始计算</button>
+      </div>
+      <p class="links">
+        <a href="https://lintendo.github.io/Make-Template/knowledge/versions/2026-08-14.2/previews/binance-mobile/index.html" target="_blank" rel="noopener">完整主题预览 ↗</a>
+        · Make：<a href="http://localhost:53817/?projectId=amake-demo&theme=binance-mobile">binance-mobile</a>
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>2 · Revolut Mobile</h2>
+      <p class="tag">紫蓝渐变 · 大余额 · 环形分析（适合储蓄进度）</p>
+      <div class="swatches">
+        <div class="row"><span class="chip" style="background:#0A0A0F"></span><span>画布 #0A0A0F</span></div>
+        <div class="row"><span class="chip" style="background:#16161F"></span><span>卡片 #16161F</span></div>
+        <div class="row"><span class="chip" style="background:linear-gradient(115deg,#5B6BFF,#9C6BFF)"></span><span>渐变 #5B6BFF → #9C6BFF</span></div>
+        <div class="row"><span class="chip" style="background:#1FD17B"></span><span>收入/达成 #1FD17B</span></div>
+        <div class="row"><span class="chip" style="background:#FF5A6A"></span><span>警示 #FF5A6A</span></div>
+      </div>
+      <div class="mock" style="background:#0A0A0F;color:#fff">
+        <div style="font-size:12px;color:#9A9AAA">储蓄目标进度</div>
+        <div class="num">68%</div>
+        <button style="background:linear-gradient(115deg,#5B6BFF,#9C6BFF);color:#fff">存入一笔</button>
+      </div>
+      <p class="links">
+        <a href="https://lintendo.github.io/Make-Template/knowledge/versions/2026-08-14.2/previews/revolut-mobile/index.html" target="_blank" rel="noopener">完整主题预览 ↗</a>
+        · Make：<a href="http://localhost:53817/?projectId=amake-demo&theme=revolut-mobile">revolut-mobile</a>
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>3 · Cash App Mobile</h2>
+      <p class="tag">纯黑 + 荧光绿 · 超大金额（偏 Pop，弱「仪表」）</p>
+      <div class="swatches">
+        <div class="row"><span class="chip" style="background:#000000"></span><span>画布 #000000</span></div>
+        <div class="row"><span class="chip" style="background:#0F0F0F"></span><span>浮层 #0F0F0F</span></div>
+        <div class="row"><span class="chip" style="background:#00D632"></span><span>主色 #00D632</span></div>
+        <div class="row"><span class="chip" style="background:#FFFFFF"></span><span>主文字 #FFFFFF</span></div>
+        <div class="row"><span class="chip" style="background:#FF453A"></span><span>错误 #FF453A</span></div>
+      </div>
+      <div class="mock" style="background:#000;color:#fff">
+        <div style="font-size:12px;color:#9E9E9E">贷款本金</div>
+        <div class="num" style="color:#00D632">¥ 500,000</div>
+        <button style="background:#00D632;color:#000">计算</button>
+      </div>
+      <p class="links">
+        <a href="https://lintendo.github.io/Make-Template/knowledge/versions/2026-08-14.2/previews/cash-app-mobile/index.html" target="_blank" rel="noopener">完整主题预览 ↗</a>
+        · 本地仅 DESIGN.md（主题包未装完）
+      </p>
+    </section>
+  </div>
+</body>
+</html>

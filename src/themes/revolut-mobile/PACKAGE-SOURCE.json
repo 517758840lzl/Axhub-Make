@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "themeId": "revolut-mobile",
+  "sourceCommit": "0fa70b810ff51d98fe1c142243c45ed008cd7ab0",
+  "files": [
+    {
+      "path": "DESIGN.md",
+      "hash": "sha256:b0ef42daa17c4e476c364ced47c30996c07680c8f3bd9c3e59f1c4b956b4a680"
+    },
+    {
+      "path": "SOURCE.md",
+      "hash": "sha256:d092e51d9097fe5f35fbb6c22bb80c76cc7d8ff36be7fd53f7e55bc5f9784d10"
+    },
+    {
+      "path": "_runtime/DesignMdBatchShowcase/base.css",
+      "hash": "sha256:98414363d97e5262bb0e14d507aa32b04b36233726d26127a60daa32f3382f26"
+    },
+    {
+      "path": "_runtime/DesignMdBatchShowcase/headerLinks.ts",
+      "hash": "sha256:527a4eda89a06eaec92b351e8c8882ba19ead3c840d8647dd371f2ad5b02a0c6"
+    },
+    {
+      "path": "_runtime/DesignMdBatchShowcase/index.tsx",
+      "hash": "sha256:6482b563ee9676908d380567bd91b5406a2c64ed1386c54849e72b1993380d9e"
+    },
+    {
+      "path": "assets/cover.svg",
+      "hash": "sha256:1129c68e8827061925c2f504e5c38449ef49351f07d688a2688b23f2a2d4591e"
+    },
+    {
+      "path": "assets/product-screenshot-01.webp",
+      "hash": "sha256:de2e4ee4f665fa5a905f847619f149e6d32d58f37b8c99e838ff0c431692ba26"
+    },
+    {
+      "path": "assets/product-screenshot-02.webp",
+      "hash": "sha256:32b28f513cdbf85e3c1f3646a2236c083b556a48756342201e92fa4569cf6f5f"
+    },
+    {
+      "path": "assets/product-screenshot-03.webp",
+      "hash": "sha256:73b047133f606dd579d538ead5b97a6a0f8bed05dd921c3c87fe30b09c2cfcda"
+    },
+    {
+      "path": "assets/tokens.json",
+      "hash": "sha256:24071382b108a7e411ed2dfa0800ca825a4c3c99e364d170bf654715d6fa0c15"
+    },
+    {
+      "path": "index.tsx",
+      "hash": "sha256:50e8a505bfcb6e3d240a00cac6b3e47c88a3a836f592912d30a2e7faaeac6500"
+    },
+    {
+      "path": "style.css",
+      "hash": "sha256:058e3ce3f974d43a3a6586c67328b2d3a633fdffd1d6869f9b01dd63908e6f05"
+    },
+    {
+      "path": "theme.json",
+      "hash": "sha256:941145cea48df7886a1b18b7605c6073234090b9ade4c8a2a46719af915df97a"
+    },
+    {
+      "path": "tw.css",
+      "hash": "sha256:42070e0b45bb201b2b838a52aaaa6e965f964e0b542d97f1fe517fe59c4b75a8"
+    }
+  ]
+}
