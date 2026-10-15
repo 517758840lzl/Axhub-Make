@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updatedAt": "2026-09-30T05:56:32.513Z",
+  "updatedAt": "2026-10-15T06:29:54.418Z",
   "prototypes": [
     {
-      "id": "item-prototypes-loan-calculator",
+      "id": "item:prototypes:loan-calculator",
       "kind": "item",
-      "title": "loan calculator",
+      "title": "贷款计算器",
       "itemKey": "prototypes/loan-calculator"
     },
     {

@@ -566,14 +566,15 @@ class LoanStatRow extends StatelessWidget {
 }
 
 class LoanStatBox extends StatelessWidget {
-  const LoanStatBox({super.key, required this.label, required this.value});
+  const LoanStatBox({super.key, required this.label, required this.value, this.onTap});
 
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final box = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: RevolutColors.surface1,
@@ -587,6 +588,15 @@ class LoanStatBox extends StatelessWidget {
           LoanLabel(label),
           Text(value, style: monoStyle(context, size: 20, w: FontWeight.w700).copyWith(color: RevolutColors.brandSolid)),
         ],
+      ),
+    );
+    if (onTap == null) return box;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: box,
       ),
     );
   }

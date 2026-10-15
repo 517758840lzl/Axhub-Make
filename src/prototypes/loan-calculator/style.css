@@ -807,6 +807,20 @@
   box-shadow: var(--rev-shadow-soft);
 }
 
+.loan-stat-box--btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.loan-stat-box--btn:active {
+  transform: scale(0.98);
+  opacity: 0.92;
+}
+
 .loan-stat-box .loan-label {
   margin-bottom: 4px;
 }

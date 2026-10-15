@@ -2225,23 +2225,16 @@ function ProfileHome({
         </div>
       </div>
       <div className="loan-stat-row">
-        <div className="loan-stat-box">
+        <button type="button" className="loan-stat-box loan-stat-box--btn" onClick={() => setPage('profile-saved')}>
           <div className="loan-label">{t('profile.savedCount')}</div>
           <strong>{savedCount}</strong>
-        </div>
-        <div className="loan-stat-box">
+        </button>
+        <button type="button" className="loan-stat-box loan-stat-box--btn" onClick={() => setPage('savings')}>
           <div className="loan-label">{t('profile.savingsCount')}</div>
           <strong>{savingsCount}</strong>
-        </div>
+        </button>
       </div>
       <div className="loan-card" style={{ padding: '0 16px' }}>
-        <button
-          type="button"
-          className="loan-menu-item"
-          onClick={() => setPage('profile-saved')}
-        >
-          {t('profile.saved')} <ChevronRight size={18} aria-hidden />
-        </button>
         <button
           type="button"
           className="loan-menu-item"

@@ -1442,13 +1442,17 @@ class ProfileHomeScreen extends StatelessWidget {
         ),
         LoanStatRow(
           children: [
-            LoanStatBox(label: app.tr('profile.savedCount'), value: '${app.calculations.length}'),
-            LoanStatBox(label: app.tr('profile.savingsCount'), value: '${app.savingsGoals.length}'),
+            LoanStatBox(
+              label: app.tr('profile.savedCount'),
+              value: '${app.calculations.length}',
+              onTap: () => app.push(AppRoute.savedList),
+            ),
+            LoanStatBox(
+              label: app.tr('profile.savingsCount'),
+              value: '${app.savingsGoals.length}',
+              onTap: () => app.goTab(1),
+            ),
           ],
-        ),
-        LoanMenuItem(
-          label: app.tr('profile.saved'),
-          onTap: () => app.push(AppRoute.savedList),
         ),
         LoanMenuItem(
           label: app.tr('profile.settings'),
