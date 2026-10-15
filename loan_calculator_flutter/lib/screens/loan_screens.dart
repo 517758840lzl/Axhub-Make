@@ -3,18 +3,15 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../data/calc.dart';
-import '../data/savings_insights.dart';
-import '../data/currencies.dart';
 import '../data/format.dart';
-import '../data/intl_init.dart';
+import '../data/i18n.dart';
 import '../data/models.dart';
-import '../data/tags.dart';
+import '../data/savings_insights.dart';
 import '../state/app_state.dart';
 import '../theme/revolut_theme.dart';
 import '../widgets/currency_picker.dart';
 import '../widgets/donut_chart.dart';
 import '../widgets/loan_widgets.dart';
-import '../widgets/tag_picker.dart';
 
 // --- Calc ---
 
@@ -32,198 +29,516 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
   final _rate = TextEditingController(text: '4.2');
   final _years = TextEditingController(text: '30');
   final _months = TextEditingController(text: '0');
+  final _vehicle = TextEditingController(text: '200000');
+  final _down = TextEditingController(text: '40000');
+  bool _loanManual = false;
+
+  // Dual parts
+  final _aPrincipal = TextEditingController(text: '800000');
+  final _aRate = TextEditingController(text: '4.2');
+  final _aYears = TextEditingController(text: '25');
+  final _aMonths = TextEditingController(text: '0');
+  RepaymentMode _aMode = RepaymentMode.equalPayment;
+  final _bPrincipal = TextEditingController(text: '300000');
+  final _bRate = TextEditingController(text: '3.1');
+  final _bYears = TextEditingController(text: '20');
+  final _bMonths = TextEditingController(text: '0');
+  RepaymentMode _bMode = RepaymentMode.equalPayment;
+
   final _errors = <String, bool>{};
 
   @override
   void dispose() {
-    _principal.dispose();
-    _rate.dispose();
-    _years.dispose();
-    _months.dispose();
+    for (final c in [
+      _principal, _rate, _years, _months, _vehicle, _down,
+      _aPrincipal, _aRate, _aYears, _aMonths,
+      _bPrincipal, _bRate, _bYears, _bMonths,
+    ]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  CalcResult? _preview(AppState app) {
-    final p = double.tryParse(_principal.text);
-    final r = double.tryParse(_rate.text);
-    final termMonths = (int.tryParse(_years.text) ?? 0) * 12 + (int.tryParse(_months.text) ?? 0);
-    if (p == null || p <= 0 || r == null || r < 0 || termMonths <= 0) return null;
+  void _syncAutoLoan() {
+    if (_loanManual) return;
+    final price = double.tryParse(_vehicle.text) ?? 0;
+    final down = double.tryParse(_down.text) ?? 0;
+    final loan = (price - down).clamp(0, double.infinity);
+    _principal.text = loan == loan.roundToDouble() ? '${loan.round()}' : loan.toStringAsFixed(2);
+  }
+
+  int _term(TextEditingController y, TextEditingController m) =>
+      (int.tryParse(y.text) ?? 0) * 12 + (int.tryParse(m.text) ?? 0);
+
+  CalcResult? _preview() {
     try {
-      return computeLoan(CalcInput(
-        principal: p,
-        annualRatePercent: r,
-        termMonths: termMonths,
-        mode: _mode,
-        category: _category,
-      ));
+      return _buildResult();
     } catch (_) {
       return null;
     }
   }
 
-  void _submit(AppState app) {
+  CalcResult? _buildResult() {
+    if (_category == LoanCategory.dual) {
+      final ap = double.tryParse(_aPrincipal.text);
+      final ar = double.tryParse(_aRate.text);
+      final at = _term(_aYears, _aMonths);
+      final bp = double.tryParse(_bPrincipal.text);
+      final br = double.tryParse(_bRate.text);
+      final bt = _term(_bYears, _bMonths);
+      if (ap == null || ap <= 0 || ar == null || ar < 0 || at <= 0) return null;
+      if (bp == null || bp <= 0 || br == null || br < 0 || bt <= 0) return null;
+      return computeLoan(CalcInput(
+        principal: ap + bp,
+        annualRatePercent: ar,
+        termMonths: at > bt ? at : bt,
+        mode: _aMode,
+        category: LoanCategory.dual,
+        parts: [
+          DualLoanPart(principal: ap, annualRatePercent: ar, termMonths: at, mode: _aMode),
+          DualLoanPart(principal: bp, annualRatePercent: br, termMonths: bt, mode: _bMode),
+        ],
+      ));
+    }
+
+    if (_category == LoanCategory.auto) _syncAutoLoan();
     final p = double.tryParse(_principal.text);
     final r = double.tryParse(_rate.text);
-    final termMonths = (int.tryParse(_years.text) ?? 0) * 12 + (int.tryParse(_months.text) ?? 0);
-    _errors.clear();
-    if (p == null || p <= 0) _errors['principal'] = true;
-    if (r == null || r < 0) _errors['rate'] = true;
-    if (termMonths <= 0) _errors['term'] = true;
-    setState(() {});
-    if (_errors.isNotEmpty) return;
-    try {
-      final result = computeLoan(CalcInput(
-        principal: p!,
-        annualRatePercent: r!,
-        termMonths: termMonths,
-        mode: _mode,
-        category: _category,
-      ));
-      app.setPendingResult(result);
-      app.push(AppRoute.calcResult);
-    } catch (_) {
-      _errors['principal'] = true;
-      _errors['term'] = true;
-      setState(() {});
+    final termMonths = _term(_years, _months);
+    if (p == null || p <= 0 || r == null || r < 0 || termMonths <= 0) return null;
+
+    double? vehicle;
+    double? down;
+    if (_category == LoanCategory.auto) {
+      vehicle = double.tryParse(_vehicle.text);
+      down = double.tryParse(_down.text);
     }
+
+    return computeLoan(CalcInput(
+      principal: p,
+      annualRatePercent: r,
+      termMonths: termMonths,
+      mode: _mode,
+      category: _category,
+      vehiclePrice: vehicle,
+      downPayment: down,
+    ));
+  }
+
+  void _submit(AppState app) {
+    _errors.clear();
+    final result = _buildResult();
+    if (result == null) {
+      if (_category == LoanCategory.dual) {
+        _errors['a'] = true;
+        _errors['b'] = true;
+      } else {
+        _errors['principal'] = true;
+        _errors['rate'] = true;
+        _errors['term'] = true;
+      }
+      setState(() {});
+      app.showToast(app.tr('home.fillFirst'));
+      return;
+    }
+    setState(() {});
+    app.setPendingResult(result);
+    app.push(AppRoute.calcResult);
+  }
+
+  void _ensureResultThen(AppState app, AppRoute route) {
+    final result = app.pendingResult ?? _buildResult();
+    if (result == null) {
+      app.showToast(app.tr('home.fillFirst'));
+      return;
+    }
+    app.setPendingResult(result, savedId: app.pendingSavedId);
+    app.push(route);
   }
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final preview = _preview(app);
+    final preview = _preview();
     final previewPayment = preview == null
         ? null
-        : (_mode == RepaymentMode.equalPrincipal ? preview.firstMonthPayment : preview.monthlyPayment);
+        : (preview.input.mode == RepaymentMode.equalPrincipal || preview.input.category == LoanCategory.dual
+            ? preview.firstMonthPayment
+            : preview.monthlyPayment);
+
+    final downPct = () {
+      if (_category != LoanCategory.auto) return null;
+      final price = double.tryParse(_vehicle.text) ?? 0;
+      final down = double.tryParse(_down.text) ?? 0;
+      if (price <= 0) return null;
+      return (down / price * 100).toStringAsFixed(0);
+    }();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         LoanHeroBanner(
+          title: app.tr('home.title'),
+          subtitle: app.tr('home.subtitle'),
           badges: [
-            const LoanHeroBadge(icon: LucideIcons.wifiOff, label: '纯离线'),
-            const LoanHeroBadge(icon: LucideIcons.shield, label: '数据在本地'),
+            LoanHeroBadge(icon: LucideIcons.shield, label: app.tr('home.badge.local')),
             if (app.calculations.isNotEmpty)
-              LoanHeroBadge(icon: LucideIcons.clock3, label: '已存 ${app.calculations.length} 条方案'),
+              LoanHeroBadge(
+                icon: LucideIcons.clock3,
+                label: app.tr('home.badge.saved', {'count': '${app.calculations.length}'}),
+              ),
           ],
         ),
-        const LoanFeatureRow(),
+        LoanFeatureRow(
+          ratioLabel: app.tr('home.feature.ratio'),
+          amortLabel: app.tr('home.feature.amort'),
+          compareLabel: app.tr('home.feature.compare'),
+          onRatio: () => _ensureResultThen(app, AppRoute.calcResult),
+          onAmort: () => _ensureResultThen(app, AppRoute.amortization),
+          onCompare: () => app.push(AppRoute.compare),
+        ),
         if (preview != null && previewPayment != null)
           LoanPreviewCard(
-            modeLabelText: modeLabel(_mode),
+            previewTitle: app.tr('home.preview', {'mode': modeLabel(
+                  preview.input.category == LoanCategory.dual ? preview.input.mode : _mode,
+                  app.locale,
+                )}) +
+                (downPct != null ? app.tr('home.previewDown', {'pct': downPct}) : ''),
             payment: app.money(previewPayment),
             totalInterest: app.money(preview.totalInterest),
             totalPayment: app.money(preview.totalPayment),
+            interestLabel: app.tr('home.totalInterest'),
+            totalLabel: app.tr('home.totalPayment'),
+          ),
+        if (_category != LoanCategory.dual)
+          LoanCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LoanSectionHead(icon: LucideIcons.landmark, title: app.tr('home.repayMode')),
+                LoanSegment(
+                  options: [
+                    ('equal-payment', app.tr('mode.equalPayment')),
+                    ('equal-principal', app.tr('mode.equalPrincipal')),
+                  ],
+                  selected: _mode == RepaymentMode.equalPayment ? 'equal-payment' : 'equal-principal',
+                  onSelect: (v) => setState(() =>
+                      _mode = v == 'equal-principal' ? RepaymentMode.equalPrincipal : RepaymentMode.equalPayment),
+                ),
+              ],
+            ),
           ),
         LoanCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const LoanSectionHead(icon: LucideIcons.landmark, title: '还款方式'),
-              LoanSegment(
-                options: const [('equal-payment', '等额本息'), ('equal-principal', '等额本金')],
-                selected: _mode == RepaymentMode.equalPayment ? 'equal-payment' : 'equal-principal',
-                onSelect: (v) => setState(() => _mode = v == 'equal-principal' ? RepaymentMode.equalPrincipal : RepaymentMode.equalPayment),
-              ),
-              const SizedBox(height: 10),
-              LoanMuted(
-                _mode == RepaymentMode.equalPayment ? '每月还款额固定，前期利息占比较高。' : '每月本金固定，月供逐月递减。',
-                fontSize: 12,
-              ),
-            ],
-          ),
-        ),
-        LoanCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const LoanSectionHead(icon: LucideIcons.wallet, title: '贷款类型'),
-              Row(
-                children: LoanCategory.values.map((k) {
-                  final meta = _loanTypeMeta(k);
-                  final active = _category == k;
-                  return Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(right: k != LoanCategory.other ? 8 : 0),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _category = k),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-                          decoration: BoxDecoration(
-                            color: active ? RevolutColors.brandStart.withValues(alpha: 0.12) : RevolutColors.surface2,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: active ? RevolutColors.brandStart.withValues(alpha: 0.25) : RevolutColors.divider),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(meta.$1, size: 20, color: active ? RevolutColors.brandSolid : RevolutColors.textSecondary),
-                              const SizedBox(height: 6),
-                              Text(meta.$2, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: active ? RevolutColors.brandSolid : RevolutColors.textSecondary)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        ),
-        LoanCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const LoanSectionHead(icon: LucideIcons.calculator, title: '贷款参数'),
-              const LoanLabel('贷款本金'),
-              LoanInput(controller: _principal, suffix: '元', error: _errors['principal'] == true, onChanged: (_) => setState(() {})),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [500000, 1000000, 1500000, 2000000].map((v) {
-                  return LoanQuickChip(
-                    label: v >= 1000000 ? '${v ~/ 1000000} 百万' : '${v ~/ 10000} 万',
-                    onTap: () {
-                      _principal.text = '$v';
-                      setState(() {});
-                    },
-                  );
-                }).toList(),
-              ),
-              const LoanLabel('年利率', marginTop: 14),
-              LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true, onChanged: (_) => setState(() {})),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: ['3.1', '3.85', '4.2', '4.9'].map((v) => LoanQuickChip(label: '$v%', onTap: () { _rate.text = v; setState(() {}); })).toList(),
-              ),
-              const LoanLabel('贷款期限', marginTop: 14),
+              LoanSectionHead(icon: LucideIcons.wallet, title: app.tr('home.loanType')),
+              // 一行四等分：类型是轻量切换，不抢主参数区权重
               Row(
                 children: [
-                  Expanded(child: LoanInput(controller: _years, suffix: '年', error: _errors['term'] == true, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}))),
-                  const SizedBox(width: 8),
-                  Expanded(child: LoanInput(controller: _months, suffix: '月', error: _errors['term'] == true, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}))),
+                  for (final (i, k) in LoanCategory.values.where((k) => k != LoanCategory.other).indexed) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(
+                      child: Builder(builder: (context) {
+                        final meta = _loanTypeMeta(k, app);
+                        final active = _category == k;
+                        return GestureDetector(
+                          onTap: () => setState(() {
+                            _category = k;
+                            if (k == LoanCategory.auto) {
+                              _loanManual = false;
+                              _syncAutoLoan();
+                            }
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+                            decoration: BoxDecoration(
+                              color: active ? RevolutColors.brandStart.withValues(alpha: 0.12) : RevolutColors.surface2,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: active ? RevolutColors.brandStart.withValues(alpha: 0.25) : RevolutColors.divider,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(meta.$1, size: 20, color: active ? RevolutColors.brandSolid : RevolutColors.textSecondary),
+                                const SizedBox(height: 4),
+                                Text(
+                                  meta.$2,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: active ? RevolutColors.brandSolid : RevolutColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
                 ],
-              ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: ['30', '20', '10', '5'].map((y) => LoanQuickChip(label: '$y 年', onTap: () { _years.text = y; _months.text = '0'; setState(() {}); })).toList(),
               ),
             ],
           ),
         ),
-        LoanPrimaryButton(label: '开始计算', onPressed: () => _submit(app)),
-        const Padding(padding: EdgeInsets.only(top: 12), child: LoanMuted('试算结果仅供参考，不构成任何放贷承诺', center: true, fontSize: 12)),
+        if (_category == LoanCategory.dual)
+          ..._dualForms(app)
+        else if (_category == LoanCategory.auto)
+          _autoForm(app)
+        else
+          _standardForm(app),
+        LoanPrimaryButton(label: app.tr('home.cta'), onPressed: () => _submit(app)),
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 0),
+          child: LoanMuted(app.tr('home.disclaimer'), center: true, fontSize: 12),
+        ),
       ],
     );
   }
 
-  (IconData, String) _loanTypeMeta(LoanCategory k) => switch (k) {
-        LoanCategory.mortgage => (LucideIcons.home, '房贷'),
-        LoanCategory.auto => (LucideIcons.car, '车贷'),
-        LoanCategory.personal => (LucideIcons.shoppingBag, '消费'),
-        LoanCategory.other => (LucideIcons.moreHorizontal, '其他'),
+  List<Widget> _dualForms(AppState app) {
+    return [
+      _partCard(app, app.tr('dual.partA'), _aPrincipal, _aRate, _aYears, _aMonths, _aMode, (m) => setState(() => _aMode = m), 'a'),
+      _partCard(app, app.tr('dual.partB'), _bPrincipal, _bRate, _bYears, _bMonths, _bMode, (m) => setState(() => _bMode = m), 'b'),
+    ];
+  }
+
+  Widget _partCard(
+    AppState app,
+    String title,
+    TextEditingController principal,
+    TextEditingController rate,
+    TextEditingController years,
+    TextEditingController months,
+    RepaymentMode mode,
+    ValueChanged<RepaymentMode> onMode,
+    String errKey,
+  ) {
+    return LoanCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LoanSectionHead(icon: LucideIcons.layers, title: title),
+          LoanSegment(
+            options: [
+              ('equal-payment', app.tr('mode.equalPayment')),
+              ('equal-principal', app.tr('mode.equalPrincipal')),
+            ],
+            selected: mode == RepaymentMode.equalPayment ? 'equal-payment' : 'equal-principal',
+            onSelect: (v) => onMode(v == 'equal-principal' ? RepaymentMode.equalPrincipal : RepaymentMode.equalPayment),
+          ),
+          LoanLabel(app.tr('home.principal'), marginTop: 12),
+          LoanInput(
+            controller: principal,
+            suffix: app.tr('home.unit.yuan'),
+            error: _errors[errKey] == true,
+            onChanged: (_) => setState(() {}),
+          ),
+          LoanLabel(app.tr('home.rate'), marginTop: 12),
+          LoanInput(controller: rate, suffix: '%', error: _errors[errKey] == true, onChanged: (_) => setState(() {})),
+          LoanLabel(app.tr('home.term'), marginTop: 12),
+          Row(
+            children: [
+              Expanded(
+                child: LoanInput(
+                  controller: years,
+                  suffix: app.tr('home.year'),
+                  error: _errors[errKey] == true,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: LoanInput(
+                  controller: months,
+                  suffix: app.tr('home.month'),
+                  error: _errors[errKey] == true,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _autoForm(AppState app) {
+    return LoanCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LoanSectionHead(icon: LucideIcons.car, title: app.tr('home.paramsAuto')),
+          LoanLabel(app.tr('home.vehiclePrice')),
+          LoanInput(
+            controller: _vehicle,
+            suffix: app.tr('home.unit.yuan'),
+            onChanged: (_) {
+              _loanManual = false;
+              _syncAutoLoan();
+              setState(() {});
+            },
+          ),
+          LoanLabel(app.tr('home.downAmount'), marginTop: 12),
+          LoanInput(
+            controller: _down,
+            suffix: app.tr('home.unit.yuan'),
+            onChanged: (_) {
+              _loanManual = false;
+              _syncAutoLoan();
+              setState(() {});
+            },
+          ),
+          LoanLabel(app.tr('home.loanAmount'), marginTop: 12),
+          LoanInput(
+            controller: _principal,
+            suffix: app.tr('home.unit.yuan'),
+            error: _errors['principal'] == true,
+            onChanged: (_) {
+              _loanManual = true;
+              setState(() {});
+            },
+          ),
+          LoanMuted(app.tr('home.loanHint'), fontSize: 12),
+          LoanLabel(app.tr('home.rate'), marginTop: 12),
+          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true, onChanged: (_) => setState(() {})),
+          LoanLabel(app.tr('home.term'), marginTop: 12),
+          Row(
+            children: [
+              Expanded(
+                child: LoanInput(
+                  controller: _years,
+                  suffix: app.tr('home.year'),
+                  error: _errors['term'] == true,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: LoanInput(
+                  controller: _months,
+                  suffix: app.tr('home.month'),
+                  error: _errors['term'] == true,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            ],
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ['5', '3', '2', '1']
+                .map((y) => LoanQuickChip(
+                      label: app.tr('home.yearsN', {'n': y}),
+                      onTap: () {
+                        _years.text = y;
+                        _months.text = '0';
+                        setState(() {});
+                      },
+                    ))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _standardForm(AppState app) {
+    return LoanCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LoanSectionHead(icon: LucideIcons.calculator, title: app.tr('home.params')),
+          LoanLabel(app.tr('home.principal')),
+          LoanInput(
+            controller: _principal,
+            suffix: app.tr('home.unit.yuan'),
+            error: _errors['principal'] == true,
+            onChanged: (_) => setState(() {}),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [500000, 1000000, 1500000, 2000000].map((v) {
+              final label = v >= 1000000
+                  ? app.tr('home.million', {'n': '${v ~/ 1000000}'})
+                  : app.tr('home.wan', {'n': '${v ~/ 10000}'});
+              return LoanQuickChip(
+                label: label,
+                onTap: () {
+                  _principal.text = '$v';
+                  setState(() {});
+                },
+              );
+            }).toList(),
+          ),
+          LoanLabel(app.tr('home.rate'), marginTop: 14),
+          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true, onChanged: (_) => setState(() {})),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ['3.1', '3.85', '4.2', '4.9']
+                .map((v) => LoanQuickChip(label: '$v%', onTap: () { _rate.text = v; setState(() {}); }))
+                .toList(),
+          ),
+          LoanLabel(app.tr('home.term'), marginTop: 14),
+          Row(
+            children: [
+              Expanded(
+                child: LoanInput(
+                  controller: _years,
+                  suffix: app.tr('home.year'),
+                  error: _errors['term'] == true,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: LoanInput(
+                  controller: _months,
+                  suffix: app.tr('home.month'),
+                  error: _errors['term'] == true,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            ],
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ['30', '20', '10', '5']
+                .map((y) => LoanQuickChip(
+                      label: app.tr('home.yearsN', {'n': y}),
+                      onTap: () {
+                        _years.text = y;
+                        _months.text = '0';
+                        setState(() {});
+                      },
+                    ))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  (IconData, String) _loanTypeMeta(LoanCategory k, AppState app) => switch (k) {
+        LoanCategory.mortgage => (LucideIcons.home, app.tr('cat.mortgage')),
+        LoanCategory.auto => (LucideIcons.car, app.tr('cat.auto')),
+        LoanCategory.personal => (LucideIcons.shoppingBag, app.tr('cat.personal')),
+        LoanCategory.dual => (LucideIcons.layers, app.tr('cat.dual')),
+        LoanCategory.other => (LucideIcons.moreHorizontal, app.tr('cat.other')),
       };
 }
 
@@ -236,52 +551,121 @@ class CalcResultScreen extends StatelessWidget {
     final result = app.pendingResult;
     if (result == null) return const RedirectCalcScreen();
 
+    final isDual = result.input.category == LoanCategory.dual;
     final isEqPrincipal = result.input.mode == RepaymentMode.equalPrincipal;
-    final hero = isEqPrincipal
+    final hero = isDual || isEqPrincipal
         ? '${app.money(result.firstMonthPayment)} → ${app.money(result.lastMonthPayment)}'
         : app.money(result.monthlyPayment);
+    final share = result.totalPayment > 0
+        ? (result.totalInterest / result.totalPayment * 100).toStringAsFixed(0)
+        : '0';
+    final fromSaved = app.pendingSavedId != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         LoanTopBar(
           onBack: () => app.pop(),
-          title: '计算结果',
-          subtitle: modeLabel(result.input.mode),
+          title: app.tr('result.title'),
+          subtitle: '${categoryLabel(result.input.category, app.locale)} · ${modeLabel(result.input.mode, app.locale)}',
         ),
         LoanCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              LoanLabel(isEqPrincipal ? '首月 → 末月还款' : '月供'),
+              LoanLabel(isDual || isEqPrincipal ? app.tr('result.firstLast') : app.tr('result.monthly')),
               LoanHeroAmount(hero),
               DonutChart(
                 segments: [
-                  DonutSegment(value: result.input.principal, color: RevolutColors.brandStart, label: '本金'),
-                  DonutSegment(value: result.totalInterest, color: RevolutColors.brandEnd, label: '利息'),
+                  DonutSegment(
+                    value: result.input.principal,
+                    color: RevolutColors.brandStart,
+                    label: app.tr('result.principal'),
+                    amountText: app.money(result.input.principal),
+                  ),
+                  DonutSegment(
+                    value: result.totalInterest,
+                    color: RevolutColors.brandEnd,
+                    label: app.tr('result.interest'),
+                    amountText: app.money(result.totalInterest),
+                  ),
                 ],
-                centerLabel: app.money(result.totalPayment),
-                centerSub: '还款总额',
+                centerLabel: '$share%',
+                centerSub: app.tr('result.interestShare'),
               ),
-              LoanRow(label: '总利息', value: app.money(result.totalInterest), valueColor: RevolutColors.spend),
-              LoanRow(label: '贷款本金', value: app.money(result.input.principal)),
+              LoanRow(label: app.tr('result.totalPayment'), value: app.money(result.totalPayment)),
+              LoanRow(
+                label: app.tr('result.totalInterest'),
+                value: app.money(result.totalInterest),
+                valueColor: RevolutColors.spend,
+              ),
+              LoanRow(label: app.tr('result.loanPrincipal'), value: app.money(result.input.principal)),
+              if (result.input.vehiclePrice != null)
+                LoanRow(label: app.tr('result.vehicle'), value: app.money(result.input.vehiclePrice!)),
+              if (result.input.downPayment != null)
+                LoanRow(label: app.tr('result.downPayment'), value: app.money(result.input.downPayment!)),
             ],
           ),
         ),
-        LoanPrimaryButton(label: '查看摊还明细', onPressed: () => app.push(AppRoute.amortization)),
-        const SizedBox(height: 8),
-        LoanSecondaryButton(
-          label: '保存到记账',
-          onPressed: () async {
-            if (app.pendingResult != null) await app.saveCalcToLedger(app.pendingResult!);
-          },
+        if (isDual && result.partsResults != null) ...[
+          LoanCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LoanLabel(app.tr('dual.partBreakdown')),
+                for (var i = 0; i < result.partsResults!.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: LoanRow(
+                      label: i == 0 ? app.tr('dual.partA') : app.tr('dual.partB'),
+                      value: app.tr('compare.perMonth', {
+                        'amount': app.money(result.partsResults![i].monthlyPayment),
+                      }),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        LoanCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LoanLabel(app.tr('result.insights')),
+              LoanMuted(
+                isDual
+                    ? app.tr('dual.insight', {
+                        'monthly': app.money(result.monthlyPayment),
+                        'interest': app.money(result.totalInterest),
+                        'total': app.money(result.totalPayment),
+                      })
+                    : app.tr('result.insight.1', {
+                        'mode': modeLabel(result.input.mode, app.locale),
+                        'years': (result.input.termMonths / 12).toStringAsFixed(result.input.termMonths % 12 == 0 ? 0 : 1),
+                        'share': share,
+                      }),
+                fontSize: 13,
+              ),
+            ],
+          ),
         ),
+        LoanPrimaryButton(label: app.tr('result.amort'), onPressed: () => app.push(AppRoute.amortization)),
+        const SizedBox(height: 8),
+        LoanSecondaryButton(label: app.tr('result.compare'), onPressed: app.addPendingToCompare),
+        if (!fromSaved) ...[
+          const SizedBox(height: 8),
+          LoanSecondaryButton(
+            label: app.tr('result.save'),
+            onPressed: () async {
+              if (app.pendingResult != null) await app.saveCalc(app.pendingResult!);
+            },
+          ),
+        ],
         const SizedBox(height: 8),
         LoanSecondaryButton(
-          label: '为月供设储蓄目标',
+          label: app.tr('result.savings'),
           onPressed: () {
-            final monthly = result.monthlyPayment;
-            app.push(AppRoute.savingsNew, prefill: '${(monthly * 3).round()}');
+            app.push(AppRoute.savingsNew, prefill: '${(result.monthlyPayment * 3).round()}');
           },
         ),
       ],
@@ -297,7 +681,16 @@ class AmortizationScreen extends StatefulWidget {
 }
 
 class _AmortizationScreenState extends State<AmortizationScreen> {
-  bool _yearly = false;
+  String _view = 'month';
+  final _from = TextEditingController(text: '1');
+  final _to = TextEditingController();
+
+  @override
+  void dispose() {
+    _from.dispose();
+    _to.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -305,36 +698,102 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
     final result = app.pendingResult;
     if (result == null) return const RedirectCalcScreen();
 
-    final rows = _yearly ? _yearlyRows(result) : result.schedule;
+    final max = result.schedule.length;
+    if (_to.text.isEmpty) _to.text = '$max';
+
+    List<AmortizationRow> rows;
+    if (_view == 'year') {
+      rows = _yearlyRows(result);
+    } else if (_view == 'custom') {
+      final from = (int.tryParse(_from.text) ?? 1).clamp(1, max);
+      final to = (int.tryParse(_to.text) ?? max).clamp(from, max);
+      rows = result.schedule.where((r) => r.period >= from && r.period <= to).toList();
+    } else {
+      rows = result.schedule;
+    }
+
+    final sumPay = rows.fold<double>(0, (s, r) => s + r.payment);
+    final sumPrin = rows.fold<double>(0, (s, r) => s + r.principal);
+    final sumInt = rows.fold<double>(0, (s, r) => s + r.interest);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         LoanTopBar(
           onBack: () => app.pop(),
-          title: '摊还明细',
-          subtitle: '共 ${result.schedule.length} 期',
+          title: app.tr('amort.title'),
+          subtitle: app.tr('amort.periods', {'n': '$max'}),
         ),
         LoanCard(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               LoanSegment(
-                options: const [('month', '按月'), ('year', '按年')],
-                selected: _yearly ? 'year' : 'month',
-                onSelect: (v) => setState(() => _yearly = v == 'year'),
+                options: [
+                  ('month', app.tr('amort.byMonth')),
+                  ('year', app.tr('amort.byYear')),
+                  ('custom', app.tr('amort.byCustom')),
+                ],
+                selected: _view,
+                onSelect: (v) => setState(() => _view = v),
               ),
+              if (_view == 'custom') ...[
+                const SizedBox(height: 12),
+                LoanMuted(app.tr('amort.rangeHint', {'max': '$max'}), fontSize: 12),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LoanLabel(app.tr('amort.fromPeriod')),
+                          LoanInput(
+                            controller: _from,
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LoanLabel(app.tr('amort.toPeriod')),
+                          LoanInput(
+                            controller: _to,
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                LoanMuted(app.tr('amort.showing', {'n': '${rows.length}'}), fontSize: 12),
+                const SizedBox(height: 8),
+                LoanRow(label: app.tr('amort.rangeSum'), value: app.money(sumPay)),
+                LoanRow(label: app.tr('amort.col.principal'), value: app.money(sumPrin)),
+                LoanRow(label: app.tr('amort.col.interest'), value: app.money(sumInt)),
+              ],
               const SizedBox(height: 12),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
-                  headingTextStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: RevolutColors.textSecondary),
+                  headingTextStyle: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: RevolutColors.textSecondary,
+                  ),
                   dataTextStyle: monoStyle(context, size: 11),
                   columns: [
-                    DataColumn(label: Text(_yearly ? '年' : '期')),
-                    const DataColumn(label: Text('还款')),
-                    const DataColumn(label: Text('本金')),
-                    const DataColumn(label: Text('利息')),
-                    const DataColumn(label: Text('余额')),
+                    DataColumn(label: Text(_view == 'year' ? app.tr('amort.col.year') : app.tr('amort.col.period'))),
+                    DataColumn(label: Text(app.tr('amort.col.payment'))),
+                    DataColumn(label: Text(app.tr('amort.col.principal'))),
+                    DataColumn(label: Text(app.tr('amort.col.interest'))),
+                    DataColumn(label: Text(app.tr('amort.col.balance'))),
                   ],
                   rows: rows.map((row) {
                     return DataRow(cells: [
@@ -370,6 +829,93 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
   }
 }
 
+class CompareScreen extends StatelessWidget {
+  const CompareScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final ids = app.compareIds;
+    final results = <(String, CalcResult)>[];
+    for (final id in ids) {
+      final r = app.resultForCompareId(id);
+      if (r != null) results.add((id, r));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LoanTopBar(
+          onBack: () => app.pop(),
+          title: app.tr('compare.title'),
+          subtitle: app.tr('compare.subtitle', {'n': '${results.length}'}),
+        ),
+        if (results.length < 2)
+          LoanCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LoanMuted(app.tr('compare.needTwo'), fontSize: 13),
+                const SizedBox(height: 12),
+                LoanPrimaryButton(
+                  label: app.tr('compare.goSaved'),
+                  onPressed: () => app.push(AppRoute.savedList),
+                ),
+              ],
+            ),
+          )
+        else
+          LoanCard(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingTextStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                dataTextStyle: monoStyle(context, size: 11),
+                columns: [
+                  DataColumn(label: Text(app.tr('compare.metric'))),
+                  ...results.asMap().entries.map((e) => DataColumn(
+                        label: Text('#${e.key + 1}'),
+                      )),
+                ],
+                rows: [
+                  _cmpRow(app.tr('compare.principal'), results.map((e) => app.money(e.$2.input.principal)).toList()),
+                  _cmpRow(app.tr('compare.rate'), results.map((e) => '${e.$2.input.annualRatePercent}%').toList()),
+                  _cmpRow(
+                    app.tr('compare.term'),
+                    results.map((e) => app.tr('compare.termMonths', {'n': '${e.$2.input.termMonths}'})).toList(),
+                  ),
+                  _cmpRow(app.tr('compare.monthly'), results.map((e) => app.money(e.$2.monthlyPayment)).toList()),
+                  _cmpRow(app.tr('result.totalInterest'), results.map((e) => app.money(e.$2.totalInterest)).toList()),
+                  _cmpRow(app.tr('result.totalPayment'), results.map((e) => app.money(e.$2.totalPayment)).toList()),
+                ],
+              ),
+            ),
+          ),
+        if (results.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          ...results.map((e) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: LoanSecondaryButton(
+                  label: '${app.tr('compare.remove')} #${results.indexOf(e) + 1}',
+                  onPressed: () => app.removeFromCompare(e.$1),
+                ),
+              )),
+        ],
+        LoanMuted(app.tr('compare.hint'), fontSize: 12),
+        const SizedBox(height: 8),
+        LoanSecondaryButton(
+          label: app.tr('compare.addSaved'),
+          onPressed: () => app.push(AppRoute.savedList),
+        ),
+      ],
+    );
+  }
+
+  DataRow _cmpRow(String label, List<String> values) => DataRow(
+        cells: [DataCell(Text(label)), ...values.map((v) => DataCell(Text(v)))],
+      );
+}
+
 // --- Savings ---
 
 class _SavingsInsightLine extends StatelessWidget {
@@ -378,7 +924,7 @@ class _SavingsInsightLine extends StatelessWidget {
     required this.iconColor,
     required this.text,
     required this.muted,
-    this.marginBottom = 10,
+    this.marginBottom = 8,
   });
 
   final IconData icon;
@@ -389,22 +935,23 @@ class _SavingsInsightLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(
-      fontSize: 13,
-      height: 1.55,
-      color: muted ? RevolutColors.textSecondary : RevolutColors.text,
-    );
     return Padding(
       padding: EdgeInsets.only(bottom: marginBottom),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, size: 14, color: iconColor),
+          Icon(icon, size: 16, color: iconColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: muted ? RevolutColors.textSecondary : RevolutColors.text,
+              ),
+            ),
           ),
-          const SizedBox(width: 6),
-          Expanded(child: Text(text, style: style)),
         ],
       ),
     );
@@ -422,11 +969,11 @@ class SavingsListScreen extends StatelessWidget {
     if (goals.isEmpty) {
       return Column(
         children: [
-          const LoanTopBar(title: '储蓄目标', subtitle: '为月供或缓冲金攒一笔'),
+          LoanTopBar(title: app.tr('savings.title'), subtitle: app.tr('savings.subtitle')),
           LoanEmpty(
             icon: const Icon(LucideIcons.piggyBank, size: 40, color: RevolutColors.brandSolid),
-            message: '还没有储蓄目标。可从计算结果一键创建，或手动新建。',
-            action: LoanPrimaryButton(label: '新建目标', onPressed: () => app.push(AppRoute.savingsNew)),
+            message: app.tr('savings.empty'),
+            action: LoanPrimaryButton(label: app.tr('savings.new'), onPressed: () => app.push(AppRoute.savingsNew)),
           ),
         ],
       );
@@ -438,20 +985,27 @@ class SavingsListScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LoanTopBar(title: '储蓄目标', subtitle: '${goals.length} 个进行中'),
+        LoanTopBar(
+          title: app.tr('savings.title'),
+          subtitle: app.tr('savings.inProgress', {'n': '${goals.length}'}),
+        ),
         LoanStatRow(
           children: [
-            LoanStatBox(label: '已存合计', value: app.money(totalSaved)),
-            LoanStatBox(label: '目标合计', value: app.money(totalTarget)),
+            LoanStatBox(label: app.tr('savings.savedTotal'), value: app.money(totalSaved)),
+            LoanStatBox(label: app.tr('savings.targetTotal'), value: app.money(totalTarget)),
           ],
         ),
         if (app.calculations.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: LoanMuted('已关联 ${app.calculations.length} 条贷款方案，可在计算结果页快速创建目标', fontSize: 12),
+            child: LoanMuted(
+              app.tr('savings.linkedHint', {'n': '${app.calculations.length}'}),
+              fontSize: 12,
+            ),
           ),
         ...goals.map((g) {
           final pct = g.target > 0 ? (g.current / g.target * 100).clamp(0, 100) : 0.0;
+          final left = (g.target - g.current).clamp(0, double.infinity);
           return LoanCard(
             onTap: () => app.push(AppRoute.savingsDetail, id: g.id),
             child: Column(
@@ -460,7 +1014,7 @@ class SavingsListScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(g.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text(_savingsName(g.name, app), style: const TextStyle(fontWeight: FontWeight.w700)),
                     LoanChip('${pct.toStringAsFixed(0)}%'),
                   ],
                 ),
@@ -470,11 +1024,21 @@ class SavingsListScreen extends StatelessWidget {
                     stroke: 10,
                     animate: false,
                     segments: [
-                      DonutSegment(value: g.current, color: RevolutColors.brandStart, label: '已存'),
-                      DonutSegment(value: (g.target - g.current).clamp(0, double.infinity), color: RevolutColors.donutTrack, label: '待存'),
+                      DonutSegment(
+                        value: g.current,
+                        color: RevolutColors.brandStart,
+                        label: app.tr('savings.done'),
+                        amountText: app.money(g.current),
+                      ),
+                      DonutSegment(
+                        value: left.toDouble(),
+                        color: RevolutColors.donutTrack,
+                        label: app.tr('savings.todo'),
+                        amountText: app.money(left.toDouble()),
+                      ),
                     ],
-                    centerLabel: app.money(g.current),
-                    centerSub: '目标 ${app.money(g.target)}',
+                    centerLabel: '${pct.toStringAsFixed(0)}%',
+                    centerSub: app.tr('savings.progress'),
                   ),
                 ),
               ],
@@ -487,17 +1051,17 @@ class SavingsListScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const LoanLabel('智能提示', marginBottom: 10),
+                LoanLabel(app.tr('savings.insights'), marginBottom: 10),
                 _SavingsInsightLine(
                   icon: LucideIcons.clock3,
                   iconColor: RevolutColors.text,
-                  text: savingsEtaLine(g, app.money),
+                  text: savingsEtaLine(g, app.money, app.tr),
                   muted: false,
                 ),
                 _SavingsInsightLine(
                   icon: LucideIcons.shield,
                   iconColor: RevolutColors.textSecondary,
-                  text: savingsBufferLine(g, app.calculations, app.money),
+                  text: savingsBufferLine(g, app.calculations, app.money, app.tr),
                   muted: true,
                   marginBottom: 0,
                 ),
@@ -508,6 +1072,14 @@ class SavingsListScreen extends StatelessWidget {
       ],
     );
   }
+}
+
+String _savingsName(String name, AppState app) {
+  final n = name.trim();
+  if (n.isEmpty || n == '月供缓冲金' || n == 'Payment buffer') {
+    return app.tr('savings.defaultName');
+  }
+  return n;
 }
 
 class SavingsNewScreen extends StatefulWidget {
@@ -525,8 +1097,10 @@ class _SavingsNewScreenState extends State<SavingsNewScreen> {
   void initState() {
     super.initState();
     final app = context.read<AppState>();
-    _name = TextEditingController(text: '月供缓冲金');
-    _target = TextEditingController(text: app.savingsPrefill?.isNotEmpty == true ? app.savingsPrefill : '15000');
+    _name = TextEditingController(text: app.tr('savings.defaultName'));
+    _target = TextEditingController(
+      text: app.savingsPrefill?.isNotEmpty == true ? app.savingsPrefill : '15000',
+    );
   }
 
   @override
@@ -542,27 +1116,31 @@ class _SavingsNewScreenState extends State<SavingsNewScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LoanTopBar(onBack: () => app.pop(), title: '新建目标'),
+        LoanTopBar(onBack: () => app.pop(), title: app.tr('savings.create')),
         LoanCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const LoanLabel('名称'),
+              LoanLabel(app.tr('savings.name')),
               LoanInput(controller: _name, onChanged: (_) {}),
-              const LoanLabel('目标金额', marginTop: 12),
-              LoanInput(controller: _target, keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) {}),
+              LoanLabel(app.tr('savings.target'), marginTop: 12),
+              LoanInput(
+                controller: _target,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (_) {},
+              ),
             ],
           ),
         ),
         LoanPrimaryButton(
-          label: '创建',
+          label: app.tr('savings.createCta'),
           onPressed: () async {
-            final t = double.tryParse(_target.text);
-            if (_name.text.trim().isEmpty || t == null || t <= 0) return;
+            final target = double.tryParse(_target.text);
+            if (_name.text.trim().isEmpty || target == null || target <= 0) return;
             final goal = SavingsGoal(
               id: uid('goal'),
               name: _name.text.trim(),
-              target: t,
+              target: target,
               current: 0,
               deadline: null,
               linkedCalcId: null,
@@ -570,7 +1148,7 @@ class _SavingsNewScreenState extends State<SavingsNewScreen> {
               createdAt: DateTime.now().toIso8601String(),
             );
             await app.persistSavings([goal, ...app.savingsGoals]);
-            app.showToast('目标已创建');
+            app.showToast(app.tr('savings.created'));
             app.replaceRoute(AppRoute.savings);
           },
         ),
@@ -601,7 +1179,10 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
     final goal2 = app.savingsGoals.where((x) => x.id == app.detailId).firstOrNull;
 
     if (goal2 == null) {
-      return EmptyRedirectScreen(message: '目标不存在', onGo: () => app.replaceRoute(AppRoute.savings));
+      return EmptyRedirectScreen(
+        message: app.tr('savings.missing'),
+        onGo: () => app.replaceRoute(AppRoute.savings),
+      );
     }
 
     void addTx(String type) {
@@ -613,10 +1194,16 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
         id: uid('tx'),
         amount: v,
         type: type,
-        note: type == 'deposit' ? '存入' : '取出',
+        note: type == 'deposit' ? app.tr('savings.deposit') : app.tr('savings.withdraw'),
         at: DateTime.now().toIso8601String(),
       );
-      app.persistSavings(app.savingsGoals.map((x) => x.id == goal2.id ? x.copyWith(current: next.toDouble(), transactions: [tx, ...x.transactions]) : x).toList());
+      app.persistSavings(
+        app.savingsGoals
+            .map((x) => x.id == goal2.id
+                ? x.copyWith(current: next.toDouble(), transactions: [tx, ...x.transactions])
+                : x)
+            .toList(),
+      );
       _amount.clear();
       setState(() {});
     }
@@ -626,21 +1213,26 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
       children: [
         LoanTopBar(
           onBack: () => app.pop(),
-          title: goal2.name,
+          title: _savingsName(goal2.name, app),
           subtitle: '${app.money(goal2.current)} / ${app.money(goal2.target)}',
         ),
         LoanCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const LoanLabel('存入 / 取出'),
-              LoanInput(controller: _amount, placeholder: '金额', keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) {}),
+              LoanLabel(app.tr('savings.depositWithdraw')),
+              LoanInput(
+                controller: _amount,
+                placeholder: app.tr('savings.amount'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (_) {},
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  LoanPrimaryButton(label: '存入', flex: true, onPressed: () => addTx('deposit')),
+                  LoanPrimaryButton(label: app.tr('savings.deposit'), flex: true, onPressed: () => addTx('deposit')),
                   const SizedBox(width: 8),
-                  LoanSecondaryButton(label: '取出', flex: true, onPressed: () => addTx('withdraw')),
+                  LoanSecondaryButton(label: app.tr('savings.withdraw'), flex: true, onPressed: () => addTx('withdraw')),
                 ],
               ),
             ],
@@ -650,13 +1242,14 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const LoanLabel('流水'),
+              LoanLabel(app.tr('savings.flow')),
               if (goal2.transactions.isEmpty)
-                const LoanMuted('暂无记录', fontSize: 14)
+                LoanMuted(app.tr('savings.noTx'), fontSize: 14)
               else
                 ...goal2.transactions.map((tx) {
                   return LoanRow(
-                    label: '${tx.type == 'deposit' ? '存入' : '取出'} · ${formatShortDate(DateTime.parse(tx.at))}',
+                    label:
+                        '${tx.type == 'deposit' ? app.tr('savings.deposit') : app.tr('savings.withdraw')} · ${formatShortDate(DateTime.parse(tx.at))}',
                     value: '${tx.type == 'deposit' ? '+' : '-'}${app.money(tx.amount)}',
                     valueColor: tx.type == 'deposit' ? RevolutColors.income : null,
                   );
@@ -677,380 +1270,133 @@ extension _FirstOrNull<E> on Iterable<E> {
   }
 }
 
-// --- Ledger ---
+// --- Saved ---
 
-class LedgerHomeScreen extends StatefulWidget {
-  const LedgerHomeScreen({super.key});
-
-  @override
-  State<LedgerHomeScreen> createState() => _LedgerHomeScreenState();
-}
-
-class _LedgerHomeScreenState extends State<LedgerHomeScreen> {
-  final _q = TextEditingController();
-  String? _activeTag;
-
-  @override
-  void dispose() {
-    _q.dispose();
-    super.dispose();
-  }
+class SavedListScreen extends StatelessWidget {
+  const SavedListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final allTags = collectAllTags(
-      app.calculations.map((c) => c.tags).toList(),
-      app.ledgerEntries.map((e) => e.tags).toList(),
-    );
-    final monthStart = DateTime(DateTime.now().year, DateTime.now().month);
-    final monthManual = app.ledgerEntries.where((e) => DateTime.parse(e.createdAt).isAfter(monthStart)).length;
-    final favCount = app.calculations.where((c) => c.favorite).length;
+    final list = app.calculations;
 
-    bool matchTag(List<String> tags) => _activeTag == null || tags.contains(_activeTag);
-    bool matchQ(String text) => _q.text.trim().isEmpty || text.toLowerCase().contains(_q.text.trim().toLowerCase());
-
-    final filteredCalcs = app.calculations.where((c) => matchTag(c.tags) && (matchQ(c.note) || matchQ(modeLabel(c.result.input.mode)))).toList();
-    final filteredManual = app.ledgerEntries.where((e) => matchTag(e.tags) && (matchQ(e.title) || matchQ(e.note))).toList();
-    final empty = app.calculations.isEmpty && app.ledgerEntries.isEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const LoanTopBar(title: '记账', subtitle: '贷款方案与收支，用标签归类'),
-        LoanStatRow(
-          triple: true,
-          children: [
-            LoanStatBox(label: '贷款方案', value: '${app.calculations.length}'),
-            LoanStatBox(label: '收支笔数', value: '${app.ledgerEntries.length}'),
-            LoanStatBox(label: '本月收支', value: '$monthManual'),
-          ],
+        LoanTopBar(
+          onBack: () => app.pop(),
+          title: app.tr('saved.title'),
+          subtitle: app.tr('saved.count', {'n': '${list.length}'}),
         ),
-        LoanPrimaryButton(label: '记一笔', onPressed: () => app.push(AppRoute.ledgerNew)),
-        LoanSecondaryButton(label: '去试算并保存方案', marginTop: 8, onPressed: () => app.goTab(0)),
-        if (allTags.isNotEmpty) LoanTagFilter(tags: allTags, activeTag: _activeTag, onSelect: (t) => setState(() => _activeTag = t)),
-        LoanInput(controller: _q, placeholder: '搜索标题、备注或还款方式', marginBottom: 12, onChanged: (_) => setState(() {})),
-        if (empty)
+        if (list.isEmpty)
           LoanEmpty(
-            icon: const Icon(LucideIcons.clipboardList, size: 40, color: RevolutColors.brandSolid),
-            message: '记一笔日常收支，或在计算页保存贷款方案，都会出现在这里。',
+            icon: const Icon(LucideIcons.bookmark, size: 40, color: RevolutColors.brandSolid),
+            message: app.tr('saved.empty'),
+            action: LoanPrimaryButton(
+              label: app.tr('saved.goCalc'),
+              onPressed: () => app.goTab(0),
+            ),
           )
-        else ...[
-          LoanSectionHead(
-            title: '贷款试算',
-            trailing: favCount > 0 ? LoanChip('$favCount 个收藏') : null,
-          ),
-          LoanCard(
-            dense: true,
-            child: filteredCalcs.isEmpty
-                ? const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: LoanMuted('当前筛选下暂无贷款方案', fontSize: 13))
-                : Column(
-                    children: filteredCalcs.asMap().entries.map((entry) {
-                      return _calcListItem(context, app, entry.value, showDivider: entry.key < filteredCalcs.length - 1);
-                    }).toList(),
-                  ),
-          ),
-          LoanSectionHead(title: '收支明细', marginTop: 16),
-          LoanCard(
-            dense: true,
-            child: filteredManual.isEmpty
-                ? const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: LoanMuted('当前筛选下暂无收支，点上方「记一笔」添加', fontSize: 13))
-                : Column(
-                    children: filteredManual.asMap().entries.map((entry) {
-                      return _manualListItem(context, app, entry.value, showDivider: entry.key < filteredManual.length - 1);
-                    }).toList(),
-                  ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _calcListItem(BuildContext context, AppState app, SavedCalculation c, {required bool showDivider}) {
-    return LoanListItemStack(
-      showDivider: showDivider,
-      children: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => app.push(AppRoute.ledgerCalcDetail, id: c.id),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LoanListItemTitle(title: c.note, trailing: const LoanBadgeCalc()),
-              const SizedBox(height: 6),
-              Text(
-                '${modeLabel(c.result.input.mode)} · ${app.money(c.result.monthlyPayment)}/月',
-                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.textSecondary),
-              ),
-              TagRow(tags: c.tags),
-            ],
-          ),
-        ),
-        LoanListItemActions(
-          children: [
-            LoanLedgerInlineAction(
-              label: c.favorite ? '★' : '☆',
-              danger: false,
-              onPressed: () => app.persistCalculations(
-                app.calculations.map((x) => x.id == c.id ? x.copyWith(favorite: !x.favorite) : x).toList(),
-              ),
-            ),
-            LoanLedgerInlineAction(
-              label: '删除',
-              onPressed: () {
-                app.persistCalculations(app.calculations.where((x) => x.id != c.id).toList());
-                app.showToast('已删除');
+        else
+          ...list.map((c) {
+            final inCompare = app.compareIds.contains(c.id);
+            return LoanCard(
+              onTap: () {
+                app.setPendingResult(c.result, savedId: c.id);
+                app.push(AppRoute.savedDetail, id: c.id);
               },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _manualListItem(BuildContext context, AppState app, ManualLedgerEntry e, {required bool showDivider}) {
-    final amountColor = e.direction == LedgerDirection.income ? RevolutColors.income : RevolutColors.spend;
-    return LoanListItemStack(
-      showDivider: showDivider,
-      children: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => app.push(AppRoute.ledgerManualDetail, id: e.id),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LoanListItemTitle(
-                title: e.title,
-                trailing: Text(
-                  '${e.direction == LedgerDirection.income ? '+' : '−'}${app.money(e.amount)}',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: amountColor, fontFeatures: const [FontFeature.tabularFigures()]),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          c.note.isNotEmpty ? c.note : categoryLabel(c.result.input.category, app.locale),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      if (c.favorite) const Icon(LucideIcons.star, size: 16, color: RevolutColors.brandSolid),
+                      if (inCompare) ...[
+                        const SizedBox(width: 6),
+                        LoanChip(app.tr('saved.inCompare')),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  LoanMuted(
+                    app.tr('saved.meta', {
+                      'principal': app.money(c.result.input.principal),
+                      'rate': '${c.result.input.annualRatePercent}',
+                      'months': '${c.result.input.termMonths}',
+                    }),
+                    fontSize: 12,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    app.tr('compare.perMonth', {'amount': app.money(c.result.monthlyPayment)}),
+                    style: monoStyle(context, size: 16, w: FontWeight.w700)
+                        .copyWith(color: RevolutColors.brandSolid),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      LoanLedgerInlineAction(
+                        label: c.favorite ? app.tr('saved.unfav') : app.tr('saved.fav'),
+                        danger: false,
+                        onPressed: () {
+                          app.persistCalculations(
+                            app.calculations
+                                .map((x) => x.id == c.id ? x.copyWith(favorite: !x.favorite) : x)
+                                .toList(),
+                          );
+                        },
+                      ),
+                      LoanLedgerInlineAction(
+                        label: app.tr('saved.compare'),
+                        danger: false,
+                        onPressed: () => app.addToCompare(c.id),
+                      ),
+                      LoanLedgerInlineAction(
+                        label: app.tr('saved.delete'),
+                        onPressed: () async {
+                          await app.persistCalculations(app.calculations.where((x) => x.id != c.id).toList());
+                          app.showToast(app.tr('saved.deleted'));
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                '${formatShortDate(DateTime.parse(e.createdAt))}${e.note.isNotEmpty ? ' · ${e.note}' : ''}',
-                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.textSecondary),
-              ),
-              TagRow(tags: e.tags),
-            ],
-          ),
-        ),
-        LoanListItemActions(
-          children: [
-            LoanLedgerInlineAction(
-              label: '删除',
-              onPressed: () {
-                app.persistLedger(app.ledgerEntries.where((x) => x.id != e.id).toList());
-                app.showToast('已删除');
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class LedgerNewScreen extends StatefulWidget {
-  const LedgerNewScreen({super.key});
-
-  @override
-  State<LedgerNewScreen> createState() => _LedgerNewScreenState();
-}
-
-class _LedgerNewScreenState extends State<LedgerNewScreen> {
-  final _title = TextEditingController();
-  final _amount = TextEditingController();
-  final _note = TextEditingController();
-  LedgerDirection _direction = LedgerDirection.expense;
-  List<String> _tags = const ['日常'];
-
-  @override
-  void dispose() {
-    _title.dispose();
-    _amount.dispose();
-    _note.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LoanTopBar(onBack: () => app.pop(), title: '记一笔', subtitle: '记录与贷款相关的收支'),
-        LoanCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LoanSegment(
-                options: const [('expense', '支出'), ('income', '收入')],
-                selected: _direction == LedgerDirection.expense ? 'expense' : 'income',
-                onSelect: (v) => setState(() => _direction = v == 'income' ? LedgerDirection.income : LedgerDirection.expense),
-              ),
-              const LoanLabel('标题'),
-              LoanInput(controller: _title, placeholder: '如 本月房贷、保险缴费', onChanged: (_) {}),
-              const LoanLabel('金额', marginTop: 12),
-              LoanInput(controller: _amount, placeholder: '0.00', amountStyle: true, keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setState(() {})),
-              LoanMuted(
-                '预览：${_direction == LedgerDirection.income ? '+' : '−'}${app.money(double.tryParse(_amount.text) ?? 0)}',
-                fontSize: 12,
-              ),
-            ],
-          ),
-        ),
-        TagPicker(value: _tags, onChange: (t) => setState(() => _tags = t)),
-        LoanCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const LoanLabel('备注（可选）'),
-              LoanInput(controller: _note, onChanged: (_) {}),
-            ],
-          ),
-        ),
-        LoanPrimaryButton(
-          label: '保存',
-          onPressed: () async {
-            final n = double.tryParse(_amount.text);
-            if (_title.text.trim().isEmpty || n == null || n <= 0 || _tags.isEmpty) return;
-            final entry = ManualLedgerEntry(
-              id: uid('ledger'),
-              createdAt: DateTime.now().toIso8601String(),
-              title: _title.text.trim(),
-              amount: n,
-              direction: _direction,
-              tags: _tags,
-              note: _note.text.trim(),
             );
-            await app.persistLedger([entry, ...app.ledgerEntries]);
-            app.showToast('已记账');
-            app.replaceRoute(AppRoute.ledger);
-          },
-        ),
+          }),
       ],
     );
   }
 }
 
-class LedgerCalcDetailScreen extends StatefulWidget {
-  const LedgerCalcDetailScreen({super.key});
-
-  @override
-  State<LedgerCalcDetailScreen> createState() => _LedgerCalcDetailScreenState();
-}
-
-class _LedgerCalcDetailScreenState extends State<LedgerCalcDetailScreen> {
-  List<String>? _tags;
+class SavedDetailScreen extends StatelessWidget {
+  const SavedDetailScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final item = app.calculations.where((c) => c.id == app.detailId).firstOrNull;
-    if (item == null) return EmptyRedirectScreen(message: '记录不存在', onGo: () => app.replaceRoute(AppRoute.ledger));
-
-    _tags ??= List<String>.from(item.tags);
-    final tags = _tags!;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LoanTopBar(
-          onBack: () => app.pop(),
-          title: item.note,
-          subtitle: formatShortDateTime(DateTime.parse(item.createdAt)),
-        ),
-        LoanCard(
-          child: Column(
-            children: [
-              LoanRow(label: '月供', value: app.money(item.result.monthlyPayment)),
-              LoanRow(label: '总利息', value: app.money(item.result.totalInterest)),
-              LoanRow(label: '还款总额', value: app.money(item.result.totalPayment)),
-            ],
-          ),
-        ),
-        TagPicker(
-          value: tags,
-          onChange: (next) {
-            setState(() => _tags = next);
-            app.persistCalculations(app.calculations.map((c) => c.id == item.id ? c.copyWith(tags: next) : c).toList());
-          },
-        ),
-        LoanPrimaryButton(
-          label: '打开完整结果',
-          onPressed: () {
-            app.setPendingResult(item.result);
-            app.push(AppRoute.calcResult);
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class LedgerManualDetailScreen extends StatefulWidget {
-  const LedgerManualDetailScreen({super.key});
-
-  @override
-  State<LedgerManualDetailScreen> createState() => _LedgerManualDetailScreenState();
-}
-
-class _LedgerManualDetailScreenState extends State<LedgerManualDetailScreen> {
-  List<String>? _tags;
-  TextEditingController? _note;
-
-  @override
-  Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final entry = app.ledgerEntries.where((e) => e.id == app.detailId).firstOrNull;
-    if (entry == null) return EmptyRedirectScreen(message: '记录不存在', onGo: () => app.replaceRoute(AppRoute.ledger));
-
-    _tags ??= List<String>.from(entry.tags);
-    _note ??= TextEditingController(text: entry.note);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LoanTopBar(
-          onBack: () => app.pop(),
-          title: entry.title,
-          subtitle: '${entry.direction == LedgerDirection.income ? '收入' : '支出'} · ${formatShortDateTime(DateTime.parse(entry.createdAt))}',
-        ),
-        LoanCard(
-          child: LoanHeroAmount(
-            '${entry.direction == LedgerDirection.income ? '+' : '−'}${app.money(entry.amount)}',
-            fontSize: 28,
-          ),
-        ),
-        TagPicker(
-          value: _tags!,
-          onChange: (next) {
-            setState(() => _tags = next);
-            app.persistLedger(app.ledgerEntries.map((e) => e.id == entry.id ? e.copyWith(tags: next) : e).toList());
-          },
-        ),
-        LoanCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const LoanLabel('备注'),
-              LoanInput(
-                controller: _note!,
-                onChanged: (v) => app.persistLedger(app.ledgerEntries.map((e) => e.id == entry.id ? e.copyWith(tags: _tags!, note: v) : e).toList()),
-              ),
-            ],
-          ),
-        ),
-        LoanSecondaryButton(
-          label: '删除此笔',
-          onPressed: () async {
-            await app.persistLedger(app.ledgerEntries.where((e) => e.id != entry.id).toList());
-            app.showToast('已删除');
-            app.replaceRoute(AppRoute.ledger);
-          },
-        ),
-      ],
-    );
+    if (item == null) {
+      return EmptyRedirectScreen(
+        message: app.tr('common.missing'),
+        onGo: () => app.replaceRoute(AppRoute.savedList),
+      );
+    }
+    // Ensure pending mirrors saved item (idempotent if already set by list tap).
+    if (app.pendingSavedId != item.id) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          context.read<AppState>().setPendingResult(item.result, savedId: item.id);
+        }
+      });
+    }
+    return const CalcResultScreen();
   }
 }
 
@@ -1062,28 +1408,21 @@ class ProfileHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final ledgerCount = app.calculations.length + app.ledgerEntries.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const LoanTopBar(title: '我的', subtitle: '本地资料与偏好'),
+        LoanTopBar(title: app.tr('profile.title'), subtitle: app.tr('profile.subtitle')),
         LoanCard(
           child: Row(
             children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(color: RevolutColors.surface2, shape: BoxShape.circle),
-                alignment: Alignment.center,
-                child: Text(app.profile.avatar, style: const TextStyle(fontSize: 32)),
-              ),
-              const SizedBox(width: 16),
+              Text(app.profile.avatar, style: const TextStyle(fontSize: 36)),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(app.profile.nickname, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                    const LoanMuted('数据仅保存在本设备', fontSize: 13),
+                    Text(app.displayNickname(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    LoanMuted(app.tr('profile.localOnly'), fontSize: 12),
                   ],
                 ),
               ),
@@ -1092,19 +1431,25 @@ class ProfileHomeScreen extends StatelessWidget {
         ),
         LoanStatRow(
           children: [
-            LoanStatBox(label: '记账条目', value: '$ledgerCount'),
-            LoanStatBox(label: '储蓄目标', value: '${app.savingsGoals.length}'),
+            LoanStatBox(label: app.tr('profile.savedCount'), value: '${app.calculations.length}'),
+            LoanStatBox(label: app.tr('profile.savingsCount'), value: '${app.savingsGoals.length}'),
           ],
         ),
-        LoanCard(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              LoanMenuItem(label: '偏好设置', onTap: () => app.push(AppRoute.profileSettings)),
-              LoanMenuItem(label: '数据管理', onTap: () => app.push(AppRoute.profileData)),
-              LoanMenuItem(label: '关于与隐私', onTap: () => app.push(AppRoute.profileAbout)),
-            ],
-          ),
+        LoanMenuItem(
+          label: app.tr('profile.saved'),
+          onTap: () => app.push(AppRoute.savedList),
+        ),
+        LoanMenuItem(
+          label: app.tr('profile.settings'),
+          onTap: () => app.push(AppRoute.profileSettings),
+        ),
+        LoanMenuItem(
+          label: app.tr('profile.data'),
+          onTap: () => app.push(AppRoute.profileData),
+        ),
+        LoanMenuItem(
+          label: app.tr('profile.about'),
+          onTap: () => app.push(AppRoute.profileAbout),
         ),
       ],
     );
@@ -1119,25 +1464,26 @@ class ProfileSettingsScreen extends StatefulWidget {
 }
 
 class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
-  late String _currencyCode;
-  late TextEditingController _decimals;
-  late TextEditingController _nickname;
+  late TextEditingController _nick;
   late TextEditingController _avatar;
+  late int _decimals;
+  late AppLocale _locale;
+  late String _currency;
 
   @override
   void initState() {
     super.initState();
     final app = context.read<AppState>();
-    _currencyCode = app.settings.currencyCode;
-    _decimals = TextEditingController(text: '${app.settings.decimals}');
-    _nickname = TextEditingController(text: app.profile.nickname);
+    _nick = TextEditingController(text: app.profile.nickname);
     _avatar = TextEditingController(text: app.profile.avatar);
+    _decimals = app.settings.decimals;
+    _locale = app.settings.locale;
+    _currency = app.settings.currencyCode;
   }
 
   @override
   void dispose() {
-    _decimals.dispose();
-    _nickname.dispose();
+    _nick.dispose();
     _avatar.dispose();
     super.dispose();
   }
@@ -1148,48 +1494,55 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LoanTopBar(onBack: () => app.pop(), title: '偏好设置'),
+        LoanTopBar(onBack: () => app.pop(), title: app.tr('settings.title')),
         LoanCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const LoanLabel('昵称'),
-              LoanInput(controller: _nickname, onChanged: (_) {}),
-              const LoanLabel('头像（emoji）', marginTop: 12),
+              LoanLabel(app.tr('settings.nickname')),
+              LoanInput(controller: _nick, onChanged: (_) {}),
+              LoanLabel(app.tr('settings.avatar'), marginTop: 12),
               LoanInput(controller: _avatar, onChanged: (_) {}),
-              const LoanLabel('小数位', marginTop: 12),
-              LoanInput(controller: _decimals, keyboardType: TextInputType.number, onChanged: (_) {}),
+              LoanLabel(app.tr('settings.decimals'), marginTop: 12),
+              LoanSegment(
+                options: const [('0', '0'), ('2', '2')],
+                selected: '$_decimals',
+                onSelect: (v) => setState(() => _decimals = int.parse(v)),
+              ),
+              LoanLabel(app.tr('settings.language'), marginTop: 12),
+              LoanSegment(
+                options: appLocales.map((e) => (e.$1.id, e.$2)).toList(),
+                selected: _locale.id,
+                onSelect: (v) => setState(() => _locale = AppLocaleX.fromId(v)),
+              ),
+              LoanLabel(app.tr('currency.label'), marginTop: 12),
+              CurrencyPicker(
+                currencyCode: _currency,
+                onChange: (c) => setState(() => _currency = c),
+              ),
             ],
           ),
         ),
-        CurrencyPicker(
-          compact: true,
-          currencyCode: _currencyCode,
-          onChange: (code) => setState(() {
-            _currencyCode = code;
-            _decimals.text = '${getCurrency(code).defaultDecimals}';
-          }),
-        ),
         LoanPrimaryButton(
-          label: '保存',
+          label: app.tr('settings.save'),
           onPressed: () async {
-            final dec = int.tryParse(_decimals.text.replaceAll(RegExp(r'\D'), '')) ?? 2;
-            await app.updateProfile(app.profile.copyWith(nickname: _nickname.text.trim().isEmpty ? '借款人' : _nickname.text.trim(), avatar: _avatar.text));
-            await app.updateSettings(AppSettings(currencyCode: _currencyCode, decimals: dec.clamp(0, 4), theme: 'light'));
+            await app.updateProfile(UserProfile(
+              nickname: _nick.text.trim(),
+              avatar: _avatar.text.trim().isEmpty ? '🧑‍💼' : _avatar.text.trim(),
+              createdAt: app.profile.createdAt,
+            ));
+            await app.updateSettings(app.settings.copyWith(
+              decimals: _decimals,
+              locale: _locale,
+              currencyCode: _currency,
+            ));
+            app.showToast(app.tr('toast.savedProfile'));
             app.pop();
           },
         ),
       ],
     );
   }
-}
-
-extension on UserProfile {
-  UserProfile copyWith({String? nickname, String? avatar}) => UserProfile(
-        nickname: nickname ?? this.nickname,
-        avatar: avatar ?? this.avatar,
-        createdAt: createdAt,
-      );
 }
 
 class ProfileDataScreen extends StatelessWidget {
@@ -1201,38 +1554,31 @@ class ProfileDataScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LoanTopBar(onBack: () => app.pop(), title: '数据管理'),
-        LoanCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              LoanMenuItem(label: '导出 JSON 备份', trailing: const Text('↓'), onTap: () => app.exportData()),
-              LoanMenuItem(
-                label: '清空计算与储蓄数据',
-                trailing: const Text('!'),
-                danger: true,
-                onTap: () async {
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('确认清空'),
-                      content: const Text('确定清空所有计算与储蓄数据？偏好设置将保留。'),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('确定')),
-                      ],
-                    ),
-                  );
-                  if (ok == true) {
-                    await app.clearBusiness();
-                    app.showToast('业务数据已清空');
-                  }
-                },
+        LoanTopBar(onBack: () => app.pop(), title: app.tr('data.title')),
+        LoanPrimaryButton(label: app.tr('data.export'), onPressed: app.exportData),
+        const SizedBox(height: 8),
+        LoanSecondaryButton(
+          label: app.tr('data.clear'),
+          onPressed: () async {
+            final ok = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(app.tr('data.clear')),
+                content: Text(app.tr('data.confirm')),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(app.tr('common.back'))),
+                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(app.tr('data.clear'))),
+                ],
               ),
-            ],
-          ),
+            );
+            if (ok == true) {
+              await app.clearBusiness();
+              app.showToast(app.tr('data.cleared'));
+            }
+          },
         ),
-        const LoanMuted('清空仅删除贷款方案、收支记账与储蓄目标，不会重置昵称、货币等偏好。', fontSize: 13),
+        const SizedBox(height: 12),
+        LoanMuted(app.tr('data.hint'), fontSize: 12),
       ],
     );
   }
@@ -1243,17 +1589,12 @@ class ProfileAboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LoanTopBar(onBack: () => context.read<AppState>().pop(), title: '关于与隐私'),
-        const LoanCard(
-          child: LoanMuted(
-            '本原型为离线贷款计算器演示：所有计算在浏览器内完成，数据写入 localStorage，不连接任何服务器，不上传个人信息。'
-            '导出文件仅由您自行保存。设计参考 Revolut Mobile 视觉规范，仅供产品原型与后续 App 开发参考。',
-            fontSize: 15,
-          ),
-        ),
+        LoanTopBar(onBack: () => app.pop(), title: app.tr('about.title')),
+        LoanCard(child: LoanMuted(app.tr('about.body'), fontSize: 14)),
       ],
     );
   }
@@ -1264,24 +1605,30 @@ class RedirectCalcScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppState>().replaceRoute(AppRoute.calc);
-    });
-    return const SizedBox.shrink();
+    final app = context.watch<AppState>();
+    return EmptyRedirectScreen(
+      message: app.tr('home.fillFirst'),
+      onGo: () => app.goTab(0),
+    );
   }
 }
 
 class EmptyRedirectScreen extends StatelessWidget {
   const EmptyRedirectScreen({super.key, required this.message, required this.onGo});
-
   final String message;
   final VoidCallback onGo;
 
   @override
   Widget build(BuildContext context) {
-    return LoanEmpty(
-      message: message,
-      action: LoanPrimaryButton(label: '返回', onPressed: onGo),
+    final app = context.watch<AppState>();
+    return Column(
+      children: [
+        LoanEmpty(
+          icon: const Icon(LucideIcons.circleAlert, size: 40, color: RevolutColors.brandSolid),
+          message: message,
+          action: LoanPrimaryButton(label: app.tr('common.back'), onPressed: onGo),
+        ),
+      ],
     );
   }
 }

@@ -5,10 +5,17 @@ import 'package:flutter/material.dart';
 import '../theme/revolut_theme.dart';
 
 class DonutSegment {
-  const DonutSegment({required this.value, required this.color, required this.label});
+  const DonutSegment({
+    required this.value,
+    required this.color,
+    required this.label,
+    this.amountText,
+  });
   final double value;
   final Color color;
   final String label;
+  /// 环外明细金额文案；不进圆心
+  final String? amountText;
 }
 
 class DonutChart extends StatefulWidget {
@@ -23,6 +30,7 @@ class DonutChart extends StatefulWidget {
   });
 
   final List<DonutSegment> segments;
+  /// 圆心主文案：宜短，如 39%
   final String centerLabel;
   final String? centerSub;
   final double size;
@@ -71,7 +79,7 @@ class _DonutChartState extends State<DonutChart> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final total = widget.segments.fold<double>(0, (s, x) => s + x.value);
+    final total = widget.segments.fold<double>(0, (s, x) => s + math.max(0, x.value));
     final safeTotal = total <= 0 ? 1.0 : total;
     final r = (widget.size - widget.stroke) / 2;
     final c = 2 * math.pi * r;
@@ -84,63 +92,77 @@ class _DonutChartState extends State<DonutChart> with SingleTickerProviderStateM
           SizedBox(
             width: widget.size,
             height: widget.size,
-          child: AnimatedBuilder(
-            animation: _progress,
-            builder: (context, _) {
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  CustomPaint(
-                    size: Size(widget.size, widget.size),
-                    painter: _DonutPainter(
-                      segments: widget.segments,
-                      total: safeTotal,
-                      stroke: widget.stroke,
-                      progress: _progress.value,
-                      circumference: c,
-                      trackColor: RevolutColors.donutTrack,
-                    ),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.centerLabel,
-                        textAlign: TextAlign.center,
-                        style: monoStyle(context, size: 22, w: FontWeight.w700),
+            child: AnimatedBuilder(
+              animation: _progress,
+              builder: (context, _) {
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CustomPaint(
+                      size: Size(widget.size, widget.size),
+                      painter: _DonutPainter(
+                        segments: widget.segments,
+                        total: safeTotal,
+                        stroke: widget.stroke,
+                        progress: _progress.value,
+                        circumference: c,
+                        trackColor: RevolutColors.donutTrack,
                       ),
-                      if (widget.centerSub != null)
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Text(
-                          widget.centerSub!,
+                          widget.centerLabel,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 12, height: 1.3, color: RevolutColors.textSecondary),
+                          style: monoStyle(context, size: 22, w: FontWeight.w700),
                         ),
-                    ],
-                  ),
-                ],
-              );
-            },
+                        if (widget.centerSub != null)
+                          Text(
+                            widget.centerSub!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.3,
+                              color: RevolutColors.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 16,
-          alignment: WrapAlignment.center,
-          children: widget.segments.map((s) {
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: s.color, shape: BoxShape.circle),
+          const SizedBox(height: 12),
+          Column(
+            children: widget.segments.map((s) {
+              final pct = ((math.max(0, s.value) / safeTotal) * 100).toStringAsFixed(0);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(color: s.color, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        s.label,
+                        style: const TextStyle(fontSize: 12, color: RevolutColors.textSecondary),
+                      ),
+                    ),
+                    Text(
+                      s.amountText ?? '$pct%',
+                      style: monoStyle(context, size: 12, w: FontWeight.w600),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                Text(s.label, style: const TextStyle(fontSize: 12, color: RevolutColors.textSecondary)),
-              ],
-            );
-          }).toList(),
-        ),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );
@@ -176,7 +198,7 @@ class _DonutPainter extends CustomPainter {
 
     var startAngle = -math.pi / 2;
     for (final seg in segments) {
-      final sweep = (seg.value / total) * 2 * math.pi * progress;
+      final sweep = (math.max(0, seg.value) / total) * 2 * math.pi * progress;
       final paint = Paint()
         ..color = seg.color
         ..style = PaintingStyle.stroke

@@ -23,13 +23,21 @@ const zhCN = {
   'cat.mortgage': '房贷',
   'cat.auto': '车贷',
   'cat.personal': '消费',
+  'cat.dual': '双贷款',
   'cat.other': '其他',
+  'dual.partA': '贷款 A',
+  'dual.partB': '贷款 B',
+  'dual.combinedMonthly': '合计月供',
+  'dual.combinedFirst': '合计首月',
+  'dual.partBreakdown': '分笔明细',
+  'dual.insight': '两笔合计月供约 {monthly}，总利息约 {interest}，总成本约 {total}。',
+  'dual.params': '双贷款参数',
+  'home.subtitle': '房贷 · 车贷 · 消费贷 · 双贷款 · 对比',
 
   'mode.equalPayment': '等额本息',
   'mode.equalPrincipal': '等额本金',
 
   'home.title': '贷款计算器',
-  'home.subtitle': '房贷 · 车贷 · 消费贷 · 对比方案',
   'home.badge.local': '数据在本地',
   'home.badge.saved': '已存 {count} 条',
   'home.loanType': '贷款类型',
@@ -142,20 +150,17 @@ const zhCN = {
   'savings.progress': '完成度',
   'savings.created': '目标已创建',
   'savings.missing': '目标不存在',
-  'savings.eta.done': '已达成目标，继续保持即可。',
-  'savings.eta.start': '还差 {amount}；开始存入后，将根据你的节奏估算达标时间。',
-  'savings.eta.continue': '还差 {amount}；继续存入即可更新预测。',
-  'savings.eta.long': '还差 {amount}；按当前节奏耗时较长，可适当提高存入频率。',
-  'savings.eta.soon': '还差 {amount}；按近期节奏，约 1 个月内有望达标。',
-  'savings.eta.months': '还差 {amount}；按近期存入节奏，约 {months} 个月后有望达标。',
-  'savings.buffer.intro': '主流建议预留 3～6 个月月供作应急缓冲。',
-  'savings.buffer.noLink': '{intro} 在计算页保存方案并关联后，可查看相当于几个月月供。',
-  'savings.buffer.high':
-    '{intro} 当前已存约 {months} 个月月供（方案月供 {monthly}），高于 6 个月建议。',
-  'savings.buffer.ok':
-    '{intro} 当前已存约 {months} 个月月供（方案月供 {monthly}），处于建议区间内。',
-  'savings.buffer.low':
-    '{intro} 当前约 {months} 个月月供；距 3 个月下限还差 {gap}（月供 {monthly}）。',
+  'savings.eta.done': '已达成目标',
+  'savings.eta.start': '还差 {amount}，存入后可估算达标时间',
+  'savings.eta.continue': '还差 {amount}，继续存入可更新预测',
+  'savings.eta.long': '还差 {amount}，当前节奏偏慢',
+  'savings.eta.soon': '还差 {amount}，约 1 个月达标',
+  'savings.eta.months': '还差 {amount}，约 {months} 个月达标',
+  'savings.buffer.intro': '建议预留 3～6 个月月供',
+  'savings.buffer.noLink': '关联贷款方案后可查看月供缓冲',
+  'savings.buffer.high': '已覆盖约 {months} 个月月供，高于建议',
+  'savings.buffer.ok': '已覆盖约 {months} 个月月供，处于建议区间',
+  'savings.buffer.low': '已覆盖约 {months} 个月月供，距 3 个月还差 {gap}',
 
   'profile.title': '我的',
   'profile.subtitle': '本地资料与已保存方案',
@@ -230,13 +235,22 @@ const en: Record<MessageKey, string> = {
   'cat.mortgage': 'Home',
   'cat.auto': 'Auto',
   'cat.personal': 'Personal',
+  'cat.dual': 'Dual',
   'cat.other': 'Other',
+  'dual.partA': 'Loan A',
+  'dual.partB': 'Loan B',
+  'dual.combinedMonthly': 'Combined monthly',
+  'dual.combinedFirst': 'Combined first month',
+  'dual.partBreakdown': 'Per-loan breakdown',
+  'dual.insight':
+    'Combined monthly about {monthly}; total interest about {interest}; total cost about {total}.',
+  'dual.params': 'Dual loan details',
 
   'mode.equalPayment': 'Equal payment',
   'mode.equalPrincipal': 'Equal principal',
 
   'home.title': 'Loan calculator',
-  'home.subtitle': 'Home · Auto · Personal · Compare',
+  'home.subtitle': 'Home · Auto · Personal · Dual · Compare',
   'home.badge.local': 'Stored on device',
   'home.badge.saved': '{count} saved',
   'home.loanType': 'Loan type',
@@ -352,24 +366,17 @@ const en: Record<MessageKey, string> = {
   'savings.progress': 'Progress',
   'savings.created': 'Goal created',
   'savings.missing': 'Goal not found',
-  'savings.eta.done': 'Goal reached — keep it up.',
-  'savings.eta.start':
-    '{amount} to go; start depositing to estimate a finish date.',
-  'savings.eta.continue': '{amount} to go; keep depositing to refresh the estimate.',
-  'savings.eta.long':
-    '{amount} to go; at this pace it will take a while — consider depositing more often.',
-  'savings.eta.soon': '{amount} to go; at recent pace, about 1 month left.',
-  'savings.eta.months':
-    '{amount} to go; at recent pace, about {months} months left.',
-  'savings.buffer.intro': 'A common buffer is 3–6 months of payments.',
-  'savings.buffer.noLink':
-    '{intro} Save and link a plan on Calc to see months of cover.',
-  'savings.buffer.high':
-    '{intro} You have about {months} months ({monthly}/mo) — above the 6‑month guide.',
-  'savings.buffer.ok':
-    '{intro} You have about {months} months ({monthly}/mo) — within the guide.',
-  'savings.buffer.low':
-    '{intro} About {months} months now; {gap} to reach 3 months ({monthly}/mo).',
+  'savings.eta.done': 'Goal reached',
+  'savings.eta.start': '{amount} left — deposit to estimate finish',
+  'savings.eta.continue': '{amount} left — keep depositing to refresh',
+  'savings.eta.long': '{amount} left — pace is slow',
+  'savings.eta.soon': '{amount} left — about 1 month',
+  'savings.eta.months': '{amount} left — about {months} months',
+  'savings.buffer.intro': 'Aim for 3–6 months of payments',
+  'savings.buffer.noLink': 'Link a loan plan to see payment buffer',
+  'savings.buffer.high': 'About {months} months covered — above guide',
+  'savings.buffer.ok': 'About {months} months covered — on track',
+  'savings.buffer.low': 'About {months} months covered — {gap} to 3 months',
 
   'profile.title': 'Profile',
   'profile.subtitle': 'Local profile & saved plans',
@@ -446,13 +453,22 @@ const es: Record<MessageKey, string> = {
   'cat.mortgage': 'Hipoteca',
   'cat.auto': 'Auto',
   'cat.personal': 'Personal',
+  'cat.dual': 'Doble',
   'cat.other': 'Otro',
+  'dual.partA': 'Préstamo A',
+  'dual.partB': 'Préstamo B',
+  'dual.combinedMonthly': 'Cuota combinada',
+  'dual.combinedFirst': 'Primera cuota combinada',
+  'dual.partBreakdown': 'Detalle por préstamo',
+  'dual.insight':
+    'Cuota combinada ~{monthly}; interés total ~{interest}; costo total ~{total}.',
+  'dual.params': 'Datos del doble préstamo',
 
   'mode.equalPayment': 'Cuota fija',
   'mode.equalPrincipal': 'Capital fijo',
 
   'home.title': 'Calculadora de préstamos',
-  'home.subtitle': 'Hipoteca · Auto · Personal · Comparar',
+  'home.subtitle': 'Hipoteca · Auto · Personal · Doble · Comparar',
   'home.badge.local': 'Datos en el dispositivo',
   'home.badge.saved': '{count} guardados',
   'home.loanType': 'Tipo de préstamo',
@@ -568,24 +584,17 @@ const es: Record<MessageKey, string> = {
   'savings.progress': 'Progreso',
   'savings.created': 'Meta creada',
   'savings.missing': 'Meta no encontrada',
-  'savings.eta.done': 'Meta alcanzada — ¡sigue así!',
-  'savings.eta.start':
-    'Faltan {amount}; empieza a ingresar para estimar la fecha.',
-  'savings.eta.continue': 'Faltan {amount}; sigue ingresando para actualizar la estimación.',
-  'savings.eta.long':
-    'Faltan {amount}; a este ritmo tardarás — considera ingresar más a menudo.',
-  'savings.eta.soon': 'Faltan {amount}; a ritmo reciente, ~1 mes.',
-  'savings.eta.months':
-    'Faltan {amount}; a ritmo reciente, ~{months} meses.',
-  'savings.buffer.intro': 'Suele recomendarse 3–6 meses de cuota como colchón.',
-  'savings.buffer.noLink':
-    '{intro} Guarda y vincula un plan en Calcular para ver la cobertura.',
-  'savings.buffer.high':
-    '{intro} Tienes ~{months} meses ({monthly}/mes) — por encima de 6 meses.',
-  'savings.buffer.ok':
-    '{intro} Tienes ~{months} meses ({monthly}/mes) — dentro de la guía.',
-  'savings.buffer.low':
-    '{intro} Ahora ~{months} meses; faltan {gap} para 3 meses ({monthly}/mes).',
+  'savings.eta.done': 'Meta alcanzada',
+  'savings.eta.start': 'Faltan {amount}; ingresa para estimar',
+  'savings.eta.continue': 'Faltan {amount}; sigue ingresando',
+  'savings.eta.long': 'Faltan {amount}; ritmo lento',
+  'savings.eta.soon': 'Faltan {amount}; ~1 mes',
+  'savings.eta.months': 'Faltan {amount}; ~{months} meses',
+  'savings.buffer.intro': 'Apunta a 3–6 meses de cuota',
+  'savings.buffer.noLink': 'Vincula un plan para ver el colchón',
+  'savings.buffer.high': 'Cubres ~{months} meses — por encima',
+  'savings.buffer.ok': 'Cubres ~{months} meses — en rango',
+  'savings.buffer.low': 'Cubres ~{months} meses — faltan {gap} para 3',
 
   'profile.title': 'Perfil',
   'profile.subtitle': 'Perfil local y planes guardados',
@@ -683,11 +692,12 @@ export type TranslateFn = (
 ) => string;
 
 export function categoryMessageKey(
-  category: 'mortgage' | 'auto' | 'personal' | 'other',
+  category: 'mortgage' | 'auto' | 'personal' | 'dual' | 'other',
 ): MessageKey {
   if (category === 'mortgage') return 'cat.mortgage';
   if (category === 'auto') return 'cat.auto';
   if (category === 'personal') return 'cat.personal';
+  if (category === 'dual') return 'cat.dual';
   return 'cat.other';
 }
 
@@ -706,4 +716,31 @@ export function htmlLang(locale: AppLocale): string {
   if (locale === 'zh-CN') return 'zh-CN';
   if (locale === 'es') return 'es';
   return 'en';
+}
+
+/** 各语言下的默认昵称；用于识别「仍是系统默认」从而随界面语言切换展示 */
+export const DEFAULT_NICKNAMES = ['借款人', 'Borrower', 'Prestatario'] as const;
+
+export function isDefaultNickname(nickname: string): boolean {
+  const n = nickname.trim();
+  return (DEFAULT_NICKNAMES as readonly string[]).includes(n) || n === '';
+}
+
+export function displayNickname(nickname: string, t: TranslateFn): string {
+  return isDefaultNickname(nickname) ? t('settings.defaultNick') : nickname;
+}
+
+/** 种子/默认储蓄目标名，随界面语言展示 */
+export const DEFAULT_SAVINGS_NAMES = [
+  '月供缓冲金',
+  'Payment buffer',
+  'Colchón de cuota',
+] as const;
+
+export function isDefaultSavingsName(name: string): boolean {
+  return (DEFAULT_SAVINGS_NAMES as readonly string[]).includes(name.trim());
+}
+
+export function displaySavingsName(name: string, t: TranslateFn): string {
+  return isDefaultSavingsName(name) ? t('savings.defaultName') : name;
 }

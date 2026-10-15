@@ -1,6 +1,6 @@
 # 贷款计算器 · Flutter（iOS / Android）
 
-与 Make 原型 `src/prototypes/loan-calculator` 及 PRD `src/resources/prd/prd-01-loan-calculator.md` 对齐的 **原生壳**，Revolut 浅色视觉与四 Tab 流程一致。
+与 Make 原型 `src/prototypes/loan-calculator` 及 PRD `src/resources/prd/prd-01-loan-calculator.md` 对齐的 **原生壳**，Revolut 浅色视觉与三 Tab（计算 / 储蓄 / 我的）流程一致。
 
 ## 平台
 

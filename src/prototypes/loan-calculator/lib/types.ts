@@ -1,6 +1,15 @@
 export type RepaymentMode = 'equal-payment' | 'equal-principal';
 
-export type LoanCategory = 'mortgage' | 'auto' | 'personal' | 'other';
+export type LoanCategory = 'mortgage' | 'auto' | 'personal' | 'dual' | 'other';
+
+/** 通用双贷款中的单笔 */
+export interface DualLoanPart {
+  principal: number;
+  annualRatePercent: number;
+  termMonths: number;
+  mode: RepaymentMode;
+  label?: string;
+}
 
 export interface CalcInput {
   principal: number;
@@ -13,6 +22,8 @@ export interface CalcInput {
   vehiclePrice?: number;
   /** 车贷：首付金额 */
   downPayment?: number;
+  /** 双贷款：两笔明细 */
+  parts?: DualLoanPart[];
 }
 
 export interface AmortizationRow {
@@ -31,6 +42,8 @@ export interface CalcResult {
   totalInterest: number;
   totalPayment: number;
   schedule: AmortizationRow[];
+  /** 双贷款时各笔完整结果 */
+  partsResults?: CalcResult[];
 }
 
 export interface SavedCalculation {

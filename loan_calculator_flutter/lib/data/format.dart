@@ -17,3 +17,7 @@ String formatMoney(double value, AppSettings settings) {
   );
   return fmt.format(value);
 }
+
+String formatShortDate(DateTime dt) => DateFormat('yyyy-MM-dd').format(dt);
+
+String formatShortDateTime(DateTime dt) => DateFormat('yyyy-MM-dd HH:mm').format(dt);

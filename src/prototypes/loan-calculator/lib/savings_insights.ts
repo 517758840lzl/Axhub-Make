@@ -55,34 +55,23 @@ export function savingsBufferLine(
     ? calculations.find((c) => c.id === goal.linkedCalcId)
     : undefined;
   const monthly = linked?.result.monthlyPayment;
-  const intro = t('savings.buffer.intro');
 
   if (!monthly || monthly <= 0) {
-    return t('savings.buffer.noLink', { intro });
+    return t('savings.buffer.noLink');
   }
 
   const monthsCovered = goal.current / monthly;
   const m = monthsCovered.toFixed(1);
 
   if (monthsCovered >= 6) {
-    return t('savings.buffer.high', {
-      intro,
-      months: m,
-      monthly: money(monthly),
-    });
+    return t('savings.buffer.high', { months: m });
   }
   if (monthsCovered >= 3) {
-    return t('savings.buffer.ok', {
-      intro,
-      months: m,
-      monthly: money(monthly),
-    });
+    return t('savings.buffer.ok', { months: m });
   }
   const gap = (3 - monthsCovered) * monthly;
   return t('savings.buffer.low', {
-    intro,
     months: m,
     gap: money(gap),
-    monthly: money(monthly),
   });
 }

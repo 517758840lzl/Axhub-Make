@@ -25,7 +25,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late final Animation<double> _scale;
   late final Animation<double> _fadeIn;
   late final Animation<double> _textFade;
-  late final Animation<double> _exitFade;
 
   bool _minTimeDone = false;
   bool _animDone = false;
@@ -41,8 +40,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _ring = CurvedAnimation(parent: _master, curve: const Interval(0, 0.45, curve: Curves.easeOutCubic));
     _scale = CurvedAnimation(parent: _master, curve: const Interval(0.15, 0.55, curve: Curves.elasticOut));
     _fadeIn = CurvedAnimation(parent: _master, curve: const Interval(0.1, 0.4, curve: Curves.easeOut));
-    _textFade = CurvedAnimation(parent: _master, curve: const Interval(0.45, 0.75, curve: Curves.easeOut));
-    _exitFade = CurvedAnimation(parent: _master, curve: const Interval(0.82, 1, curve: Curves.easeIn));
+    _textFade = CurvedAnimation(parent: _master, curve: const Interval(0.45, 0.85, curve: Curves.easeOut));
+    // 不再淡出到透明（会露出黑底）；切首页由外层 AnimatedSwitcher 做交叉淡入
 
     unawaited(_master.forward());
     Timer(const Duration(milliseconds: 1600), () {
@@ -80,79 +79,76 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       animation: Listenable.merge([_master, _pulse]),
       builder: (context, _) {
         final glow = 0.35 + _pulse.value * 0.25;
-        final opacity = (1 - _exitFade.value).clamp(0.0, 1.0);
 
-        return Opacity(
-          opacity: opacity,
-          child: Material(
-            color: RevolutColors.canvas,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    RevolutColors.canvas,
-                    RevolutColors.brandSolid.withValues(alpha: 0.07),
-                  ],
-                ),
+        return Material(
+          color: RevolutColors.canvas,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  RevolutColors.canvas,
+                  RevolutColors.brandSolid.withValues(alpha: 0.07),
+                ],
               ),
-              child: SafeArea(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      FadeTransition(
-                        opacity: _fadeIn,
-                        child: ScaleTransition(
-                          scale: Tween<double>(begin: 0.82, end: 1).animate(_scale),
-                          child: BrandLogo(
-                            size: 112,
-                            ringProgress: _ring.value,
-                            glow: glow,
-                          ),
+            ),
+            child: SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FadeTransition(
+                      opacity: _fadeIn,
+                      child: ScaleTransition(
+                        scale: Tween<double>(begin: 0.82, end: 1).animate(_scale),
+                        child: BrandLogo(
+                          size: 112,
+                          ringProgress: _ring.value,
+                          glow: glow,
                         ),
                       ),
-                      const SizedBox(height: 28),
-                      FadeTransition(
-                        opacity: _textFade,
-                        child: Column(
-                          children: [
-                            Text(
-                              '贷款计算器',
-                              style: GoogleFonts.inter(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.5,
-                                color: RevolutColors.text,
-                              ),
+                    ),
+                    const SizedBox(height: 28),
+                    FadeTransition(
+                      opacity: _textFade,
+                      child: Column(
+                        children: [
+                          Text(
+                            '贷款计算器',
+                            style: GoogleFonts.notoSansSc(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0,
+                              height: 1.25,
+                              color: RevolutColors.text,
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '智能试算 · 本地隐私 · 储蓄规划',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: RevolutColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 48),
-                      FadeTransition(
-                        opacity: _textFade,
-                        child: SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: RevolutColors.brandSolid.withValues(alpha: 0.85),
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '智能试算 · 本地隐私 · 储蓄规划',
+                            style: GoogleFonts.notoSansSc(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: RevolutColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    FadeTransition(
+                      opacity: _textFade,
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: RevolutColors.brandSolid.withValues(alpha: 0.85),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

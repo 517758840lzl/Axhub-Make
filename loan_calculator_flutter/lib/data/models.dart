@@ -1,8 +1,44 @@
+import 'i18n.dart';
+
 enum RepaymentMode { equalPayment, equalPrincipal }
 
-enum LoanCategory { mortgage, auto, personal, other }
+enum LoanCategory { mortgage, auto, personal, dual, other }
 
 enum LedgerDirection { expense, income }
+
+class DualLoanPart {
+  DualLoanPart({
+    required this.principal,
+    required this.annualRatePercent,
+    required this.termMonths,
+    required this.mode,
+    this.label,
+  });
+
+  final double principal;
+  final double annualRatePercent;
+  final int termMonths;
+  final RepaymentMode mode;
+  final String? label;
+
+  Map<String, dynamic> toJson() => {
+        'principal': principal,
+        'annualRatePercent': annualRatePercent,
+        'termMonths': termMonths,
+        'mode': mode == RepaymentMode.equalPayment ? 'equal-payment' : 'equal-principal',
+        'label': label,
+      };
+
+  factory DualLoanPart.fromJson(Map<String, dynamic> j) => DualLoanPart(
+        principal: (j['principal'] as num).toDouble(),
+        annualRatePercent: (j['annualRatePercent'] as num).toDouble(),
+        termMonths: j['termMonths'] as int,
+        mode: (j['mode'] as String?) == 'equal-principal'
+            ? RepaymentMode.equalPrincipal
+            : RepaymentMode.equalPayment,
+        label: j['label'] as String?,
+      );
+}
 
 class CalcInput {
   CalcInput({
@@ -12,6 +48,9 @@ class CalcInput {
     required this.mode,
     required this.category,
     this.label,
+    this.vehiclePrice,
+    this.downPayment,
+    this.parts,
   });
 
   final double principal;
@@ -20,6 +59,9 @@ class CalcInput {
   final RepaymentMode mode;
   final LoanCategory category;
   final String? label;
+  final double? vehiclePrice;
+  final double? downPayment;
+  final List<DualLoanPart>? parts;
 
   Map<String, dynamic> toJson() => {
         'principal': principal,
@@ -28,18 +70,33 @@ class CalcInput {
         'mode': mode == RepaymentMode.equalPayment ? 'equal-payment' : 'equal-principal',
         'category': category.name,
         'label': label,
+        if (vehiclePrice != null) 'vehiclePrice': vehiclePrice,
+        if (downPayment != null) 'downPayment': downPayment,
+        if (parts != null) 'parts': parts!.map((e) => e.toJson()).toList(),
       };
 
-  factory CalcInput.fromJson(Map<String, dynamic> j) => CalcInput(
-        principal: (j['principal'] as num).toDouble(),
-        annualRatePercent: (j['annualRatePercent'] as num).toDouble(),
-        termMonths: j['termMonths'] as int,
-        mode: (j['mode'] as String?) == 'equal-principal'
-            ? RepaymentMode.equalPrincipal
-            : RepaymentMode.equalPayment,
-        category: LoanCategory.values.byName(j['category'] as String? ?? 'mortgage'),
-        label: j['label'] as String?,
-      );
+  factory CalcInput.fromJson(Map<String, dynamic> j) {
+    final catRaw = j['category'] as String? ?? 'mortgage';
+    final category = LoanCategory.values.firstWhere(
+      (e) => e.name == catRaw,
+      orElse: () => LoanCategory.mortgage,
+    );
+    return CalcInput(
+      principal: (j['principal'] as num).toDouble(),
+      annualRatePercent: (j['annualRatePercent'] as num).toDouble(),
+      termMonths: j['termMonths'] as int,
+      mode: (j['mode'] as String?) == 'equal-principal'
+          ? RepaymentMode.equalPrincipal
+          : RepaymentMode.equalPayment,
+      category: category,
+      label: j['label'] as String?,
+      vehiclePrice: (j['vehiclePrice'] as num?)?.toDouble(),
+      downPayment: (j['downPayment'] as num?)?.toDouble(),
+      parts: (j['parts'] as List?)
+          ?.map((e) => DualLoanPart.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 }
 
 class AmortizationRow {
@@ -83,6 +140,7 @@ class CalcResult {
     required this.totalInterest,
     required this.totalPayment,
     required this.schedule,
+    this.partsResults,
   });
 
   final CalcInput input;
@@ -92,6 +150,7 @@ class CalcResult {
   final double totalInterest;
   final double totalPayment;
   final List<AmortizationRow> schedule;
+  final List<CalcResult>? partsResults;
 
   Map<String, dynamic> toJson() => {
         'input': input.toJson(),
@@ -101,6 +160,8 @@ class CalcResult {
         'totalInterest': totalInterest,
         'totalPayment': totalPayment,
         'schedule': schedule.map((e) => e.toJson()).toList(),
+        if (partsResults != null)
+          'partsResults': partsResults!.map((e) => e.toJson()).toList(),
       };
 
   factory CalcResult.fromJson(Map<String, dynamic> j) => CalcResult(
@@ -112,6 +173,9 @@ class CalcResult {
         totalPayment: (j['totalPayment'] as num).toDouble(),
         schedule: (j['schedule'] as List)
             .map((e) => AmortizationRow.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        partsResults: (j['partsResults'] as List?)
+            ?.map((e) => CalcResult.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
 }
@@ -322,10 +386,16 @@ class UserProfile {
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> j) => UserProfile(
-        nickname: j['nickname'] as String? ?? '借款人',
+        nickname: j['nickname'] as String? ?? '',
         avatar: j['avatar'] as String? ?? '🧑‍💼',
         createdAt: j['createdAt'] as String? ?? DateTime.now().toIso8601String(),
       );
+
+  String displayNickname(AppLocale locale) {
+    final n = nickname.trim();
+    if (n.isEmpty) return t(locale, 'settings.defaultNick');
+    return n;
+  }
 }
 
 class AppSettings {
@@ -333,21 +403,38 @@ class AppSettings {
     required this.currencyCode,
     required this.decimals,
     required this.theme,
+    this.locale = AppLocale.zhCN,
   });
 
   final String currencyCode;
   final int decimals;
   final String theme;
+  final AppLocale locale;
 
   Map<String, dynamic> toJson() => {
         'currencyCode': currencyCode,
         'decimals': decimals,
         'theme': theme,
+        'locale': locale.id,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
         currencyCode: j['currencyCode'] as String? ?? 'CNY',
         decimals: j['decimals'] as int? ?? 2,
         theme: j['theme'] as String? ?? 'light',
+        locale: AppLocaleX.fromId(j['locale'] as String?),
+      );
+
+  AppSettings copyWith({
+    String? currencyCode,
+    int? decimals,
+    String? theme,
+    AppLocale? locale,
+  }) =>
+      AppSettings(
+        currencyCode: currencyCode ?? this.currencyCode,
+        decimals: decimals ?? this.decimals,
+        theme: theme ?? this.theme,
+        locale: locale ?? this.locale,
       );
 }

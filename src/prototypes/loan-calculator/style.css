@@ -46,7 +46,7 @@
 .loan-main {
   flex: 1;
   overflow: auto;
-  padding: 16px 16px 88px;
+  padding: 12px 16px 52px;
 }
 
 .loan-tabbar {
@@ -470,7 +470,7 @@
 .loan-fab {
   position: fixed;
   right: max(16px, calc(50% - 430px / 2 + 16px));
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -638,6 +638,55 @@
 
 .loan-type-grid-3 {
   grid-template-columns: repeat(3, 1fr);
+}
+
+.loan-type-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+  width: 100%;
+}
+
+.loan-type-grid-4 .loan-type-tile {
+  width: 100%;
+  padding: 10px 2px;
+  font-size: 11px;
+}
+
+.loan-type-grid-4 .loan-type-tile svg {
+  width: 20px;
+  height: 20px;
+}
+
+.loan-dual-part {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rev-divider);
+}
+
+.loan-dual-part:first-of-type {
+  margin-top: 8px;
+}
+
+.loan-dual-part-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--rev-text);
+}
+
+.loan-dual-breakdown {
+  margin-top: 4px;
+}
+
+.loan-dual-breakdown-card {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--rev-surface-2);
+}
+
+.loan-dual-breakdown-card .loan-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .loan-type-tile {

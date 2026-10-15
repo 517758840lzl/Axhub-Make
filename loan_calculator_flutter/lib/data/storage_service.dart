@@ -21,7 +21,7 @@ class StorageService {
     final raw = prefs.getString(_profile);
     if (raw == null) {
       return UserProfile(
-        nickname: '借款人',
+        nickname: '',
         avatar: '🧑‍💼',
         createdAt: DateTime.now().toIso8601String(),
       );
@@ -105,7 +105,7 @@ class StorageService {
 
   Future<void> setSeeded(bool v) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_meta, jsonEncode({'schemaVersion': 1, 'seeded': v}));
+    await prefs.setString(_meta, jsonEncode({'schemaVersion': 2, 'seeded': v}));
   }
 
   Future<void> clearBusiness() async {
@@ -144,26 +144,6 @@ class StorageService {
         note: '示例房贷方案',
         tags: const ['房贷', '月供'],
         result: sample,
-      ),
-    ]);
-    await saveLedgerEntries([
-      ManualLedgerEntry(
-        id: 'seed-ledger-1',
-        createdAt: DateTime.now().toIso8601String(),
-        title: '本月房贷预留',
-        amount: 4890,
-        direction: LedgerDirection.expense,
-        tags: const ['房贷', '月供'],
-        note: '与试算方案配套的手动记账',
-      ),
-      ManualLedgerEntry(
-        id: 'seed-ledger-2',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
-        title: '公积金入账',
-        amount: 3200,
-        direction: LedgerDirection.income,
-        tags: const ['房贷'],
-        note: '示例收入',
       ),
     ]);
     await saveSavingsGoals([

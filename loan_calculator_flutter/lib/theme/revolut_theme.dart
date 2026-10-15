@@ -1,5 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+/// 状态栏/导航栏与画布一体（浅色底 + 深色图标）
+const revolutSystemUi = SystemUiOverlayStyle(
+  statusBarColor: Colors.transparent,
+  statusBarIconBrightness: Brightness.dark,
+  statusBarBrightness: Brightness.light,
+  systemStatusBarContrastEnforced: false,
+  systemNavigationBarColor: Colors.transparent,
+  systemNavigationBarIconBrightness: Brightness.dark,
+  systemNavigationBarContrastEnforced: false,
+);
 
 /// 与原型 `style.css` 中 `--rev-*` 一一对应
 abstract final class RevolutColors {
@@ -47,11 +59,20 @@ ThemeData buildRevolutTheme() {
       surface: RevolutColors.surface1,
     ),
   );
+  // Inter 无中文：回退字体会假粗体/负字距叠笔画，标题发糊。用 Noto Sans SC 覆盖全文。
+  final textTheme = GoogleFonts.notoSansScTextTheme(base.textTheme).apply(
+    bodyColor: RevolutColors.text,
+    displayColor: RevolutColors.text,
+  );
   return base.copyWith(
-    textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
-      bodyColor: RevolutColors.text,
-      displayColor: RevolutColors.text,
+    appBarTheme: const AppBarTheme(
+      systemOverlayStyle: revolutSystemUi,
+      backgroundColor: RevolutColors.canvas,
+      elevation: 0,
+      scrolledUnderElevation: 0,
     ),
+    textTheme: textTheme,
+    primaryTextTheme: textTheme,
   );
 }
 

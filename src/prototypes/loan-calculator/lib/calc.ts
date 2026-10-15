@@ -1,10 +1,20 @@
-import type { AmortizationRow, CalcInput, CalcResult, RepaymentMode } from './types';
+import type {
+  AmortizationRow,
+  CalcInput,
+  CalcResult,
+  DualLoanPart,
+  RepaymentMode,
+} from './types';
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
 export function computeLoan(input: CalcInput): CalcResult {
+  if (input.category === 'dual' && input.parts?.length === 2) {
+    return computeDualLoan(input);
+  }
+
   const { principal: P, annualRatePercent, termMonths: n } = input;
   const r = annualRatePercent / 100 / 12;
 
@@ -16,6 +26,51 @@ export function computeLoan(input: CalcInput): CalcResult {
     return computeEqualPayment(P, r, n, input);
   }
   return computeEqualPrincipal(P, r, n, input);
+}
+
+function partToInput(part: DualLoanPart, index: number): CalcInput {
+  return {
+    principal: part.principal,
+    annualRatePercent: part.annualRatePercent,
+    termMonths: part.termMonths,
+    mode: part.mode,
+    category: 'other',
+    label: part.label || `Loan ${index + 1}`,
+  };
+}
+
+export function computeDualLoan(input: CalcInput): CalcResult {
+  const parts = input.parts;
+  if (!parts || parts.length !== 2) {
+    throw new Error('invalid dual');
+  }
+  const a = computeLoan(partToInput(parts[0], 0));
+  const b = computeLoan(partToInput(parts[1], 1));
+  const principal = round2(parts[0].principal + parts[1].principal);
+  const totalInterest = round2(a.totalInterest + b.totalInterest);
+  const longer = a.schedule.length >= b.schedule.length ? a : b;
+
+  return {
+    input: {
+      ...input,
+      principal,
+      annualRatePercent: parts[0].annualRatePercent,
+      termMonths: Math.max(parts[0].termMonths, parts[1].termMonths),
+      mode: parts[0].mode,
+      category: 'dual',
+      parts,
+    },
+    monthlyPayment: round2(a.monthlyPayment + b.monthlyPayment),
+    firstMonthPayment: round2(a.firstMonthPayment + b.firstMonthPayment),
+    lastMonthPayment: round2(
+      (a.schedule[a.schedule.length - 1]?.payment ?? 0) +
+        (b.schedule[b.schedule.length - 1]?.payment ?? 0),
+    ),
+    totalInterest,
+    totalPayment: round2(principal + totalInterest),
+    schedule: longer.schedule,
+    partsResults: [a, b],
+  };
 }
 
 function computeEqualPayment(P: number, r: number, n: number, input: CalcInput): CalcResult {
@@ -98,6 +153,7 @@ function computeEqualPrincipal(P: number, r: number, n: number, input: CalcInput
   };
 }
 
+/** @deprecated 界面请用 i18n modeMessageKey；保留给非 UI 调用 */
 export function modeLabel(mode: RepaymentMode): string {
-  return mode === 'equal-payment' ? '等额本息' : '等额本金';
+  return mode === 'equal-payment' ? 'equal-payment' : 'equal-principal';
 }

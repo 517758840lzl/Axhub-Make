@@ -18,6 +18,7 @@ List<String> defaultTagsForCategory(LoanCategory category) => [
         LoanCategory.mortgage => '房贷',
         LoanCategory.auto => '车贷',
         LoanCategory.personal => '消费贷',
+        LoanCategory.dual => '房贷',
         LoanCategory.other => '其他',
       },
     ];

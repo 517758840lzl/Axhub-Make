@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme/revolut_theme.dart';
@@ -14,6 +15,7 @@ class LoanShell extends StatelessWidget {
     required this.showTabBar,
     required this.activeTab,
     required this.onTab,
+    required this.tabLabels,
     this.toast,
     this.fab,
   });
@@ -22,50 +24,58 @@ class LoanShell extends StatelessWidget {
   final bool showTabBar;
   final int activeTab;
   final ValueChanged<int> onTab;
+  final List<String> tabLabels;
   final String? toast;
   /// 固定在 Tab 栏上方（与 Web `position: fixed` 的 `.loan-fab` 一致）
   final Widget? fab;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: RevolutColors.canvas,
-      child: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: loanShellMaxWidth),
-            child: Container(
-              decoration: BoxDecoration(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: revolutSystemUi,
+      child: Material(
+        color: RevolutColors.canvas,
+        child: SafeArea(
+          // 顶底留白给系统栏，背后画布色透过透明状态栏，视觉一体
+          top: true,
+          bottom: true,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: loanShellMaxWidth),
+              child: ColoredBox(
                 color: RevolutColors.canvas,
-                border: Border.all(color: RevolutColors.divider),
-              ),
-              child: Stack(
-                children: [
-                  Column(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(16, 16, 16, showTabBar ? (fab != null ? 148 : 88) : 16),
-                          child: body,
+                child: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            // 任意页拖拽滚动时收起键盘
+                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                            // 仅留出 Tab 栏高度；有 FAB 时略加，避免内容被挡
+                            padding: EdgeInsets.fromLTRB(16, 12, 16, showTabBar ? (fab != null ? 80 : 52) : 12),
+                            child: body,
+                          ),
                         ),
+                        if (showTabBar)
+                          _LoanTabBar(activeTab: activeTab, onTab: onTab, labels: tabLabels),
+                      ],
+                    ),
+                    if (fab != null && showTabBar)
+                      Positioned(
+                        right: 16,
+                        bottom: 60,
+                        child: fab!,
                       ),
-                      if (showTabBar) _LoanTabBar(activeTab: activeTab, onTab: onTab),
-                    ],
-                  ),
-                  if (fab != null && showTabBar)
-                    Positioned(
-                      right: 16,
-                      bottom: 72,
-                      child: fab!,
-                    ),
-                  if (toast != null)
-                    Positioned(
-                      top: 16,
-                      left: 0,
-                      right: 0,
-                      child: Center(child: LoanToast(message: toast!)),
-                    ),
-                ],
+                    if (toast != null)
+                      Positioned(
+                        top: 16,
+                        left: 0,
+                        right: 0,
+                        child: Center(child: LoanToast(message: toast!)),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -76,20 +86,25 @@ class LoanShell extends StatelessWidget {
 }
 
 class _LoanTabBar extends StatelessWidget {
-  const _LoanTabBar({required this.activeTab, required this.onTab});
+  const _LoanTabBar({
+    required this.activeTab,
+    required this.onTab,
+    required this.labels,
+  });
 
   final int activeTab;
   final ValueChanged<int> onTab;
+  final List<String> labels;
 
-  static final _tabs = [
-    (LucideIcons.calculator, '计算'),
-    (LucideIcons.piggyBank, '储蓄'),
-    (LucideIcons.bookOpen, '记账'),
-    (LucideIcons.userCircle, '我的'),
+  static const _icons = [
+    LucideIcons.calculator,
+    LucideIcons.piggyBank,
+    LucideIcons.userCircle,
   ];
 
   @override
   Widget build(BuildContext context) {
+    final count = labels.length.clamp(0, _icons.length);
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -100,9 +115,8 @@ class _LoanTabBar extends StatelessWidget {
           ),
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: Row(
-            children: List.generate(_tabs.length, (i) {
+            children: List.generate(count, (i) {
               final active = activeTab == i;
-              final (icon, label) = _tabs[i];
               return Expanded(
                 child: InkWell(
                   borderRadius: BorderRadius.circular(14),
@@ -124,14 +138,14 @@ class _LoanTabBar extends StatelessWidget {
                             gradient: active ? RevolutColors.gradient : null,
                           ),
                           child: Icon(
-                            icon,
+                            _icons[i],
                             size: 18,
                             color: active ? Colors.white : RevolutColors.textMuted,
                           ),
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          label,
+                          labels[i],
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
@@ -377,11 +391,12 @@ class LoanLabel extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: marginBottom, top: marginTop ?? 0),
       child: Text(
-        text.toUpperCase(),
+        text,
         style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.6,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+          height: 1.3,
           color: RevolutColors.textSecondary,
         ),
       ),
@@ -463,7 +478,12 @@ class LoanTopBar extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                    letterSpacing: 0,
+                  ),
                 ),
                 if (subtitle != null)
                   Padding(
@@ -556,8 +576,15 @@ class LoanStatBox extends StatelessWidget {
 }
 
 class LoanHeroBanner extends StatelessWidget {
-  const LoanHeroBanner({super.key, required this.badges});
+  const LoanHeroBanner({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.badges,
+  });
 
+  final String title;
+  final String subtitle;
   final List<Widget> badges;
 
   @override
@@ -585,14 +612,16 @@ class LoanHeroBanner extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('智能贷款试算', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+              Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, height: 1.25, color: Colors.white)),
               const SizedBox(height: 6),
               Text(
-                '输入金额与期限，实时预览月供与总利息，结果可保存并关联储蓄目标。',
+                subtitle,
                 style: TextStyle(fontSize: 13, height: 1.45, color: Colors.white.withValues(alpha: 0.92)),
               ),
-              const SizedBox(height: 14),
-              Wrap(spacing: 8, runSpacing: 8, children: badges),
+              if (badges.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Wrap(spacing: 8, runSpacing: 8, children: badges),
+              ],
             ],
           ),
         ],
@@ -627,41 +656,72 @@ class LoanHeroBadge extends StatelessWidget {
 }
 
 class LoanFeatureRow extends StatelessWidget {
-  const LoanFeatureRow({super.key});
+  const LoanFeatureRow({
+    super.key,
+    required this.ratioLabel,
+    required this.amortLabel,
+    required this.compareLabel,
+    required this.onRatio,
+    required this.onAmort,
+    required this.onCompare,
+  });
+
+  final String ratioLabel;
+  final String amortLabel;
+  final String compareLabel;
+  final VoidCallback onRatio;
+  final VoidCallback onAmort;
+  final VoidCallback onCompare;
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (LucideIcons.pieChart, '本息占比图'),
-      (LucideIcons.tableProperties, '摊还明细表'),
-      (LucideIcons.piggyBank, '月供储蓄'),
+    final items = [
+      (LucideIcons.pieChart, ratioLabel, onRatio),
+      (LucideIcons.tableProperties, amortLabel, onAmort),
+      (LucideIcons.columns2, compareLabel, onCompare),
     ];
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        children: items.map((item) {
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: item == items.last ? 0 : 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                decoration: BoxDecoration(
+        children: [
+          for (var i = 0; i < items.length; i++)
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(right: i == items.length - 1 ? 0 : 8),
+                child: Material(
                   color: RevolutColors.surface1,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: RevolutColors.divider),
-                  boxShadow: [RevolutColors.softShadow],
-                ),
-                child: Column(
-                  children: [
-                    Icon(item.$1, size: 20, color: RevolutColors.brandSolid),
-                    const SizedBox(height: 4),
-                    Text(item.$2, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: RevolutColors.textSecondary)),
-                  ],
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: items[i].$3,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: RevolutColors.divider),
+                        boxShadow: [RevolutColors.softShadow],
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(items[i].$1, size: 20, color: RevolutColors.brandSolid),
+                          const SizedBox(height: 4),
+                          Text(
+                            items[i].$2,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: RevolutColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          );
-        }).toList(),
+        ],
       ),
     );
   }
@@ -670,16 +730,20 @@ class LoanFeatureRow extends StatelessWidget {
 class LoanPreviewCard extends StatelessWidget {
   const LoanPreviewCard({
     super.key,
-    required this.modeLabelText,
+    required this.previewTitle,
     required this.payment,
     required this.totalInterest,
     required this.totalPayment,
+    required this.interestLabel,
+    required this.totalLabel,
   });
 
-  final String modeLabelText;
+  final String previewTitle;
   final String payment;
   final String totalInterest;
   final String totalPayment;
+  final String interestLabel;
+  final String totalLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -699,7 +763,12 @@ class LoanPreviewCard extends StatelessWidget {
             children: [
               const Icon(LucideIcons.sparkles, size: 14, color: RevolutColors.textSecondary),
               const SizedBox(width: 4),
-              Text('实时预览 · $modeLabelText', style: const TextStyle(fontSize: 12, color: RevolutColors.textSecondary)),
+              Flexible(
+                child: Text(
+                  previewTitle,
+                  style: const TextStyle(fontSize: 12, color: RevolutColors.textSecondary),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -707,9 +776,9 @@ class LoanPreviewCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _metaBox('总利息', totalInterest, context)),
+              Expanded(child: _metaBox(interestLabel, totalInterest, context)),
               const SizedBox(width: 8),
-              Expanded(child: _metaBox('还款总额', totalPayment, context)),
+              Expanded(child: _metaBox(totalLabel, totalPayment, context)),
             ],
           ),
         ],

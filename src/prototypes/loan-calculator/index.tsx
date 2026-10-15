@@ -11,6 +11,7 @@ import {
   Columns2,
   Home,
   Landmark,
+  Layers2,
   PieChart,
   PiggyBank,
   Shield,
@@ -32,8 +33,12 @@ import { formatMoney, parseHashParams, setHashPage, uid } from './lib/format';
 import {
   APP_LOCALES,
   categoryMessageKey,
+  displayNickname,
+  displaySavingsName,
   htmlLang,
+  isDefaultNickname,
   modeMessageKey,
+  translate,
   type TranslateFn,
 } from './lib/i18n';
 import { defaultTagsForCategory } from './lib/tags';
@@ -41,6 +46,7 @@ import type {
   AppLocale,
   CalcInput,
   CalcResult,
+  DualLoanPart,
   LoanCategory,
   RepaymentMode,
   SavedCalculation,
@@ -85,6 +91,7 @@ const LOAN_TYPE_META: Record<
   mortgage: { Icon: Home },
   auto: { Icon: Car },
   personal: { Icon: ShoppingBag },
+  dual: { Icon: Layers2 },
 };
 
 const CATEGORY_PRESETS: Record<
@@ -94,6 +101,22 @@ const CATEGORY_PRESETS: Record<
   mortgage: { principal: '1000000', rate: '3.6', years: '30', months: '0' },
   auto: { principal: '126000', rate: '4.5', years: '3', months: '0', vehicle: '180000', downPct: '30' },
   personal: { principal: '50000', rate: '8.5', years: '3', months: '0' },
+  dual: { principal: '0', rate: '0', years: '0', months: '0' },
+};
+
+const DEFAULT_DUAL_A = {
+  principal: '600000',
+  rate: '3.1',
+  years: '30',
+  months: '0',
+  mode: 'equal-payment' as RepaymentMode,
+};
+const DEFAULT_DUAL_B = {
+  principal: '400000',
+  rate: '4.2',
+  years: '25',
+  months: '0',
+  mode: 'equal-payment' as RepaymentMode,
 };
 
 function categoryLabel(c: LoanCategory, t: TranslateFn) {
@@ -104,7 +127,23 @@ function modeLabel(mode: RepaymentMode, t: TranslateFn) {
   return t(modeMessageKey(mode));
 }
 
+function sameDualPart(a: DualLoanPart, b: DualLoanPart): boolean {
+  return (
+    a.principal === b.principal &&
+    a.annualRatePercent === b.annualRatePercent &&
+    a.termMonths === b.termMonths &&
+    a.mode === b.mode
+  );
+}
+
 function sameLoanInput(a: CalcInput, b: CalcInput): boolean {
+  if (a.category === 'dual' || b.category === 'dual') {
+    if (a.category !== b.category) return false;
+    const ap = a.parts;
+    const bp = b.parts;
+    if (!ap || !bp || ap.length !== 2 || bp.length !== 2) return false;
+    return sameDualPart(ap[0], bp[0]) && sameDualPart(ap[1], bp[1]);
+  }
   return (
     a.category === b.category &&
     a.mode === b.mode &&
@@ -135,6 +174,19 @@ function showTabBar(page: string) {
 
 function insightLines(result: CalcResult, t: TranslateFn): string[] {
   const { input, monthlyPayment, totalInterest, totalPayment } = result;
+  if (input.category === 'dual' && result.partsResults?.length === 2) {
+    return [
+      t('dual.insight', {
+        monthly: monthlyPayment.toFixed(0),
+        interest: totalInterest.toFixed(0),
+        total: totalPayment.toFixed(0),
+      }),
+      t('result.insight.3', {
+        principal: input.principal.toFixed(0),
+        rate: `${input.parts?.[0]?.annualRatePercent ?? '-'} / ${input.parts?.[1]?.annualRatePercent ?? '-'}`,
+      }),
+    ];
+  }
   const interestShare = totalPayment > 0 ? (totalInterest / totalPayment) * 100 : 0;
   const years = (input.termMonths / 12).toFixed(input.termMonths % 12 === 0 ? 0 : 1);
   const lines = [
@@ -410,7 +462,17 @@ function LoanCalculatorApp() {
     <div className="loan-app" lang={htmlLang(app.settings.locale)}>
       <div className="loan-shell">
         {app.toast ? <div className="loan-toast">{app.toast}</div> : null}
-        <main className="loan-main">{content}</main>
+        <main
+          className="loan-main"
+          onScroll={() => {
+            const el = document.activeElement;
+            if (el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+              el.blur();
+            }
+          }}
+        >
+          {content}
+        </main>
         {showTabBar(page) ? (
           <nav className="loan-tabbar" aria-label={t('nav.main')}>
             {TAB_NAV.map(({ id, labelKey, Icon }) => (
@@ -474,16 +536,39 @@ function CalcHome({
   const [downPct, setDownPct] = useState('30');
   const [downPayment, setDownPayment] = useState('54000');
   const [loanManual, setLoanManual] = useState(false);
+  const [aPrincipal, setAPrincipal] = useState(DEFAULT_DUAL_A.principal);
+  const [aRate, setARate] = useState(DEFAULT_DUAL_A.rate);
+  const [aYears, setAYears] = useState(DEFAULT_DUAL_A.years);
+  const [aMonths, setAMonths] = useState(DEFAULT_DUAL_A.months);
+  const [aMode, setAMode] = useState<RepaymentMode>(DEFAULT_DUAL_A.mode);
+  const [bPrincipal, setBPrincipal] = useState(DEFAULT_DUAL_B.principal);
+  const [bRate, setBRate] = useState(DEFAULT_DUAL_B.rate);
+  const [bYears, setBYears] = useState(DEFAULT_DUAL_B.years);
+  const [bMonths, setBMonths] = useState(DEFAULT_DUAL_B.months);
+  const [bMode, setBMode] = useState<RepaymentMode>(DEFAULT_DUAL_B.mode);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   const applyCategory = (next: Exclude<LoanCategory, 'other'>) => {
     setCategory(next);
+    setErrors({});
+    if (next === 'dual') {
+      setAPrincipal(DEFAULT_DUAL_A.principal);
+      setARate(DEFAULT_DUAL_A.rate);
+      setAYears(DEFAULT_DUAL_A.years);
+      setAMonths(DEFAULT_DUAL_A.months);
+      setAMode(DEFAULT_DUAL_A.mode);
+      setBPrincipal(DEFAULT_DUAL_B.principal);
+      setBRate(DEFAULT_DUAL_B.rate);
+      setBYears(DEFAULT_DUAL_B.years);
+      setBMonths(DEFAULT_DUAL_B.months);
+      setBMode(DEFAULT_DUAL_B.mode);
+      return;
+    }
     const p = CATEGORY_PRESETS[next];
     setPrincipal(p.principal);
     setRate(p.rate);
     setYears(p.years);
     setMonths(p.months);
-    setErrors({});
     if (next === 'auto') {
       setVehiclePrice(p.vehicle || '180000');
       setDownPct(p.downPct || '30');
@@ -505,13 +590,65 @@ function CalcHome({
     }
   };
 
+  const buildDualParts = (): DualLoanPart[] | null => {
+    const aTerm = Number(aYears) * 12 + Number(aMonths);
+    const bTerm = Number(bYears) * 12 + Number(bMonths);
+    const aP = Number(aPrincipal);
+    const bP = Number(bPrincipal);
+    const aR = Number(aRate);
+    const bR = Number(bRate);
+    if (
+      !aP ||
+      aP <= 0 ||
+      !bP ||
+      bP <= 0 ||
+      Number.isNaN(aR) ||
+      aR < 0 ||
+      Number.isNaN(bR) ||
+      bR < 0 ||
+      !aTerm ||
+      !bTerm
+    ) {
+      return null;
+    }
+    return [
+      {
+        principal: aP,
+        annualRatePercent: aR,
+        termMonths: aTerm,
+        mode: aMode,
+        label: 'A',
+      },
+      {
+        principal: bP,
+        annualRatePercent: bR,
+        termMonths: bTerm,
+        mode: bMode,
+        label: 'B',
+      },
+    ];
+  };
+
   const preview = useMemo(() => {
     try {
+      if (category === 'dual') {
+        const parts = buildDualParts();
+        if (!parts) return null;
+        return computeLoan({
+          principal: parts[0].principal + parts[1].principal,
+          annualRatePercent: parts[0].annualRatePercent,
+          termMonths: Math.max(parts[0].termMonths, parts[1].termMonths),
+          mode: parts[0].mode,
+          category: 'dual',
+          parts,
+          label: categoryLabel('dual', t),
+        });
+      }
       const P = Number(principal);
       const r = Number(rate);
       const termMonths = Number(years) * 12 + Number(months);
       if (!P || P <= 0 || Number.isNaN(r) || r < 0 || !termMonths) return null;
-      const input: Parameters<typeof computeLoan>[0] = {
+      const input: CalcInput = {
         principal: P,
         annualRatePercent: r,
         termMonths,
@@ -526,9 +663,54 @@ function CalcHome({
     } catch {
       return null;
     }
-  }, [principal, rate, years, months, mode, category, vehiclePrice, downPayment]);
+  }, [
+    principal,
+    rate,
+    years,
+    months,
+    mode,
+    category,
+    vehiclePrice,
+    downPayment,
+    aPrincipal,
+    aRate,
+    aYears,
+    aMonths,
+    aMode,
+    bPrincipal,
+    bRate,
+    bYears,
+    bMonths,
+    bMode,
+    t,
+  ]);
 
   const buildResult = (): CalcResult | null => {
+    if (category === 'dual') {
+      const parts = buildDualParts();
+      const err: Record<string, boolean> = {};
+      if (!parts) {
+        err.dual = true;
+        setErrors(err);
+        return null;
+      }
+      setErrors({});
+      try {
+        return computeLoan({
+          principal: parts[0].principal + parts[1].principal,
+          annualRatePercent: parts[0].annualRatePercent,
+          termMonths: Math.max(parts[0].termMonths, parts[1].termMonths),
+          mode: parts[0].mode,
+          category: 'dual',
+          parts,
+          label: categoryLabel('dual', t),
+        });
+      } catch {
+        setErrors({ dual: true });
+        return null;
+      }
+    }
+
     const P = Number(principal);
     const r = Number(rate);
     const termMonths = Number(years) * 12 + Number(months);
@@ -588,7 +770,11 @@ function CalcHome({
 
   const previewPayment =
     preview &&
-    (mode === 'equal-principal' ? preview.firstMonthPayment : preview.monthlyPayment);
+    (category === 'dual' ||
+    mode === 'equal-principal' ||
+    preview.input.parts?.some((p) => p.mode === 'equal-principal')
+      ? preview.firstMonthPayment
+      : preview.monthlyPayment);
 
   const downRatio =
     Number(vehiclePrice) > 0 && Number(downPayment) >= 0
@@ -619,7 +805,7 @@ function CalcHome({
           <Wallet aria-hidden />
           <span>{t('home.loanType')}</span>
         </div>
-        <div className="loan-type-grid loan-type-grid-3">
+        <div className="loan-type-grid loan-type-grid-4">
           {(Object.keys(LOAN_TYPE_META) as Exclude<LoanCategory, 'other'>[]).map((k) => {
             const { Icon } = LOAN_TYPE_META[k];
             return (
@@ -642,7 +828,10 @@ function CalcHome({
         <div className="loan-preview-card loan-preview-sticky">
           <div className="loan-preview-label">
             <Sparkles size={14} style={{ verticalAlign: -2, marginRight: 4 }} />
-            {t('home.preview', { mode: modeLabel(mode, t) })}
+            {t('home.preview', {
+              mode:
+                category === 'dual' ? categoryLabel('dual', t) : modeLabel(mode, t),
+            })}
             {category === 'auto'
               ? t('home.previewDown', { pct: downRatio.toFixed(0) })
               : ''}
@@ -661,6 +850,7 @@ function CalcHome({
         </div>
       ) : null}
 
+      {category !== 'dual' ? (
       <div className="loan-card">
         <div className="loan-section-head">
           <Landmark aria-hidden />
@@ -683,7 +873,111 @@ function CalcHome({
           </button>
         </div>
       </div>
+      ) : null}
 
+      {category === 'dual' ? (
+      <div className="loan-card">
+        <div className="loan-section-head">
+          <Layers2 aria-hidden />
+          <span>{t('dual.params')}</span>
+        </div>
+        {[
+          {
+            key: 'a',
+            title: t('dual.partA'),
+            principal: aPrincipal,
+            setPrincipal: setAPrincipal,
+            rate: aRate,
+            setRate: setARate,
+            years: aYears,
+            setYears: setAYears,
+            months: aMonths,
+            setMonths: setAMonths,
+            partMode: aMode,
+            setPartMode: setAMode,
+          },
+          {
+            key: 'b',
+            title: t('dual.partB'),
+            principal: bPrincipal,
+            setPrincipal: setBPrincipal,
+            rate: bRate,
+            setRate: setBRate,
+            years: bYears,
+            setYears: setBYears,
+            months: bMonths,
+            setMonths: setBMonths,
+            partMode: bMode,
+            setPartMode: setBMode,
+          },
+        ].map((part) => (
+          <div key={part.key} className="loan-dual-part">
+            <div className="loan-dual-part-title">{part.title}</div>
+            <div className="loan-segment" style={{ marginBottom: 10 }}>
+              <button
+                type="button"
+                data-active={part.partMode === 'equal-payment'}
+                onClick={() => part.setPartMode('equal-payment')}
+              >
+                {t('mode.equalPayment')}
+              </button>
+              <button
+                type="button"
+                data-active={part.partMode === 'equal-principal'}
+                onClick={() => part.setPartMode('equal-principal')}
+              >
+                {t('mode.equalPrincipal')}
+              </button>
+            </div>
+            <div className="loan-label">{t('home.principal')}</div>
+            <div className="loan-input-wrap">
+              <input
+                className={`loan-input ${errors.dual ? 'loan-input-error' : ''}`}
+                inputMode="decimal"
+                value={part.principal}
+                onChange={(e) => part.setPrincipal(e.target.value.replace(/[^\d.]/g, ''))}
+              />
+              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+            </div>
+            <div className="loan-label" style={{ marginTop: 10 }}>
+              {t('home.rate')}
+            </div>
+            <div className="loan-input-wrap">
+              <input
+                className={`loan-input ${errors.dual ? 'loan-input-error' : ''}`}
+                inputMode="decimal"
+                value={part.rate}
+                onChange={(e) => part.setRate(e.target.value.replace(/[^\d.]/g, ''))}
+              />
+              <span className="loan-input-suffix">%</span>
+            </div>
+            <div className="loan-label" style={{ marginTop: 10 }}>
+              {t('home.term')}
+            </div>
+            <div className="loan-term-grid">
+              <div className="loan-input-wrap">
+                <input
+                  className={`loan-input ${errors.dual ? 'loan-input-error' : ''}`}
+                  inputMode="numeric"
+                  value={part.years}
+                  onChange={(e) => part.setYears(e.target.value.replace(/\D/g, ''))}
+                />
+                <span className="loan-input-suffix">{t('home.year')}</span>
+              </div>
+              <div className="loan-input-wrap">
+                <input
+                  className={`loan-input ${errors.dual ? 'loan-input-error' : ''}`}
+                  inputMode="numeric"
+                  value={part.months}
+                  onChange={(e) => part.setMonths(e.target.value.replace(/\D/g, ''))}
+                />
+                <span className="loan-input-suffix">{t('home.month')}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      ) : (
       <div className="loan-card">
         <div className="loan-section-head">
           <Calculator aria-hidden />
@@ -905,6 +1199,7 @@ function CalcHome({
           ))}
         </div>
       </div>
+      )}
 
       <div className="loan-feature-row">
         <button
@@ -936,7 +1231,7 @@ function CalcHome({
       <button type="button" className="loan-btn-primary" onClick={submit}>
         {t('home.cta')}
       </button>
-      <p className="loan-muted" style={{ fontSize: 12, marginTop: 12, textAlign: 'center' }}>
+      <p className="loan-muted" style={{ fontSize: 12, marginTop: 8, marginBottom: 0, textAlign: 'center' }}>
         {t('home.disclaimer')}
       </p>
     </>
@@ -964,10 +1259,14 @@ function CalcResultView({
   back: () => void;
 }) {
   const { t } = useApp();
-  const isEqualPrincipal = result.input.mode === 'equal-principal';
-  const hero = isEqualPrincipal
-    ? `${money(result.firstMonthPayment)} → ${money(result.lastMonthPayment)}`
-    : money(result.monthlyPayment);
+  const isDual = result.input.category === 'dual' && !!result.partsResults?.length;
+  const isEqualPrincipal =
+    !isDual && result.input.mode === 'equal-principal';
+  const hero = isDual
+    ? money(result.firstMonthPayment)
+    : isEqualPrincipal
+      ? `${money(result.firstMonthPayment)} → ${money(result.lastMonthPayment)}`
+      : money(result.monthlyPayment);
   const insights = insightLines(result, t);
   const interestShare =
     result.totalPayment > 0
@@ -983,38 +1282,96 @@ function CalcResultView({
         <div>
           <h1 className="loan-title">{t('result.title')}</h1>
           <p className="loan-subtitle">
-            {categoryLabel(result.input.category, t)} · {modeLabel(result.input.mode, t)}
+            {categoryLabel(result.input.category, t)}
+            {!isDual ? ` · ${modeLabel(result.input.mode, t)}` : ''}
           </p>
         </div>
       </header>
 
       <div className="loan-card">
         <div className="loan-label">
-          {isEqualPrincipal ? t('result.firstLast') : t('result.monthly')}
+          {isDual
+            ? t('dual.combinedMonthly')
+            : isEqualPrincipal
+              ? t('result.firstLast')
+              : t('result.monthly')}
         </div>
         <div className="loan-hero-amount">{hero}</div>
         <Donut
-          segments={[
-            {
-              value: result.input.principal,
-              color: '#5b6bff',
-              label: t('result.principal'),
-              amountText: money(result.input.principal),
-            },
-            {
-              value: result.totalInterest,
-              color: '#9c6bff',
-              label: t('result.interest'),
-              amountText: money(result.totalInterest),
-            },
-          ]}
-          centerValue={`${interestShare}%`}
-          centerCaption={t('result.interestShare')}
+          segments={
+            isDual && result.partsResults
+              ? [
+                  {
+                    value: result.partsResults[0].firstMonthPayment,
+                    color: '#5b6bff',
+                    label: t('dual.partA'),
+                    amountText: money(result.partsResults[0].firstMonthPayment),
+                  },
+                  {
+                    value: result.partsResults[1].firstMonthPayment,
+                    color: '#9c6bff',
+                    label: t('dual.partB'),
+                    amountText: money(result.partsResults[1].firstMonthPayment),
+                  },
+                ]
+              : [
+                  {
+                    value: result.input.principal,
+                    color: '#5b6bff',
+                    label: t('result.principal'),
+                    amountText: money(result.input.principal),
+                  },
+                  {
+                    value: result.totalInterest,
+                    color: '#9c6bff',
+                    label: t('result.interest'),
+                    amountText: money(result.totalInterest),
+                  },
+                ]
+          }
+          centerValue={
+            isDual && result.partsResults && result.firstMonthPayment > 0
+              ? `${((result.partsResults[0].firstMonthPayment / result.firstMonthPayment) * 100).toFixed(0)}%`
+              : `${interestShare}%`
+          }
+          centerCaption={isDual ? t('dual.partA') : t('result.interestShare')}
         />
         <div className="loan-row">
           <span>{t('result.totalPayment')}</span>
           <strong>{money(result.totalPayment)}</strong>
         </div>
+        <div className="loan-row">
+          <span>{t('result.totalInterest')}</span>
+          <span className="loan-text-spend">{money(result.totalInterest)}</span>
+        </div>
+        {isDual && result.partsResults ? (
+          <div className="loan-dual-breakdown">
+            <div className="loan-label" style={{ marginTop: 8 }}>
+              {t('dual.partBreakdown')}
+            </div>
+            {result.partsResults.map((part, idx) => (
+              <div key={idx} className="loan-dual-breakdown-card">
+                <strong>{idx === 0 ? t('dual.partA') : t('dual.partB')}</strong>
+                <div className="loan-row">
+                  <span>{t('home.principal')}</span>
+                  <span>{money(part.input.principal)}</span>
+                </div>
+                <div className="loan-row">
+                  <span>{t('home.rate')}</span>
+                  <span>{part.input.annualRatePercent}%</span>
+                </div>
+                <div className="loan-row">
+                  <span>{t('result.monthly')}</span>
+                  <span>{money(part.firstMonthPayment)}</span>
+                </div>
+                <div className="loan-row">
+                  <span>{t('result.totalInterest')}</span>
+                  <span className="loan-text-spend">{money(part.totalInterest)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
         {result.input.category === 'auto' &&
         result.input.vehiclePrice != null &&
         result.input.downPayment != null ? (
@@ -1086,7 +1443,11 @@ function AmortizationView({
   back: () => void;
 }) {
   const { t } = useApp();
-  const maxPeriod = result.schedule.length;
+  const isDual = !!result.partsResults?.length;
+  const [partIndex, setPartIndex] = useState(0);
+  const activeResult =
+    isDual && result.partsResults ? result.partsResults[partIndex] ?? result : result;
+  const maxPeriod = activeResult.schedule.length;
   const [viewMode, setViewMode] = useState<'month' | 'year' | 'custom'>('month');
   const [fromPeriod, setFromPeriod] = useState('1');
   const [toPeriod, setToPeriod] = useState(String(Math.min(12, maxPeriod)));
@@ -1101,6 +1462,7 @@ function AmortizationView({
   }, [fromPeriod, toPeriod, maxPeriod]);
 
   const rows = useMemo(() => {
+    const schedule = activeResult.schedule;
     if (viewMode === 'year') {
       const byYear: {
         period: number;
@@ -1109,8 +1471,8 @@ function AmortizationView({
         interest: number;
         balance: number;
       }[] = [];
-      for (let i = 0; i < result.schedule.length; i += 12) {
-        const chunk = result.schedule.slice(i, i + 12);
+      for (let i = 0; i < schedule.length; i += 12) {
+        const chunk = schedule.slice(i, i + 12);
         byYear.push({
           period: Math.floor(i / 12) + 1,
           payment: chunk.reduce((s, r) => s + r.payment, 0),
@@ -1123,13 +1485,13 @@ function AmortizationView({
     }
 
     if (viewMode === 'custom') {
-      return result.schedule.filter(
+      return schedule.filter(
         (row) => row.period >= clampedRange.from && row.period <= clampedRange.to,
       );
     }
 
-    return result.schedule;
-  }, [viewMode, result.schedule, clampedRange]);
+    return schedule;
+  }, [viewMode, activeResult.schedule, clampedRange]);
 
   const rangeTotals = useMemo(() => {
     if (viewMode !== 'custom' || !rows.length) return null;
@@ -1153,6 +1515,34 @@ function AmortizationView({
       </header>
 
       <div className="loan-card">
+        {isDual ? (
+          <div className="loan-segment" style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              data-active={partIndex === 0}
+              onClick={() => {
+                setPartIndex(0);
+                setFromPeriod('1');
+                setToPeriod('12');
+                setViewMode('month');
+              }}
+            >
+              {t('dual.partA')}
+            </button>
+            <button
+              type="button"
+              data-active={partIndex === 1}
+              onClick={() => {
+                setPartIndex(1);
+                setFromPeriod('1');
+                setToPeriod('12');
+                setViewMode('month');
+              }}
+            >
+              {t('dual.partB')}
+            </button>
+          </div>
+        ) : null}
         <div className="loan-segment loan-amort-segment">
           <button
             type="button"
@@ -1337,7 +1727,7 @@ function SavingsList({
             onKeyDown={(e) => e.key === 'Enter' && onOpen(g.id)}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong>{g.name}</strong>
+              <strong>{displaySavingsName(g.name, t)}</strong>
               <span className="loan-chip">{pct.toFixed(0)}%</span>
             </div>
             <Donut
@@ -1485,7 +1875,7 @@ function SavingsDetail({
           ←
         </button>
         <div>
-          <h1 className="loan-title">{goal.name}</h1>
+          <h1 className="loan-title">{displaySavingsName(goal.name, t)}</h1>
           <p className="loan-subtitle">
             {money(goal.current)} / {money(goal.target)}
           </p>
@@ -1827,7 +2217,9 @@ function ProfileHome({
       <div className="loan-card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <div className="loan-profile-avatar">{profile.avatar}</div>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 700 }}>{profile.nickname}</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>
+            {displayNickname(profile.nickname, t)}
+          </div>
           <div className="loan-muted" style={{ fontSize: 13 }}>
             {t('profile.localOnly')}
           </div>
@@ -1890,9 +2282,14 @@ function ProfileSettings({
   const { t } = useApp();
   const [currencyCode, setCurrencyCode] = useState(settings.currencyCode);
   const [decimals, setDecimals] = useState(String(settings.decimals));
-  const [nickname, setNickname] = useState(profile.nickname);
+  const [nickname, setNickname] = useState(() =>
+    isDefaultNickname(profile.nickname)
+      ? t('settings.defaultNick')
+      : profile.nickname,
+  );
   const [avatar, setAvatar] = useState(profile.avatar);
   const [locale, setLocale] = useState<AppLocale>(settings.locale);
+  const nickIsDefault = isDefaultNickname(profile.nickname) || isDefaultNickname(nickname);
 
   return (
     <>
@@ -1919,6 +2316,11 @@ function ProfileSettings({
                   theme: 'light',
                   locale: loc.id,
                 });
+                if (nickIsDefault) {
+                  const nextNick = translate(loc.id, 'settings.defaultNick');
+                  setNickname(nextNick);
+                  onSaveProfile({ ...profile, nickname: nextNick, avatar });
+                }
               }}
             >
               {loc.nativeLabel}
@@ -1928,7 +2330,11 @@ function ProfileSettings({
         <div className="loan-label" style={{ marginTop: 12 }}>
           {t('settings.nickname')}
         </div>
-        <input className="loan-input" value={nickname} onChange={(e) => setNickname(e.target.value)} />
+        <input
+          className="loan-input"
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+        />
         <div className="loan-label" style={{ marginTop: 12 }}>
           {t('settings.avatar')}
         </div>

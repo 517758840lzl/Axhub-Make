@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/loan_screens.dart';
@@ -16,11 +17,22 @@ class LoanCalculatorApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AppState()),
       ],
-      child: MaterialApp(
-        title: '贷款计算器',
-        debugShowCheckedModeBanner: false,
-        theme: buildRevolutTheme(),
-        home: const _AppHost(),
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: revolutSystemUi,
+        child: MaterialApp(
+          title: '贷款计算器',
+          debugShowCheckedModeBanner: false,
+          theme: buildRevolutTheme(),
+          builder: (context, child) {
+            // 点空白处收起键盘（全页生效）
+            return GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              child: child,
+            );
+          },
+          home: const _AppHost(),
+        ),
       ),
     );
   }
@@ -38,16 +50,29 @@ class _AppHostState extends State<_AppHost> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 420),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      child: _showSplash
-          ? SplashScreen(
-              key: const ValueKey('splash'),
-              onComplete: () => setState(() => _showSplash = false),
-            )
-          : const LoanRoot(key: ValueKey('main')),
+    // 底层始终铺画布色，避免 Splash 切换瞬间露出系统黑底
+    return ColoredBox(
+      color: RevolutColors.canvas,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 320),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        layoutBuilder: (currentChild, previousChildren) {
+          return Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              ...previousChildren,
+              ?currentChild,
+            ],
+          );
+        },
+        child: _showSplash
+            ? SplashScreen(
+                key: const ValueKey('splash'),
+                onComplete: () => setState(() => _showSplash = false),
+              )
+            : const LoanRoot(key: ValueKey('main')),
+      ),
     );
   }
 }
@@ -74,6 +99,11 @@ class LoanRoot extends StatelessWidget {
           showTabBar: showTabBarForRoute(app.route),
           activeTab: app.activeTabIndex,
           onTab: app.goTab,
+          tabLabels: [
+            app.tr('tab.calc'),
+            app.tr('tab.savings'),
+            app.tr('tab.profile'),
+          ],
           fab: onSavingsList
               ? LoanFab(onPressed: () => app.push(AppRoute.savingsNew))
               : null,
@@ -91,20 +121,14 @@ class LoanRoot extends StatelessWidget {
         return const CalcResultScreen();
       case AppRoute.amortization:
         return const AmortizationScreen();
+      case AppRoute.compare:
+        return const CompareScreen();
       case AppRoute.savings:
         return const SavingsListScreen();
       case AppRoute.savingsNew:
         return const SavingsNewScreen();
       case AppRoute.savingsDetail:
         return const SavingsDetailScreen();
-      case AppRoute.ledger:
-        return const LedgerHomeScreen();
-      case AppRoute.ledgerNew:
-        return const LedgerNewScreen();
-      case AppRoute.ledgerCalcDetail:
-        return const LedgerCalcDetailScreen();
-      case AppRoute.ledgerManualDetail:
-        return const LedgerManualDetailScreen();
       case AppRoute.profile:
         return const ProfileHomeScreen();
       case AppRoute.profileSettings:
@@ -113,6 +137,10 @@ class LoanRoot extends StatelessWidget {
         return const ProfileDataScreen();
       case AppRoute.profileAbout:
         return const ProfileAboutScreen();
+      case AppRoute.savedList:
+        return const SavedListScreen();
+      case AppRoute.savedDetail:
+        return const SavedDetailScreen();
     }
   }
 }

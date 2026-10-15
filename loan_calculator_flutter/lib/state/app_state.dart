@@ -5,44 +5,45 @@ import 'package:share_plus/share_plus.dart';
 
 import '../data/calc.dart';
 import '../data/format.dart';
+import '../data/i18n.dart';
 import '../data/models.dart';
 import '../data/storage_service.dart';
 import '../data/tags.dart';
+
+export '../data/format.dart' show uid;
 
 enum AppRoute {
   calc,
   calcResult,
   amortization,
+  compare,
   savings,
   savingsDetail,
   savingsNew,
-  ledger,
-  ledgerNew,
-  ledgerCalcDetail,
-  ledgerManualDetail,
   profile,
   profileSettings,
   profileData,
   profileAbout,
+  savedList,
+  savedDetail,
 }
 
 const tabRoots = [
   AppRoute.calc,
   AppRoute.savings,
-  AppRoute.ledger,
   AppRoute.profile,
 ];
 
-AppRoute tabRootForIndex(int i) => tabRoots[i.clamp(0, 3)];
+AppRoute tabRootForIndex(int i) => tabRoots[i.clamp(0, 2)];
 
 int tabIndexForRoute(AppRoute route) {
-  if (_routePrefix(route).startsWith('calc')) return 0;
-  if (_routePrefix(route).startsWith('savings')) return 1;
-  if (_routePrefix(route).startsWith('ledger')) return 2;
-  return 3;
+  final name = route.name;
+  if (name.startsWith('calc') || name == 'amortization' || name == 'compare') {
+    return 0;
+  }
+  if (name.startsWith('savings')) return 1;
+  return 2;
 }
-
-String _routePrefix(AppRoute r) => r.name;
 
 bool showTabBarForRoute(AppRoute route) => tabRoots.contains(route);
 
@@ -56,7 +57,7 @@ class AppState extends ChangeNotifier {
   bool get ready => _ready;
 
   UserProfile _profile = UserProfile(
-    nickname: '借款人',
+    nickname: '',
     avatar: '🧑‍💼',
     createdAt: DateTime.now().toIso8601String(),
   );
@@ -65,6 +66,8 @@ class AppState extends ChangeNotifier {
   List<ManualLedgerEntry> _ledgerEntries = [];
   List<SavingsGoal> _savingsGoals = [];
   CalcResult? _pendingResult;
+  String? _pendingSavedId;
+  final List<String> _compareIds = [];
   String? _toast;
   Timer? _toastTimer;
 
@@ -74,15 +77,21 @@ class AppState extends ChangeNotifier {
 
   UserProfile get profile => _profile;
   AppSettings get settings => _settings;
+  AppLocale get locale => _settings.locale;
   List<SavedCalculation> get calculations => _calculations;
   List<ManualLedgerEntry> get ledgerEntries => _ledgerEntries;
   List<SavingsGoal> get savingsGoals => _savingsGoals;
   CalcResult? get pendingResult => _pendingResult;
+  String? get pendingSavedId => _pendingSavedId;
+  List<String> get compareIds => List.unmodifiable(_compareIds);
   String? get toast => _toast;
   AppRoute get route => _routeStack.last;
   int get activeTabIndex => tabIndexForRoute(route);
 
   String money(double n) => formatMoney(n, _settings);
+  String tr(String key, [Map<String, String>? params]) => t(locale, key, params);
+
+  String displayNickname() => _profile.displayNickname(locale);
 
   Future<void> _init() async {
     await _storage.seedIfNeeded();
@@ -95,8 +104,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setPendingResult(CalcResult? r) {
+  void setPendingResult(CalcResult? r, {String? savedId}) {
     _pendingResult = r;
+    _pendingSavedId = savedId;
     notifyListeners();
   }
 
@@ -135,9 +145,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool _needsDetailId(AppRoute r) =>
-      r == AppRoute.savingsDetail ||
-      r == AppRoute.ledgerCalcDetail ||
-      r == AppRoute.ledgerManualDetail;
+      r == AppRoute.savingsDetail || r == AppRoute.savedDetail;
 
   void showToast(String msg) {
     _toastTimer?.cancel();
@@ -179,18 +187,90 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> saveCalcToLedger(CalcResult result) async {
+  bool isDuplicateSave(CalcResult result) {
+    final fp = calcFingerprint(result);
+    return _calculations.any((c) => calcFingerprint(c.result) == fp);
+  }
+
+  Future<void> saveCalc(CalcResult result) async {
+    if (isDuplicateSave(result)) {
+      showToast(tr('toast.alreadySaved'));
+      return;
+    }
     final input = result.input;
     final item = SavedCalculation(
       id: uid('calc'),
       createdAt: DateTime.now().toIso8601String(),
       favorite: false,
-      note: input.label ?? modeLabel(input.mode),
+      note: input.label?.trim().isNotEmpty == true
+          ? input.label!
+          : modeLabel(input.mode, locale),
       tags: defaultTagsForCategory(input.category),
       result: result,
     );
     await persistCalculations([item, ..._calculations]);
-    showToast('已保存到记账');
+    _pendingSavedId = item.id;
+    showToast(tr('toast.savedProfile'));
+  }
+
+  void addToCompare(String id) {
+    if (_compareIds.contains(id)) {
+      showToast(tr('compare.added'));
+      return;
+    }
+    if (_compareIds.length >= 3) {
+      showToast(tr('compare.max'));
+      return;
+    }
+    _compareIds.add(id);
+    notifyListeners();
+    showToast(tr('compare.added'));
+  }
+
+  void addPendingToCompare() {
+    final r = _pendingResult;
+    if (r == null) return;
+    var id = _pendingSavedId;
+    if (id == null) {
+      final fp = calcFingerprint(r);
+      for (final c in _calculations) {
+        if (calcFingerprint(c.result) == fp) {
+          id = c.id;
+          break;
+        }
+      }
+    }
+    if (id != null) {
+      addToCompare(id);
+      return;
+    }
+    final tempId = 'pending:${calcFingerprint(r)}';
+    if (_compareIds.contains(tempId)) {
+      showToast(tr('compare.added'));
+      return;
+    }
+    if (_compareIds.length >= 3) {
+      showToast(tr('compare.max'));
+      return;
+    }
+    _compareIds.add(tempId);
+    notifyListeners();
+    showToast(tr('compare.added'));
+  }
+
+  void removeFromCompare(String id) {
+    _compareIds.remove(id);
+    notifyListeners();
+  }
+
+  CalcResult? resultForCompareId(String id) {
+    if (id.startsWith('pending:')) {
+      return _pendingResult;
+    }
+    for (final c in _calculations) {
+      if (c.id == id) return c.result;
+    }
+    return null;
   }
 
   Future<void> clearBusiness() async {
@@ -198,6 +278,7 @@ class AppState extends ChangeNotifier {
     _calculations = [];
     _ledgerEntries = [];
     _savingsGoals = [];
+    _compareIds.clear();
     notifyListeners();
   }
 
