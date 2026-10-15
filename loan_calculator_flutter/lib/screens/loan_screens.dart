@@ -1907,11 +1907,15 @@ class SavedListScreen extends StatelessWidget {
                                 style: const TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
-                            if (c.favorite) const _FilledStar(size: 16),
                             if (inCompare) ...[
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => app.push(AppRoute.compare),
+                                child: LoanChip(app.tr('saved.inCompare')),
+                              ),
                               const SizedBox(width: 6),
-                              LoanChip(app.tr('saved.inCompare')),
                             ],
+                            if (c.favorite) const _FilledStar(size: 16),
                           ],
                         ),
                         const SizedBox(height: 6),

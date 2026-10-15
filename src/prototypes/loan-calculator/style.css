@@ -411,6 +411,14 @@
   color: var(--rev-brand-solid);
 }
 
+button.loan-chip {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .loan-amort-table {
   width: 100%;
   border-collapse: collapse;

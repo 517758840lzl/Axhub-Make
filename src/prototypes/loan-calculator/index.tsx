@@ -284,7 +284,7 @@ function LoanCalculatorApp() {
     );
   } else if (page === 'calc-result' && app.pendingResult) {
     const resultFrom = params.get('from') || 'calc';
-    const showSave = resultFrom !== 'profile-saved';
+    const showSave = !findSavedByInput(app.calculations, app.pendingResult.input);
     content = (
       <CalcResultView
         result={app.pendingResult}
@@ -436,6 +436,7 @@ function LoanCalculatorApp() {
           if (nextLen < 2) app.showToast(t('compare.addedNeedOne'));
           setHashPage('compare', { from: 'profile-saved' });
         }}
+        onOpenCompare={() => setHashPage('compare', { from: 'profile-saved' })}
         onGoCalc={() => setPage('calc')}
       />
     );
@@ -2278,6 +2279,7 @@ function SavedList({
   onDelete,
   onToggleFav,
   onCompare,
+  onOpenCompare,
   onGoCalc,
 }: {
   calculations: SavedCalculation[];
@@ -2288,6 +2290,7 @@ function SavedList({
   onDelete: (id: string) => void;
   onToggleFav: (id: string) => void;
   onCompare: (id: string) => void;
+  onOpenCompare: () => void;
   onGoCalc: () => void;
 }) {
   const { t } = useApp();
@@ -2324,15 +2327,24 @@ function SavedList({
       {calculations.map((c) => {
         return (
           <div key={c.id} className="loan-card">
-            <button type="button" className="loan-saved-body" onClick={() => onOpen(c)}>
+            <div className="loan-saved-body" onClick={() => onOpen(c)} role="presentation">
               <div className="loan-saved-head">
                 <div className="loan-saved-title">
                   {c.note.trim() || categoryLabel(c.result.input.category, t)}
                 </div>
-                {c.favorite ? <Star className="loan-saved-star" size={16} fill="currentColor" /> : null}
                 {compareIds.includes(c.id) ? (
-                  <span className="loan-chip">{t('saved.inCompare')}</span>
+                  <button
+                    type="button"
+                    className="loan-chip"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenCompare();
+                    }}
+                  >
+                    {t('saved.inCompare')}
+                  </button>
                 ) : null}
+                {c.favorite ? <Star className="loan-saved-star" size={16} fill="currentColor" /> : null}
               </div>
               <div className="loan-muted loan-saved-meta">
                 {t('saved.meta', {
@@ -2342,7 +2354,7 @@ function SavedList({
                 })}
               </div>
               <div className="loan-saved-pay">{t('compare.perMonth', { amount: money(c.result.monthlyPayment) })}</div>
-            </button>
+            </div>
             <div className="loan-saved-actions">
               <button type="button" className="loan-quick-chip" onClick={() => onToggleFav(c.id)}>
                 {c.favorite ? t('saved.unfav') : t('saved.fav')}
