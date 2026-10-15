@@ -110,7 +110,6 @@ class LoanRoot extends StatelessWidget {
           scrollResetKey: ValueKey(
             '${app.route.name}|${app.detailId ?? ''}|${app.savingsPrefill ?? ''}',
           ),
-          expandBody: app.route == AppRoute.amortization,
           body: _screenForRoute(app),
         );
       },

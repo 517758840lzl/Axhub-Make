@@ -468,26 +468,36 @@ button.loan-chip {
   font-weight: 600;
 }
 
+.loan-amort-scroll {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
 .loan-amort-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 12px;
+  table-layout: fixed;
 }
 
 .loan-amort-table th,
 .loan-amort-table td {
-  padding: 8px 4px;
-  text-align: right;
+  height: 34px;
+  padding: 0 4px;
+  text-align: center;
   border-bottom: 1px solid var(--rev-divider);
   font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .loan-amort-table th:first-child,
 .loan-amort-table td:first-child {
-  text-align: left;
+  width: 9%;
 }
 
 .loan-amort-table th {
+  height: 32px;
   color: var(--rev-text-secondary);
   font-weight: 600;
 }

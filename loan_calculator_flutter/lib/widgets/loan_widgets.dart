@@ -1084,17 +1084,26 @@ class LoanSectionHead extends StatelessWidget {
 }
 
 class LoanRow extends StatelessWidget {
-  const LoanRow({super.key, required this.label, required this.value, this.valueColor});
+  const LoanRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.divider = true,
+  });
 
   final String label;
   final String value;
   final Color? valueColor;
+  final bool divider;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: RevolutColors.divider))),
+      decoration: divider
+          ? const BoxDecoration(border: Border(bottom: BorderSide(color: RevolutColors.divider)))
+          : null,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

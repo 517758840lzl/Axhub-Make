@@ -1633,7 +1633,7 @@ function AmortizationView({
           </div>
         ) : null}
 
-        <div style={{ overflowX: 'auto', marginTop: 12 }}>
+        <div className="loan-amort-scroll">
           <table className="loan-amort-table">
             <thead>
               <tr>

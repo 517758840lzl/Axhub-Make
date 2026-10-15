@@ -324,7 +324,7 @@
             <li>车贷：<strong>车价 + 首付 → 贷款额 + 利率 + 期限</strong>，结果含车贷专用汇总。</li>
             <li>本轮加入<strong>多方案对比</strong>；法/德/美式算法、可负担评估、PDF/Excel 导出留给后续。</li>
             <li>充实空旷感：计算首页与结果页一并加强信息密度。</li>
-            <li>本轮<strong>只改 Web 原型</strong>，不同步 Flutter。</li>
+            <li>Web 原型与 Flutter 真机按同一产品规则对齐；浏览器下载与系统分享、启动页等平台呈现可以不同。</li>
             <li>界面文案国际化：支持 <strong>简体中文 / English / Español</strong>，在「我的 → 偏好设置」切换，偏好写入 localStorage。</li>
             <li>端形态：手机端优先；数据仅 localStorage；设计基底 Revolut Mobile。</li>
             <li>计算模式：等额本息、等额本金；结果含摊还明细。</li>
@@ -361,7 +361,7 @@
           <ul>
             <li>记账 Tab、手收支、标签筛选账本。</li>
             <li>法/德/美式算法、可负担评估、PDF/Excel 导出。</li>
-            <li>Flutter 同步、云同步、账号、KYC、提前还款、反推利率。</li>
+            <li>云同步、账号、KYC、提前还款、反推利率。</li>
             <li>Push 系统通知。</li>
           </ul>
         </section>
@@ -389,14 +389,14 @@
                 <tr>
                   <td data-label="页面/视图">计算 · 结果（<code>#page=calc-result</code>）</td>
                   <td data-label="页面作用">汇总、解读、二次动作。</td>
-                  <td data-label="主要模块与内容">Hero 月供；总利息/总成本；环形占比；车贷时展示车价/首付/贷款额；分段解读；摊还、加入对比、保存、设储蓄。</td>
+                  <td data-label="主要模块与内容">Hero 月供；总利息/总成本；环形占比（组合贷按两笔月供切开，圆心为第一笔占比，下列每笔本金/利率/月供/总利息）；车贷时展示车价/首付/贷款额；分段解读；摊还、加入对比、保存、设储蓄。</td>
                   <td data-label="示例数据或素材">由输入计算。</td>
                   <td data-label="与其他页面的关系">→ 摊还 / 对比 / 已保存 / 储蓄新建。</td>
                 </tr>
                 <tr>
                   <td data-label="页面/视图">计算 · 摊还（<code>#page=amortization</code>）</td>
                   <td data-label="页面作用">按月本金/利息/余额。</td>
-                  <td data-label="主要模块与内容">月/年汇总；摘要条；密集列表。</td>
+                  <td data-label="主要模块与内容">月/年/自定义；五列居中，行距与真机一致；白卡片铺在画布上并拉满内容宽度，整页滚动。</td>
                   <td data-label="示例数据或素材">绑定当前结果。</td>
                   <td data-label="与其他页面的关系">返回结果。</td>
                 </tr>
@@ -518,15 +518,15 @@
         <section id="implementation-boundary">
           <h2>实施边界</h2>
           <ul>
-            <li><strong>本轮会做：</strong>按本规格改 <code>src/prototypes/loan-calculator</code> Web 原型，并同步本主规格。</li>
-            <li><strong>本轮不做：</strong>Flutter 同步、PRD 大改（可实现后按需补）、Loanly 级导出/多国还款算法。</li>
+            <li><strong>本轮会做：</strong>Web 原型与 Flutter 真机遵守同一产品规则；规格与 PRD 随已确认行为同步。</li>
+            <li><strong>本轮不做：</strong>Loanly 级导出、多国还款算法、云同步与账号。</li>
           </ul>
         </section>
 
         <section id="open-questions">
           <h2>当前待确认事项</h2>
           <ul>
-            <li class="hint">（已确认 2026-10-15）对比最多 3、至少 2；车贷首付 = 比例 chips + 金额可改；用户确认后已实现 Web 原型，Flutter 仍暂缓。</li>
+            <li class="hint">（已确认 2026-10-15）对比最多 3、至少 2；车贷首付 = 比例 chips + 金额可改。Web 原型与 Flutter 真机已按同一规则对齐。</li>
           </ul>
         </section>
 
@@ -538,8 +538,8 @@
               <tbody>
                 <tr>
                   <td data-label="日期">2026-10-15</td>
-                  <td data-label="用户决策或变更">去掉记账；三 Tab；已保存放「我的」；车贷专用字段；多方案对比；充实首页+结果；先定原型不同步 Flutter。</td>
-                  <td data-label="对当前原型的影响">IA 重构；ledger 下线；新增 compare 与车贷表单。</td>
+                  <td data-label="用户决策或变更">去掉记账；三 Tab；已保存放「我的」；车贷专用字段；多方案对比；充实首页+结果。随后确认真机与原型按同一规则对齐。</td>
+                  <td data-label="对当前原型的影响">IA 重构；ledger 下线；新增 compare 与车贷表单；PRD 改为覆盖两端。</td>
                 </tr>
                 <tr>
                   <td data-label="日期">2026-09-30</td>
@@ -587,7 +587,7 @@
             <li>结果页有解读与对比入口；对比页可并排 2～3 案。</li>
             <li>保存后可在「我的 → 已保存方案」复看；可设储蓄目标。</li>
             <li>刷新数据仍在；离线可用；视觉仍为 Revolut 浅色，信息不空旷。</li>
-            <li>本轮不要求 Flutter 一致。</li>
+            <li>Flutter 真机与本规格的产品规则一致；导出通道和启动页可以按平台实现。</li>
           </ul>
         </section>
       </article>

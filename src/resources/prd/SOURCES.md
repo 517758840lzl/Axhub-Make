@@ -9,12 +9,14 @@
 
 | 来源 ID | 类型 | 原始位置 | 访问日期 | 访问条件 | 本地路径 | 覆盖范围 | 处理状态 | 证据属性 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| src-001 | 主规格 HTML | Make 原型规格 | 2026-09-30 | 项目内 | `src/prototypes/loan-calculator/.spec/spec.html` | 产品范围、页面 IA、交互、验收、本地数据 | 已完成 | 已观察事实 |
-| src-002 | 可运行原型 | Make 预览 | 2026-09-30 | `?p=loan-calculator` | `src/prototypes/loan-calculator/` | 实现细节、浅色 UI、货币偏好、分项清空 | 已完成 | 已观察事实 |
+| src-001 | 主规格 HTML | Make 原型规格 | 2026-10-15 | 项目内 | `src/prototypes/loan-calculator/.spec/spec.html` | 产品范围、页面 IA、交互、验收、本地数据 | 已完成 | 已观察事实 |
+| src-002 | 可运行原型 | Make 预览 | 2026-10-15 | `?p=loan-calculator` | `src/prototypes/loan-calculator/` | 三 Tab、车贷、组合贷、对比、已保存方案、浅色 UI | 已完成 | 已观察事实 |
 | src-003 | 辅助 HTML | 项目资源 | 2026-09-30 | `?doc=loan-calc-theme-colors.html` | `src/resources/loan-calc-theme-colors.html` | 三主题色板对照（选型历史） | 已完成 | 已观察事实 |
 | src-004 | 设计规范 | 主题 DESIGN | 2026-09-30 | 项目内 | `src/themes/revolut-mobile/DESIGN.md` | Revolut Mobile 设计基底 | 已完成 | 已观察事实 |
 | src-005 | 用户决策 | 对话记录 | 2026-09-30 | — | 原型 `.spec` 决策表 + 会话 | Revolut 基底、范围 B、货币仅在偏好设置 | 已完成 | 已观察事实 |
 | src-006 | 竞品结构参考 | Google Play 公开页 | 2026-09-30 | 公开 | — | EMI / 储蓄 / 预算类 App 功能结构（非 UI 抄袭） | 部分完成 | 外部研究 |
+| src-007 | 用户决策 | 对话记录 | 2026-10-15 | — | 原型 `.spec` 决策表 + 会话 | 去掉记账、三 Tab、对比、车贷、组合贷、中/英/西文、保存与已保存方案规则 | 已完成 | 已观察事实 |
+| src-008 | Flutter 真机 | 本地工程 | 2026-10-15 | 项目内 | `loan_calculator_flutter/` | 与原型同一产品规则的 iOS/Android 实现 | 已完成 | 已观察事实 |
 
 ## 网站架构
 
@@ -23,8 +25,9 @@
 | src-002 | 计算首页 | `#page=calc` | 预填参数、实时预览 | 提交计算 | — | 已完成 |
 | src-002 | 结果 / 摊还 | `#page=calc-result` / `#page=amortization` | 汇总与明细 | 保存、收藏、设储蓄 | — | 已完成 |
 | src-002 | 储蓄 | `#page=savings` / `#page=savings-detail` | 目标 CRUD、流水 | 存入/取出 | — | 已完成 |
-| src-002 | 历史 | `#page=history` / `#page=history-detail` | 列表、搜索、收藏 | 复看、删除 | — | 已完成 |
-| src-002 | 我的 | `#page=profile` 及子页 | 偏好、导出、隐私 | 货币切换、清空 | — | 已完成 |
+| src-002 | 对比 | `#page=compare` | 2～3 个方案 | 加入、移除、查看摘要 | — | 已完成 |
+| src-002 | 我的 / 已保存方案 | `#page=profile` 及子页 | 偏好、方案列表、导出、隐私 | 语言与货币、对比中、清空 | — | 已完成 |
+| src-008 | Flutter 同等页面 | 应用内路由 | 与 src-002 相同的业务状态 | 与 src-002 相同的业务操作 | — | 已完成 |
 
 ## 图片与文档
 
@@ -38,5 +41,5 @@
 | 来源 ID | 缺口/冲突/决定 | 影响 | 后续处理 |
 | --- | --- | --- | --- |
 | src-006 | 未逐页采集 Play 商店截图 | 竞品仅作结构参考 | 正式立项时可补采 |
-| src-001 vs src-002 | 规格写「深色驾驶舱」，实现为浅色画布 | PRD 以用户后续确认的浅色为准 | 规格描述可逐步同步 |
-| — | JSON **导入**未实现，仅导出 | 验收不含导入 | 二期或 PRD 开放问题 |
+| — | JSON 导入未实现，仅导出 | 验收不含导入 | 见 PRD 开放问题 |
+| src-002 vs src-008 | 导出通道、清空确认样式仍可能不同。摊还表与组合贷环形图已按确认规则对齐 | 见 PRD | 见 PRD 开放问题 4 |
