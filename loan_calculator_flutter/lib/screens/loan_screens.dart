@@ -190,14 +190,6 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
               ),
           ],
         ),
-        LoanFeatureRow(
-          ratioLabel: app.tr('home.feature.ratio'),
-          amortLabel: app.tr('home.feature.amort'),
-          compareLabel: app.tr('home.feature.compare'),
-          onRatio: () => _ensureResultThen(app, AppRoute.calcResult),
-          onAmort: () => _ensureResultThen(app, AppRoute.amortization),
-          onCompare: () => app.push(AppRoute.compare),
-        ),
         if (preview != null && previewPayment != null)
           LoanPreviewCard(
             previewTitle: app.tr('home.preview', {'mode': modeLabel(
@@ -293,6 +285,14 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
           _autoForm(app)
         else
           _standardForm(app),
+        LoanFeatureRow(
+          ratioLabel: app.tr('home.feature.ratio'),
+          amortLabel: app.tr('home.feature.amort'),
+          compareLabel: app.tr('home.feature.compare'),
+          onRatio: () => _ensureResultThen(app, AppRoute.calcResult),
+          onAmort: () => _ensureResultThen(app, AppRoute.amortization),
+          onCompare: () => app.push(AppRoute.compare),
+        ),
         LoanPrimaryButton(label: app.tr('home.cta'), onPressed: () => _submit(app)),
         Padding(
           padding: const EdgeInsets.only(top: 8, bottom: 0),
@@ -543,6 +543,70 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
       };
 }
 
+String _interestShare(CalcResult result) {
+  if (result.totalPayment <= 0) return '0';
+  return (result.totalInterest / result.totalPayment * 100).toStringAsFixed(0);
+}
+
+String _whole(double n) => n.toStringAsFixed(0);
+
+String _yearsText(int months) {
+  final years = months / 12;
+  return months % 12 == 0 ? years.toStringAsFixed(0) : years.toStringAsFixed(1);
+}
+
+List<String> _resultInsightLines(CalcResult result, AppState app) {
+  final input = result.input;
+  if (input.category == LoanCategory.dual && (result.partsResults?.length ?? 0) == 2) {
+    final parts = input.parts;
+    final a = parts != null && parts.isNotEmpty ? '${parts[0].annualRatePercent}' : '-';
+    final b = parts != null && parts.length > 1 ? '${parts[1].annualRatePercent}' : '-';
+    return [
+      app.tr('dual.insight', {
+        'monthly': _whole(result.monthlyPayment),
+        'interest': _whole(result.totalInterest),
+        'total': _whole(result.totalPayment),
+      }),
+      app.tr('result.insight.3', {
+        'principal': _whole(input.principal),
+        'rate': '$a / $b',
+      }),
+    ];
+  }
+
+  final lines = <String>[
+    app.tr('result.insight.1', {
+      'mode': modeLabel(input.mode, app.locale),
+      'years': _yearsText(input.termMonths),
+      'share': _interestShare(result),
+    }),
+    app.tr('result.insight.2', {
+      'monthly': _whole(result.monthlyPayment),
+      'interest': _whole(result.totalInterest),
+    }),
+  ];
+  final vehicle = input.vehiclePrice;
+  final down = input.downPayment;
+  if (input.category == LoanCategory.auto && vehicle != null && down != null) {
+    final pct = vehicle > 0 ? down / vehicle * 100 : 0;
+    lines.insert(
+      0,
+      app.tr('result.insight.auto', {
+        'vehicle': _whole(vehicle),
+        'pct': pct.toStringAsFixed(0),
+        'down': _whole(down),
+        'principal': _whole(input.principal),
+      }),
+    );
+  } else {
+    lines.add(app.tr('result.insight.3', {
+      'principal': _whole(input.principal),
+      'rate': '${input.annualRatePercent}',
+    }));
+  }
+  return lines.take(3).toList();
+}
+
 class CalcResultScreen extends StatelessWidget {
   const CalcResultScreen({super.key});
 
@@ -554,13 +618,13 @@ class CalcResultScreen extends StatelessWidget {
 
     final isDual = result.input.category == LoanCategory.dual;
     final isEqPrincipal = result.input.mode == RepaymentMode.equalPrincipal;
-    final hero = isDual || isEqPrincipal
-        ? '${app.money(result.firstMonthPayment)} → ${app.money(result.lastMonthPayment)}'
-        : app.money(result.monthlyPayment);
-    final share = result.totalPayment > 0
-        ? (result.totalInterest / result.totalPayment * 100).toStringAsFixed(0)
-        : '0';
-    final fromSaved = app.pendingSavedId != null;
+    final hero = isDual
+        ? app.money(result.firstMonthPayment)
+        : isEqPrincipal
+            ? '${app.money(result.firstMonthPayment)} → ${app.money(result.lastMonthPayment)}'
+            : app.money(result.monthlyPayment);
+    final showSave = !app.isDuplicateSave(result);
+    final insights = _resultInsightLines(result, app);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -568,13 +632,21 @@ class CalcResultScreen extends StatelessWidget {
         LoanTopBar(
           onBack: () => app.pop(),
           title: app.tr('result.title'),
-          subtitle: '${categoryLabel(result.input.category, app.locale)} · ${modeLabel(result.input.mode, app.locale)}',
+          subtitle: isDual
+              ? categoryLabel(result.input.category, app.locale)
+              : '${categoryLabel(result.input.category, app.locale)} · ${modeLabel(result.input.mode, app.locale)}',
         ),
         LoanCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              LoanLabel(isDual || isEqPrincipal ? app.tr('result.firstLast') : app.tr('result.monthly')),
+              LoanLabel(
+                isDual
+                    ? app.tr('dual.combinedMonthly')
+                    : isEqPrincipal
+                        ? app.tr('result.firstLast')
+                        : app.tr('result.monthly'),
+              ),
               LoanHeroAmount(hero),
               DonutChart(
                 segments: [
@@ -591,7 +663,7 @@ class CalcResultScreen extends StatelessWidget {
                     amountText: app.money(result.totalInterest),
                   ),
                 ],
-                centerLabel: '$share%',
+                centerLabel: '${_interestShare(result)}%',
                 centerSub: app.tr('result.interestShare'),
               ),
               LoanRow(label: app.tr('result.totalPayment'), value: app.money(result.totalPayment)),
@@ -632,28 +704,38 @@ class CalcResultScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              LoanLabel(app.tr('result.insights')),
-              LoanMuted(
-                isDual
-                    ? app.tr('dual.insight', {
-                        'monthly': app.money(result.monthlyPayment),
-                        'interest': app.money(result.totalInterest),
-                        'total': app.money(result.totalPayment),
-                      })
-                    : app.tr('result.insight.1', {
-                        'mode': modeLabel(result.input.mode, app.locale),
-                        'years': (result.input.termMonths / 12).toStringAsFixed(result.input.termMonths % 12 == 0 ? 0 : 1),
-                        'share': share,
-                      }),
-                fontSize: 13,
-              ),
+              LoanSectionHead(icon: LucideIcons.sparkles, title: app.tr('result.insights')),
+              for (var i = 0; i < insights.length; i++)
+                Padding(
+                  padding: EdgeInsets.only(bottom: i == insights.length - 1 ? 0 : 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '•  ',
+                        style: TextStyle(fontSize: 13, height: 1.55, color: RevolutColors.textSecondary),
+                      ),
+                      Expanded(
+                        child: Text(
+                          insights[i],
+                          style: const TextStyle(fontSize: 13, height: 1.55, color: RevolutColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
         LoanPrimaryButton(label: app.tr('result.amort'), onPressed: () => app.push(AppRoute.amortization)),
         const SizedBox(height: 8),
-        LoanSecondaryButton(label: app.tr('result.compare'), onPressed: app.addPendingToCompare),
-        if (!fromSaved) ...[
+        LoanSecondaryButton(
+          label: app.tr('result.compare'),
+          onPressed: () {
+            app.addPendingToCompare();
+          },
+        ),
+        if (showSave) ...[
           const SizedBox(height: 8),
           LoanSecondaryButton(
             label: app.tr('result.save'),

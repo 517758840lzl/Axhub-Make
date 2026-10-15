@@ -192,10 +192,19 @@ class AppState extends ChangeNotifier {
     return _calculations.any((c) => calcFingerprint(c.result) == fp);
   }
 
-  Future<void> saveCalc(CalcResult result) async {
-    if (isDuplicateSave(result)) {
-      showToast(tr('toast.alreadySaved'));
-      return;
+  /// 与原型一致：已有相同方案时返回其 id；否则写入已保存。quiet 时不提示「未重复添加」。
+  Future<String?> savePendingResult({bool quietIfExists = false}) async {
+    final result = _pendingResult;
+    if (result == null) return null;
+    final fp = calcFingerprint(result);
+    for (final c in _calculations) {
+      if (calcFingerprint(c.result) != fp) continue;
+      if (_pendingSavedId != c.id) {
+        _pendingSavedId = c.id;
+        notifyListeners();
+      }
+      if (!quietIfExists) showToast(tr('toast.alreadySaved'));
+      return c.id;
     }
     final input = result.input;
     final item = SavedCalculation(
@@ -211,6 +220,12 @@ class AppState extends ChangeNotifier {
     await persistCalculations([item, ..._calculations]);
     _pendingSavedId = item.id;
     showToast(tr('toast.savedProfile'));
+    return item.id;
+  }
+
+  Future<void> saveCalc(CalcResult result) async {
+    _pendingResult = result;
+    await savePendingResult();
   }
 
   /// 加入对比槽。只有 1 个时提示再选一个；满 2 个直接进入对比，不再弹提示。已满 3 个则只提示。
@@ -231,20 +246,10 @@ class AppState extends ChangeNotifier {
     if (openCompare) push(AppRoute.compare);
   }
 
-  void addPendingToCompare() {
-    final r = _pendingResult;
-    if (r == null) return;
-    var id = _pendingSavedId;
-    if (id == null) {
-      final fp = calcFingerprint(r);
-      for (final c in _calculations) {
-        if (calcFingerprint(c.result) == fp) {
-          id = c.id;
-          break;
-        }
-      }
-    }
-    addToCompare(id ?? 'pending:${calcFingerprint(r)}');
+  Future<void> addPendingToCompare() async {
+    final id = await savePendingResult(quietIfExists: true);
+    if (id == null) return;
+    addToCompare(id);
   }
 
   void removeFromCompare(String id) {

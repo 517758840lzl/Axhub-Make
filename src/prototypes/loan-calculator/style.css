@@ -382,6 +382,55 @@
   line-height: 1.5;
 }
 
+.loan-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 0.32);
+}
+
+.loan-dialog {
+  width: min(100%, 320px);
+  background: var(--rev-surface-1);
+  border-radius: 16px;
+  padding: 20px 20px 12px;
+  box-shadow: var(--rev-shadow-soft);
+}
+
+.loan-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.loan-dialog p {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--rev-text-secondary);
+}
+
+.loan-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.loan-dialog-actions button {
+  border: 0;
+  background: none;
+  color: var(--rev-brand-solid);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 8px;
+  cursor: pointer;
+}
+
 .loan-toast {
   position: fixed;
   top: 72%;

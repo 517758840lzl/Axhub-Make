@@ -4,6 +4,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Bookmark,
   Calculator,
   Car,
   ChevronRight,
@@ -259,9 +260,7 @@ function LoanCalculatorApp() {
       id: uid('calc'),
       createdAt: new Date().toISOString(),
       favorite: false,
-      note:
-        input.label ||
-        `${categoryLabel(input.category, t)} · ${modeLabel(input.mode, t)}`,
+      note: input.label?.trim() || modeLabel(input.mode, t),
       tags: defaultTagsForCategory(input.category),
       result: app.pendingResult,
     };
@@ -413,7 +412,6 @@ function LoanCalculatorApp() {
           setHashPage('calc-result', { from: 'profile-saved' });
         }}
         onDelete={(id) => {
-          if (!window.confirm(t('saved.deleteConfirm'))) return;
           app.persistCalculations(app.calculations.filter((c) => c.id !== id));
           app.persistCompareIds(app.compareIds.filter((x) => x !== id));
           app.showToast(t('saved.deleted'));
@@ -2294,6 +2292,7 @@ function SavedList({
   onGoCalc: () => void;
 }) {
   const { t } = useApp();
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   if (!calculations.length) {
     return (
       <>
@@ -2301,9 +2300,13 @@ function SavedList({
           <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
             ←
           </button>
-          <h1 className="loan-title">{t('saved.title')}</h1>
+          <div>
+            <h1 className="loan-title">{t('saved.title')}</h1>
+            <p className="loan-subtitle">{t('saved.count', { n: 0 })}</p>
+          </div>
         </header>
         <div className="loan-empty">
+          <Bookmark size={40} strokeWidth={1.6} color="#6b5bff" style={{ marginBottom: 12 }} />
           <p>{t('saved.empty')}</p>
           <button type="button" className="loan-btn-primary" onClick={onGoCalc}>
             {t('saved.goCalc')}
@@ -2362,13 +2365,41 @@ function SavedList({
               <button type="button" className="loan-quick-chip" onClick={() => onCompare(c.id)}>
                 {t('saved.compare')}
               </button>
-              <button type="button" className="loan-quick-chip" onClick={() => onDelete(c.id)}>
+              <button type="button" className="loan-quick-chip" onClick={() => setPendingDeleteId(c.id)}>
                 {t('saved.delete')}
               </button>
             </div>
           </div>
         );
       })}
+      {pendingDeleteId ? (
+        <div className="loan-dialog-backdrop" role="presentation" onClick={() => setPendingDeleteId(null)}>
+          <div
+            className="loan-dialog"
+            role="dialog"
+            aria-labelledby="saved-delete-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="saved-delete-title">{t('saved.deleteTitle')}</h2>
+            <p>{t('saved.deleteConfirm')}</p>
+            <div className="loan-dialog-actions">
+              <button type="button" onClick={() => setPendingDeleteId(null)}>
+                {t('common.back')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = pendingDeleteId;
+                  setPendingDeleteId(null);
+                  onDelete(id);
+                }}
+              >
+                {t('saved.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
