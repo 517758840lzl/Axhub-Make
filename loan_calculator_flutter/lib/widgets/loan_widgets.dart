@@ -90,11 +90,16 @@ class LoanShell extends StatelessWidget {
                         child: fab!,
                       ),
                     if (toast != null)
-                      Positioned(
-                        top: 16,
-                        left: 0,
-                        right: 0,
-                        child: Center(child: LoanToast(message: toast!)),
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Align(
+                            alignment: const Alignment(0, 0.62),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 32),
+                              child: LoanToast(message: toast!),
+                            ),
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -204,7 +209,11 @@ class LoanToast extends StatelessWidget {
           border: Border.all(color: RevolutColors.divider),
           boxShadow: [RevolutColors.softShadow],
         ),
-        child: Text(message, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: RevolutColors.text),
+        ),
       ),
     );
   }

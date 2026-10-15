@@ -1048,17 +1048,14 @@ class CompareScreen extends StatelessWidget {
       return '$text%';
     }
 
-    String rawPlanName(String id, CalcResult result) {
+    String rawPlanName(CalcResult result) {
       final cat = categoryLabel(result.input.category, app.locale);
       final rate = rateText(result.input.annualRatePercent);
-      for (final c in app.calculations) {
-        if (c.id == id && c.note.trim().isNotEmpty) return c.note.trim();
-      }
       return '$cat $rate';
     }
 
     final planNames = <String>[
-      for (var i = 0; i < results.length; i++) rawPlanName(results[i].$1, results[i].$2),
+      for (var i = 0; i < results.length; i++) rawPlanName(results[i].$2),
     ];
     final nameCount = <String, int>{};
     for (final name in planNames) {
@@ -1068,7 +1065,7 @@ class CompareScreen extends StatelessWidget {
       if ((nameCount[planNames[i]] ?? 0) < 2) continue;
       final result = results[i].$2;
       planNames[i] =
-          '${categoryLabel(result.input.category, app.locale)} ${rateText(result.input.annualRatePercent)} · ${app.tr('compare.termMonths', {'n': '${result.input.termMonths}'})}';
+          '${planNames[i]} · ${app.tr('compare.termMonths', {'n': '${result.input.termMonths}'})}';
     }
 
     Widget? richCompare;
@@ -1085,26 +1082,45 @@ class CompareScreen extends StatelessWidget {
       final highInterest = maxIndex(interestVals);
       final lowMonthly = winMonthly < 0 ? 0 : winMonthly;
       final interestGap = (interestVals[highInterest] - interestVals[lowInterest]).abs();
+      String detailName(int i) {
+        final result = results[i].$2;
+        return '${planNames[i]} · ${app.tr('compare.termMonths', {'n': '${result.input.termMonths}'})}';
+      }
+
       final summary = results.length == 2
-          ? app.tr('compare.summaryTwo', {
-              'low': planNames[lowInterest],
-              'high': planNames[lowInterest == 0 ? 1 : 0],
-              'interestDiff': app.money(interestGap),
-              'monthlyDiff': app.money((monthlyValues[0] - monthlyValues[1]).abs()),
-            })
+          ? (lowInterest == lowMonthly
+              ? app.tr('compare.summaryTwoSame', {
+                  'low': detailName(lowInterest),
+                  'high': detailName(lowInterest == 0 ? 1 : 0),
+                  'lowInterestAmt': app.money(interestVals[lowInterest]),
+                  'interestDiff': app.money(interestGap),
+                  'monthlyAmt': app.money(monthlyValues[lowMonthly]),
+                })
+              : app.tr('compare.summaryTwo', {
+                  'low': detailName(lowInterest),
+                  'high': detailName(lowInterest == 0 ? 1 : 0),
+                  'lowInterestAmt': app.money(interestVals[lowInterest]),
+                  'interestDiff': app.money(interestGap),
+                  'monthly': detailName(lowMonthly),
+                  'monthlyAmt': app.money(monthlyValues[lowMonthly]),
+                }))
           : lowInterest == lowMonthly
               ? app.tr('compare.summaryManySame', {
                   'n': '${results.length}',
-                  'low': planNames[lowInterest],
-                  'high': planNames[highInterest],
+                  'low': detailName(lowInterest),
+                  'high': detailName(highInterest),
+                  'lowInterestAmt': app.money(interestVals[lowInterest]),
                   'interestDiff': app.money(interestGap),
+                  'monthlyAmt': app.money(monthlyValues[lowMonthly]),
                 })
               : app.tr('compare.summaryMany', {
                   'n': '${results.length}',
-                  'low': planNames[lowInterest],
-                  'high': planNames[highInterest],
+                  'low': detailName(lowInterest),
+                  'high': detailName(highInterest),
+                  'lowInterestAmt': app.money(interestVals[lowInterest]),
                   'interestDiff': app.money(interestGap),
-                  'monthly': planNames[lowMonthly],
+                  'monthly': detailName(lowMonthly),
+                  'monthlyAmt': app.money(monthlyValues[lowMonthly]),
                 });
       final showDown = results.any((e) => e.$2.input.downPayment != null);
 
@@ -1199,6 +1215,8 @@ class CompareScreen extends StatelessWidget {
                 children: [
                   Text(
                     planNames[i],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, height: 1.3),
                   ),
                   GestureDetector(
@@ -1792,6 +1810,54 @@ extension _FirstOrNull<E> on Iterable<E> {
 
 // --- Saved ---
 
+/// Lucide star polygon, filled. The icon font only ships the outline.
+class _FilledStar extends StatelessWidget {
+  const _FilledStar({this.size = 16});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.square(size),
+      painter: const _FilledStarPainter(RevolutColors.brandSolid),
+    );
+  }
+}
+
+class _FilledStarPainter extends CustomPainter {
+  const _FilledStarPainter(this.color);
+
+  final Color color;
+
+  static const _pts = <Offset>[
+    Offset(12, 2),
+    Offset(15.09, 8.26),
+    Offset(22, 9.27),
+    Offset(17, 14.14),
+    Offset(18.18, 21.02),
+    Offset(12, 17.77),
+    Offset(5.82, 21.02),
+    Offset(7, 14.14),
+    Offset(2, 9.27),
+    Offset(8.91, 8.26),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.width / 24;
+    final path = Path()..moveTo(_pts[0].dx * s, _pts[0].dy * s);
+    for (var i = 1; i < _pts.length; i++) {
+      path.lineTo(_pts[i].dx * s, _pts[i].dy * s);
+    }
+    path.close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _FilledStarPainter oldDelegate) => oldDelegate.color != color;
+}
+
 class SavedListScreen extends StatelessWidget {
   const SavedListScreen({super.key});
 
@@ -1841,7 +1907,7 @@ class SavedListScreen extends StatelessWidget {
                                 style: const TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
-                            if (c.favorite) const Icon(LucideIcons.star, size: 16, color: RevolutColors.brandSolid),
+                            if (c.favorite) const _FilledStar(size: 16),
                             if (inCompare) ...[
                               const SizedBox(width: 6),
                               LoanChip(app.tr('saved.inCompare')),

@@ -17,6 +17,7 @@ import {
   Shield,
   ShoppingBag,
   Sparkles,
+  Star,
   TableProperties,
   UserRound,
   Wallet,
@@ -2039,12 +2040,12 @@ function CompareView({
   const rawNames = items.map((c) => {
     const cat = categoryLabel(c.result.input.category, t);
     const rate = rateText(c.result.input.annualRatePercent);
-    return c.note.trim() || `${cat} ${rate}`;
+    return `${cat} ${rate}`;
   });
   const planNames = rawNames.map((name, i) => {
     if (rawNames.filter((n) => n === name).length < 2) return name;
     const c = items[i]!;
-    return `${categoryLabel(c.result.input.category, t)} ${rateText(c.result.input.annualRatePercent)} · ${t('compare.termMonths', { n: c.result.input.termMonths })}`;
+    return `${name} · ${t('compare.termMonths', { n: c.result.input.termMonths })}`;
   });
   const winInterest = bestIndex(interestVals, true);
   const winMonthly = bestIndex(monthlyValues, true);
@@ -2055,27 +2056,46 @@ function CompareView({
   );
   const lowMonthly = winMonthly < 0 ? 0 : winMonthly;
   const interestGap = Math.abs(interestVals[highInterest]! - interestVals[lowInterest]!);
+  const detailName = (i: number) => {
+    const c = items[i];
+    if (!c) return planNames[i] ?? '';
+    return `${planNames[i]} · ${t('compare.termMonths', { n: c.result.input.termMonths })}`;
+  };
   const summary =
     items.length === 2
-      ? t('compare.summaryTwo', {
-          low: planNames[lowInterest],
-          high: planNames[lowInterest === 0 ? 1 : 0],
-          interestDiff: money(interestGap),
-          monthlyDiff: money(Math.abs(monthlyValues[0]! - monthlyValues[1]!)),
-        })
+      ? lowInterest === lowMonthly
+        ? t('compare.summaryTwoSame', {
+            low: detailName(lowInterest),
+            high: detailName(lowInterest === 0 ? 1 : 0),
+            lowInterestAmt: money(interestVals[lowInterest] ?? 0),
+            interestDiff: money(interestGap),
+            monthlyAmt: money(monthlyValues[lowMonthly] ?? 0),
+          })
+        : t('compare.summaryTwo', {
+            low: detailName(lowInterest),
+            high: detailName(lowInterest === 0 ? 1 : 0),
+            lowInterestAmt: money(interestVals[lowInterest] ?? 0),
+            interestDiff: money(interestGap),
+            monthly: detailName(lowMonthly),
+            monthlyAmt: money(monthlyValues[lowMonthly] ?? 0),
+          })
       : lowInterest === lowMonthly
         ? t('compare.summaryManySame', {
             n: items.length,
-            low: planNames[lowInterest],
-            high: planNames[highInterest],
+            low: detailName(lowInterest),
+            high: detailName(highInterest),
+            lowInterestAmt: money(interestVals[lowInterest] ?? 0),
             interestDiff: money(interestGap),
+            monthlyAmt: money(monthlyValues[lowMonthly] ?? 0),
           })
         : t('compare.summaryMany', {
             n: items.length,
-            low: planNames[lowInterest],
-            high: planNames[highInterest],
+            low: detailName(lowInterest),
+            high: detailName(highInterest),
+            lowInterestAmt: money(interestVals[lowInterest] ?? 0),
             interestDiff: money(interestGap),
-            monthly: planNames[lowMonthly],
+            monthly: detailName(lowMonthly),
+            monthlyAmt: money(monthlyValues[lowMonthly] ?? 0),
           });
 
   const chartPlans = items.map((c, i) => ({
@@ -2136,7 +2156,7 @@ function CompareView({
               <div className="loan-compare-cell loan-compare-head">{t('compare.metric')}</div>
               {items.map((c) => (
                 <div key={c.id} className="loan-compare-cell loan-compare-head">
-                  <div>{planNames[items.indexOf(c)]}</div>
+                  <div className="loan-compare-plan">{planNames[items.indexOf(c)]}</div>
                   <button type="button" className="loan-compare-remove" onClick={() => onRemove(c.id)}>
                     {t('compare.remove')}
                   </button>
@@ -2302,41 +2322,27 @@ function SavedList({
         </div>
       </header>
       {calculations.map((c) => {
-        const pay =
-          c.result.input.mode === 'equal-principal'
-            ? c.result.firstMonthPayment
-            : c.result.monthlyPayment;
         return (
           <div key={c.id} className="loan-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <button
-                type="button"
-                style={{
-                  all: 'unset',
-                  cursor: 'pointer',
-                  flex: 1,
-                }}
-                onClick={() => onOpen(c)}
-              >
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span className="loan-chip">{categoryLabel(c.result.input.category, t)}</span>
-                  {c.favorite ? <span className="loan-chip">{t('saved.fav')}</span> : null}
-                  {compareIds.includes(c.id) ? (
-                    <span className="loan-chip">{t('saved.inCompare')}</span>
-                  ) : null}
+            <button type="button" className="loan-saved-body" onClick={() => onOpen(c)}>
+              <div className="loan-saved-head">
+                <div className="loan-saved-title">
+                  {c.note.trim() || categoryLabel(c.result.input.category, t)}
                 </div>
-                <div style={{ fontWeight: 700, fontSize: 18, marginTop: 8 }}>
-                  {t('compare.perMonth', { amount: money(pay) })}
-                </div>
-                <div className="loan-muted" style={{ fontSize: 12, marginTop: 4 }}>
-                  {t('saved.meta', {
-                    principal: money(c.result.input.principal),
-                    rate: c.result.input.annualRatePercent,
-                    months: c.result.input.termMonths,
-                  })}
-                </div>
-              </button>
-            </div>
+                {c.favorite ? <Star className="loan-saved-star" size={16} fill="currentColor" /> : null}
+                {compareIds.includes(c.id) ? (
+                  <span className="loan-chip">{t('saved.inCompare')}</span>
+                ) : null}
+              </div>
+              <div className="loan-muted loan-saved-meta">
+                {t('saved.meta', {
+                  principal: money(c.result.input.principal),
+                  rate: c.result.input.annualRatePercent,
+                  months: c.result.input.termMonths,
+                })}
+              </div>
+              <div className="loan-saved-pay">{t('compare.perMonth', { amount: money(c.result.monthlyPayment) })}</div>
+            </button>
             <div className="loan-saved-actions">
               <button type="button" className="loan-quick-chip" onClick={() => onToggleFav(c.id)}>
                 {c.favorite ? t('saved.unfav') : t('saved.fav')}

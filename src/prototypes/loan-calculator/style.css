@@ -384,10 +384,13 @@
 
 .loan-toast {
   position: fixed;
-  top: 16px;
+  top: 72%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   z-index: 50;
+  max-width: calc(100% - 48px);
+  text-align: center;
+  pointer-events: none;
   background: var(--rev-surface-1);
   border: 1px solid var(--rev-divider);
   padding: 10px 16px;
@@ -1261,6 +1264,12 @@
   background: var(--rev-surface-2);
 }
 
+.loan-compare-plan {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .loan-compare-best {
   color: var(--rev-income);
   font-weight: 700;
@@ -1277,11 +1286,49 @@
   padding: 0;
 }
 
+.loan-saved-body {
+  all: unset;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+
+.loan-saved-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.loan-saved-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.loan-saved-star {
+  flex-shrink: 0;
+  color: var(--rev-brand-solid);
+}
+
+.loan-saved-meta {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.loan-saved-pay {
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--rev-brand-solid);
+  font-variant-numeric: tabular-nums;
+}
+
 .loan-saved-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .loan-tab-label {
