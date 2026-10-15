@@ -18,7 +18,7 @@ const CATEGORY_TAG: Record<LoanCategory, string> = {
   mortgage: '房贷',
   auto: '车贷',
   personal: '消费贷',
-  dual: '双贷款',
+  dual: '组合贷',
   other: '其他',
 };
 

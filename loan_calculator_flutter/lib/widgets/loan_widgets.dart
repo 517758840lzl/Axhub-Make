@@ -7,6 +7,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../theme/revolut_theme.dart';
 
 const loanShellMaxWidth = 430.0;
+/// Tab 栏高度：外层 8+8 + item 上下 6+6 + 图标 28 + 间距 3 + 文案约 13 ≈ 72
+const loanTabBarHeight = 72.0;
+/// FAB 底边与 Tab 顶边的空隙
+const loanFabTabGap = 16.0;
 
 class LoanShell extends StatelessWidget {
   const LoanShell({
@@ -26,34 +30,40 @@ class LoanShell extends StatelessWidget {
   final ValueChanged<int> onTab;
   final List<String> tabLabels;
   final String? toast;
-  /// 固定在 Tab 栏上方（与 Web `position: fixed` 的 `.loan-fab` 一致）
+  /// 浮在内容之上、Tab 之上（不占布局条带）
   final Widget? fab;
 
   @override
   Widget build(BuildContext context) {
+    final fabClearance = fab != null ? 52.0 + loanFabTabGap + 8 : 0.0;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: revolutSystemUi,
       child: Material(
         color: RevolutColors.canvas,
         child: SafeArea(
-          // 顶底留白给系统栏，背后画布色透过透明状态栏，视觉一体
           top: true,
           bottom: true,
+          left: false,
+          right: false,
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: loanShellMaxWidth),
               child: ColoredBox(
                 color: RevolutColors.canvas,
                 child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
                     Column(
                       children: [
                         Expanded(
                           child: SingleChildScrollView(
-                            // 任意页拖拽滚动时收起键盘
                             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                            // 仅留出 Tab 栏高度；有 FAB 时略加，避免内容被挡
-                            padding: EdgeInsets.fromLTRB(16, 12, 16, showTabBar ? (fab != null ? 80 : 52) : 12),
+                            padding: EdgeInsets.fromLTRB(
+                              12,
+                              12,
+                              12,
+                              showTabBar ? 16 + fabClearance : 12,
+                            ),
                             child: body,
                           ),
                         ),
@@ -63,8 +73,8 @@ class LoanShell extends StatelessWidget {
                     ),
                     if (fab != null && showTabBar)
                       Positioned(
-                        right: 16,
-                        bottom: 60,
+                        right: 12,
+                        bottom: loanTabBarHeight + loanFabTabGap,
                         child: fab!,
                       ),
                     if (toast != null)
@@ -335,30 +345,37 @@ class LoanInput extends StatelessWidget {
   Widget build(BuildContext context) {
     final field = Material(
       color: Colors.transparent,
-      child: TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      onChanged: onChanged,
-      style: TextStyle(
-        fontSize: amountStyle ? 18 : 16,
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
-      decoration: InputDecoration(
-        hintText: placeholder,
-        filled: true,
-        fillColor: RevolutColors.surface2,
-        contentPadding: EdgeInsets.fromLTRB(14, 0, suffix != null ? 36 : 14, 0),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: RevolutColors.divider)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: error ? RevolutColors.spend : RevolutColors.divider),
+      child: SizedBox(
+        height: 52,
+        child: TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          textAlignVertical: TextAlignVertical.center,
+          style: TextStyle(
+            fontSize: amountStyle ? 18 : 16,
+            height: 1.2,
+            leadingDistribution: TextLeadingDistribution.even,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+          decoration: InputDecoration(
+            hintText: placeholder,
+            filled: true,
+            fillColor: RevolutColors.surface2,
+            isDense: true,
+            // 上下对称，避免数字视觉上偏上
+            contentPadding: EdgeInsets.fromLTRB(14, 14, suffix != null ? 36 : 14, 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: RevolutColors.divider)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: error ? RevolutColors.spend : RevolutColors.divider),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: RevolutColors.brandSolid, width: 1),
+            ),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: RevolutColors.brandSolid, width: 1),
-        ),
-        constraints: const BoxConstraints(minHeight: 52),
-      ),
       ),
     );
     final wrapped = suffix == null
@@ -581,16 +598,18 @@ class LoanHeroBanner extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.badges,
+    this.marginBottom = 16,
   });
 
   final String title;
   final String subtitle;
   final List<Widget> badges;
+  final double marginBottom;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: marginBottom),
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(
         gradient: RevolutColors.gradient,

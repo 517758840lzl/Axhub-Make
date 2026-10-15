@@ -1006,6 +1006,7 @@ class SavingsListScreen extends StatelessWidget {
         ...goals.map((g) {
           final pct = g.target > 0 ? (g.current / g.target * 100).clamp(0, 100) : 0.0;
           final left = (g.target - g.current).clamp(0, double.infinity);
+          final name = _savingsName(g.name, app);
           return LoanCard(
             onTap: () => app.push(AppRoute.savingsDetail, id: g.id),
             child: Column(
@@ -1014,7 +1015,9 @@ class SavingsListScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(_savingsName(g.name, app), style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Expanded(
+                      child: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ),
                     LoanChip('${pct.toStringAsFixed(0)}%'),
                   ],
                 ),
@@ -1041,34 +1044,42 @@ class SavingsListScreen extends StatelessWidget {
                     centerSub: app.tr('savings.progress'),
                   ),
                 ),
+                // 提示挂在对应目标卡片内，多目标时不会混淆
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                  decoration: BoxDecoration(
+                    gradient: LoanCard.savingsInsightGradient,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: RevolutColors.divider),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LoanLabel(
+                        app.tr('savings.insightsFor', {'name': name}),
+                        marginBottom: 10,
+                      ),
+                      _SavingsInsightLine(
+                        icon: LucideIcons.clock3,
+                        iconColor: RevolutColors.text,
+                        text: savingsEtaLine(g, app.money, app.tr),
+                        muted: false,
+                      ),
+                      _SavingsInsightLine(
+                        icon: LucideIcons.shield,
+                        iconColor: RevolutColors.textSecondary,
+                        text: savingsBufferLine(g, app.calculations, app.money, app.tr),
+                        muted: true,
+                        marginBottom: 0,
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
         }),
-        ...goals.map(
-          (g) => LoanCard(
-            backgroundGradient: LoanCard.savingsInsightGradient,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                LoanLabel(app.tr('savings.insights'), marginBottom: 10),
-                _SavingsInsightLine(
-                  icon: LucideIcons.clock3,
-                  iconColor: RevolutColors.text,
-                  text: savingsEtaLine(g, app.money, app.tr),
-                  muted: false,
-                ),
-                _SavingsInsightLine(
-                  icon: LucideIcons.shield,
-                  iconColor: RevolutColors.textSecondary,
-                  text: savingsBufferLine(g, app.calculations, app.money, app.tr),
-                  muted: true,
-                  marginBottom: 0,
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }

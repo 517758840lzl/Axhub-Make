@@ -1717,6 +1717,7 @@ function SavingsList({
       ) : null}
       {goals.map((g) => {
         const pct = g.target > 0 ? Math.min(100, (g.current / g.target) * 100) : 0;
+        const name = displaySavingsName(g.name, t);
         return (
           <div
             key={g.id}
@@ -1727,7 +1728,7 @@ function SavingsList({
             onKeyDown={(e) => e.key === 'Enter' && onOpen(g.id)}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong>{displaySavingsName(g.name, t)}</strong>
+              <strong>{name}</strong>
               <span className="loan-chip">{pct.toFixed(0)}%</span>
             </div>
             <Donut
@@ -1751,24 +1752,22 @@ function SavingsList({
               centerCaption={t('savings.progress')}
               animate={false}
             />
+            <div className="loan-savings-insight loan-savings-insight--inline">
+              <div className="loan-label" style={{ marginBottom: 10 }}>
+                {t('savings.insightsFor', { name })}
+              </div>
+              <p className="loan-savings-insight-line">
+                <Clock3 size={14} style={{ verticalAlign: -2, marginRight: 6 }} aria-hidden />
+                {savingsEtaLine(g, money, t)}
+              </p>
+              <p className="loan-savings-insight-line loan-muted" style={{ marginBottom: 0 }}>
+                <Shield size={14} style={{ verticalAlign: -2, marginRight: 6 }} aria-hidden />
+                {savingsBufferLine(g, calculations, money, t)}
+              </p>
+            </div>
           </div>
         );
       })}
-      {goals.map((g) => (
-        <div key={`${g.id}-insights`} className="loan-card loan-savings-insight">
-          <div className="loan-label" style={{ marginBottom: 10 }}>
-            {t('savings.insights')}
-          </div>
-          <p className="loan-savings-insight-line">
-            <Clock3 size={14} style={{ verticalAlign: -2, marginRight: 6 }} aria-hidden />
-            {savingsEtaLine(g, money, t)}
-          </p>
-          <p className="loan-savings-insight-line loan-muted" style={{ marginBottom: 0 }}>
-            <Shield size={14} style={{ verticalAlign: -2, marginRight: 6 }} aria-hidden />
-            {savingsBufferLine(g, calculations, money, t)}
-          </p>
-        </div>
-      ))}
       <button type="button" className="loan-fab" aria-label={t('savings.create')} onClick={onNew}>
         +
       </button>

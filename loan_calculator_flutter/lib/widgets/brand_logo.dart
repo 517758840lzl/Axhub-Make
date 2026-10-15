@@ -81,12 +81,15 @@ class _BrandLogoPainter extends CustomPainter {
       arcPaint,
     );
 
+    // 与桌面 App Icon 一致：3×3 九点，相对圆心居中
     final dotPaint = Paint()..color = Colors.white.withValues(alpha: 0.95);
-    final gridOrigin = Offset(center.dx - r * 0.35, center.dy + r * 0.05);
     const cols = 3;
-    const rows = 2;
-    final gap = size.width * 0.07;
-    final dotR = size.width * 0.035;
+    const rows = 3;
+    final gap = size.width * 0.065;
+    final dotR = size.width * 0.032;
+    final gridW = gap * (cols - 1);
+    final gridH = gap * (rows - 1);
+    final gridOrigin = Offset(center.dx - gridW / 2, center.dy - gridH / 2);
     for (var row = 0; row < rows; row++) {
       for (var col = 0; col < cols; col++) {
         final o = Offset(gridOrigin.dx + col * gap, gridOrigin.dy + row * gap);
