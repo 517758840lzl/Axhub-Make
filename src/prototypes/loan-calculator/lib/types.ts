@@ -9,6 +9,10 @@ export interface CalcInput {
   mode: RepaymentMode;
   category: LoanCategory;
   label?: string;
+  /** 车贷：车辆成交价 */
+  vehiclePrice?: number;
+  /** 车贷：首付金额 */
+  downPayment?: number;
 }
 
 export interface AmortizationRow {
@@ -77,11 +81,15 @@ export interface UserProfile {
   createdAt: string;
 }
 
+export type AppLocale = 'zh-CN' | 'en' | 'es';
+
 export interface AppSettings {
   /** ISO 4217，如 CNY、USD */
   currencyCode: string;
   decimals: number;
   theme: 'dark' | 'light' | 'system';
+  /** 界面语言 */
+  locale: AppLocale;
 }
 
 export interface AppMeta {

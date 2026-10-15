@@ -1,4 +1,17 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  htmlLang,
+  translate,
+  type MessageKey,
+  type TranslateFn,
+} from './lib/i18n';
 import type {
   AppSettings,
   CalcResult,
@@ -11,11 +24,13 @@ import {
   clearBusinessData,
   exportAllData,
   getCalculations,
+  getCompareIds,
   getLedgerEntries,
   getProfile,
   getSettings,
   getSavingsGoals,
   saveCalculations,
+  saveCompareIds,
   saveLedgerEntries,
   saveProfile,
   saveSettings,
@@ -29,16 +44,20 @@ type AppContextValue = {
   calculations: SavedCalculation[];
   ledgerEntries: ManualLedgerEntry[];
   savingsGoals: SavingsGoal[];
+  compareIds: string[];
   pendingResult: CalcResult | null;
   setPendingResult: (r: CalcResult | null) => void;
   toast: string | null;
   showToast: (msg: string) => void;
+  t: TranslateFn;
   refresh: () => void;
   updateProfile: (p: UserProfile) => void;
   updateSettings: (s: AppSettings) => void;
   persistCalculations: (list: SavedCalculation[]) => void;
   persistLedger: (list: ManualLedgerEntry[]) => void;
   persistSavings: (list: SavingsGoal[]) => void;
+  persistCompareIds: (ids: string[]) => void;
+  addToCompare: (id: string) => boolean;
   clearBusiness: () => void;
   exportData: () => void;
 };
@@ -52,8 +71,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [calculations, setCalculations] = useState(getCalculations);
   const [ledgerEntries, setLedgerEntries] = useState(getLedgerEntries);
   const [savingsGoals, setSavingsGoals] = useState(getSavingsGoals);
+  const [compareIds, setCompareIds] = useState(getCompareIds);
   const [pendingResult, setPendingResult] = useState<CalcResult | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.documentElement.lang = htmlLang(settings.locale);
+  }, [settings.locale]);
+
+  const t = useCallback<TranslateFn>(
+    (key: MessageKey, vars?: Record<string, string | number>) =>
+      translate(settings.locale, key, vars),
+    [settings.locale],
+  );
 
   const refresh = useCallback(() => {
     setProfileState(getProfile());
@@ -61,6 +91,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCalculations(getCalculations());
     setLedgerEntries(getLedgerEntries());
     setSavingsGoals(getSavingsGoals());
+    setCompareIds(getCompareIds());
   }, []);
 
   const showToast = useCallback((msg: string) => {
@@ -93,11 +124,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavingsGoals(list);
   }, []);
 
+  const persistCompareIds = useCallback((ids: string[]) => {
+    const next = ids.slice(0, 3);
+    saveCompareIds(next);
+    setCompareIds(next);
+  }, []);
+
+  const addToCompare = useCallback(
+    (id: string) => {
+      if (compareIds.includes(id)) return true;
+      if (compareIds.length >= 3) return false;
+      const next = [...compareIds, id];
+      saveCompareIds(next);
+      setCompareIds(next);
+      return true;
+    },
+    [compareIds],
+  );
+
   const clearBusiness = useCallback(() => {
     clearBusinessData();
     setCalculations([]);
     setLedgerEntries([]);
     setSavingsGoals([]);
+    setCompareIds([]);
   }, []);
 
   const exportData = useCallback(() => {
@@ -117,16 +167,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       calculations,
       ledgerEntries,
       savingsGoals,
+      compareIds,
       pendingResult,
       setPendingResult,
       toast,
       showToast,
+      t,
       refresh,
       updateProfile,
       updateSettings,
       persistCalculations,
       persistLedger,
       persistSavings,
+      persistCompareIds,
+      addToCompare,
       clearBusiness,
       exportData,
     }),
@@ -136,15 +190,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       calculations,
       ledgerEntries,
       savingsGoals,
+      compareIds,
       pendingResult,
       toast,
       showToast,
+      t,
       refresh,
       updateProfile,
       updateSettings,
       persistCalculations,
       persistLedger,
       persistSavings,
+      persistCompareIds,
+      addToCompare,
       clearBusiness,
       exportData,
     ],

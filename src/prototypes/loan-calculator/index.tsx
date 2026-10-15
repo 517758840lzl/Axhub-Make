@@ -8,10 +8,9 @@ import {
   Car,
   ChevronRight,
   Clock3,
+  Columns2,
   Home,
-  NotebookPen,
   Landmark,
-  MoreHorizontal,
   PieChart,
   PiggyBank,
   Shield,
@@ -20,24 +19,29 @@ import {
   TableProperties,
   UserRound,
   Wallet,
-  WifiOff,
   type LucideIcon,
 } from 'lucide-react';
 import { defineHashPageRoute, useHashPage } from '../../common/useHashPage';
 import { CurrencyPicker } from './components/CurrencyPicker';
 import { Donut } from './components/Donut';
-import { TagPicker, TagRow } from './components/TagPicker';
 import { AppProvider, useApp } from './context';
-import { computeLoan, modeLabel } from './lib/calc';
+import { computeLoan } from './lib/calc';
 import { savingsBufferLine, savingsEtaLine } from './lib/savings_insights';
 import { getCurrency } from './lib/currencies';
 import { formatMoney, parseHashParams, setHashPage, uid } from './lib/format';
-import { collectAllTags, defaultTagsForCategory } from './lib/tags';
+import {
+  APP_LOCALES,
+  categoryMessageKey,
+  htmlLang,
+  modeMessageKey,
+  type TranslateFn,
+} from './lib/i18n';
+import { defaultTagsForCategory } from './lib/tags';
 import type {
+  AppLocale,
+  CalcInput,
   CalcResult,
-  LedgerDirection,
   LoanCategory,
-  ManualLedgerEntry,
   RepaymentMode,
   SavedCalculation,
   SavingsGoal,
@@ -49,14 +53,12 @@ const ROUTE = defineHashPageRoute(
     { id: 'calc', title: '计算' },
     { id: 'calc-result', title: '计算结果' },
     { id: 'amortization', title: '摊还明细' },
+    { id: 'compare', title: '方案对比' },
     { id: 'savings', title: '储蓄' },
     { id: 'savings-detail', title: '储蓄详情' },
     { id: 'savings-new', title: '新建储蓄' },
-    { id: 'ledger', title: '记账' },
-    { id: 'ledger-new', title: '记一笔' },
-    { id: 'ledger-detail', title: '贷款方案详情' },
-    { id: 'ledger-manual-detail', title: '收支详情' },
     { id: 'profile', title: '我的' },
+    { id: 'profile-saved', title: '已保存方案' },
     { id: 'profile-settings', title: '偏好设置' },
     { id: 'profile-data', title: '数据管理' },
     { id: 'profile-about', title: '关于与隐私' },
@@ -64,33 +66,66 @@ const ROUTE = defineHashPageRoute(
   { defaultPageId: 'calc' },
 );
 
-const TAB_ROOTS = ['calc', 'savings', 'ledger', 'profile'] as const;
+const TAB_ROOTS = ['calc', 'savings', 'profile'] as const;
 
 const TAB_NAV: {
   id: (typeof TAB_ROOTS)[number];
-  label: string;
+  labelKey: 'tab.calc' | 'tab.savings' | 'tab.profile';
   Icon: LucideIcon;
 }[] = [
-  { id: 'calc', label: '计算', Icon: Calculator },
-  { id: 'savings', label: '储蓄', Icon: PiggyBank },
-  { id: 'ledger', label: '记账', Icon: NotebookPen },
-  { id: 'profile', label: '我的', Icon: UserRound },
+  { id: 'calc', labelKey: 'tab.calc', Icon: Calculator },
+  { id: 'savings', labelKey: 'tab.savings', Icon: PiggyBank },
+  { id: 'profile', labelKey: 'tab.profile', Icon: UserRound },
 ];
 
 const LOAN_TYPE_META: Record<
-  LoanCategory,
-  { label: string; Icon: LucideIcon }
+  Exclude<LoanCategory, 'other'>,
+  { Icon: LucideIcon }
 > = {
-  mortgage: { label: '房贷', Icon: Home },
-  auto: { label: '车贷', Icon: Car },
-  personal: { label: '消费', Icon: ShoppingBag },
-  other: { label: '其他', Icon: MoreHorizontal },
+  mortgage: { Icon: Home },
+  auto: { Icon: Car },
+  personal: { Icon: ShoppingBag },
 };
 
+const CATEGORY_PRESETS: Record<
+  Exclude<LoanCategory, 'other'>,
+  { principal: string; rate: string; years: string; months: string; vehicle?: string; downPct?: string }
+> = {
+  mortgage: { principal: '1000000', rate: '3.6', years: '30', months: '0' },
+  auto: { principal: '126000', rate: '4.5', years: '3', months: '0', vehicle: '180000', downPct: '30' },
+  personal: { principal: '50000', rate: '8.5', years: '3', months: '0' },
+};
+
+function categoryLabel(c: LoanCategory, t: TranslateFn) {
+  return t(categoryMessageKey(c));
+}
+
+function modeLabel(mode: RepaymentMode, t: TranslateFn) {
+  return t(modeMessageKey(mode));
+}
+
+function sameLoanInput(a: CalcInput, b: CalcInput): boolean {
+  return (
+    a.category === b.category &&
+    a.mode === b.mode &&
+    a.principal === b.principal &&
+    a.annualRatePercent === b.annualRatePercent &&
+    a.termMonths === b.termMonths &&
+    (a.vehiclePrice ?? null) === (b.vehiclePrice ?? null) &&
+    (a.downPayment ?? null) === (b.downPayment ?? null)
+  );
+}
+
+function findSavedByInput(
+  list: SavedCalculation[],
+  input: CalcInput,
+): SavedCalculation | undefined {
+  return list.find((c) => sameLoanInput(c.result.input, input));
+}
+
 function tabForPage(page: string): (typeof TAB_ROOTS)[number] {
-  if (page.startsWith('calc')) return 'calc';
+  if (page.startsWith('calc') || page === 'compare') return 'calc';
   if (page.startsWith('savings')) return 'savings';
-  if (page.startsWith('ledger') || page.startsWith('history')) return 'ledger';
   return 'profile';
 }
 
@@ -98,22 +133,88 @@ function showTabBar(page: string) {
   return (TAB_ROOTS as readonly string[]).includes(page);
 }
 
+function insightLines(result: CalcResult, t: TranslateFn): string[] {
+  const { input, monthlyPayment, totalInterest, totalPayment } = result;
+  const interestShare = totalPayment > 0 ? (totalInterest / totalPayment) * 100 : 0;
+  const years = (input.termMonths / 12).toFixed(input.termMonths % 12 === 0 ? 0 : 1);
+  const lines = [
+    t('result.insight.1', {
+      mode: modeLabel(input.mode, t),
+      years,
+      share: interestShare.toFixed(0),
+    }),
+    t('result.insight.2', {
+      monthly: monthlyPayment.toFixed(0),
+      interest: totalInterest.toFixed(0),
+    }),
+  ];
+  if (input.category === 'auto' && input.vehiclePrice != null && input.downPayment != null) {
+    const pct = input.vehiclePrice > 0 ? (input.downPayment / input.vehiclePrice) * 100 : 0;
+    lines.unshift(
+      t('result.insight.auto', {
+        vehicle: input.vehiclePrice.toFixed(0),
+        pct: pct.toFixed(0),
+        down: input.downPayment.toFixed(0),
+        principal: input.principal.toFixed(0),
+      }),
+    );
+  } else {
+    lines.push(
+      t('result.insight.3', {
+        principal: input.principal.toFixed(0),
+        rate: input.annualRatePercent,
+      }),
+    );
+  }
+  return lines.slice(0, 3);
+}
+
 function LoanCalculatorApp() {
   const { page, setPage } = useHashPage(ROUTE);
   const app = useApp();
+  const { t } = app;
   const params = parseHashParams();
   const entityId = params.get('id') ?? '';
 
   const money = (n: number) => formatMoney(n, app.settings);
 
   useEffect(() => {
-    if (page === 'history') setPage('ledger');
-    if (page === 'history-detail' && entityId) {
-      setHashPage('ledger-detail', { id: entityId });
+    if (
+      page === 'ledger' ||
+      page === 'ledger-new' ||
+      page === 'ledger-detail' ||
+      page === 'ledger-manual-detail' ||
+      page === 'history' ||
+      page === 'history-detail'
+    ) {
+      setPage('profile-saved');
     }
-  }, [page, entityId, setPage]);
+  }, [page, setPage]);
 
   const goTab = (tab: (typeof TAB_ROOTS)[number]) => setPage(tab);
+
+  const savePending = (opts?: { quietIfExists?: boolean }) => {
+    if (!app.pendingResult) return '';
+    const input = app.pendingResult.input;
+    const existing = findSavedByInput(app.calculations, input);
+    if (existing) {
+      if (!opts?.quietIfExists) app.showToast(t('toast.alreadySaved'));
+      return existing.id;
+    }
+    const item: SavedCalculation = {
+      id: uid('calc'),
+      createdAt: new Date().toISOString(),
+      favorite: false,
+      note:
+        input.label ||
+        `${categoryLabel(input.category, t)} · ${modeLabel(input.mode, t)}`,
+      tags: defaultTagsForCategory(input.category),
+      result: app.pendingResult,
+    };
+    app.persistCalculations([item, ...app.calculations]);
+    app.showToast(t('toast.savedProfile'));
+    return item.id;
+  };
 
   let content: React.ReactNode = null;
 
@@ -128,23 +229,25 @@ function LoanCalculatorApp() {
       />
     );
   } else if (page === 'calc-result' && app.pendingResult) {
+    const resultFrom = params.get('from') || 'calc';
+    const showSave = resultFrom !== 'profile-saved';
     content = (
       <CalcResultView
         result={app.pendingResult}
         money={money}
-        onAmortization={() => setPage('amortization')}
+        showSave={showSave}
+        onAmortization={() => setHashPage('amortization', { from: 'calc-result' })}
         onSave={() => {
-          const input = app.pendingResult!.input;
-          const item: SavedCalculation = {
-            id: uid('calc'),
-            createdAt: new Date().toISOString(),
-            favorite: false,
-            note: input.label || modeLabel(input.mode),
-            tags: defaultTagsForCategory(input.category),
-            result: app.pendingResult!,
-          };
-          app.persistCalculations([item, ...app.calculations]);
-          app.showToast('已保存到记账');
+          savePending();
+        }}
+        onCompare={() => {
+          const id = savePending({ quietIfExists: true });
+          if (id) {
+            const ok = app.addToCompare(id);
+            if (!ok) app.showToast(t('compare.max'));
+            else app.showToast(t('compare.added'));
+          }
+          setHashPage('compare', { from: 'calc-result' });
         }}
         onSavings={() => {
           const monthly = app.pendingResult!.monthlyPayment;
@@ -152,21 +255,39 @@ function LoanCalculatorApp() {
             prefill: String(Math.round(monthly * 3)),
           });
         }}
-        back={() => setPage('calc')}
+        back={() => setPage(resultFrom)}
       />
     );
   } else if (page === 'calc-result') {
     content = <RedirectCalc />;
   } else if (page === 'amortization' && app.pendingResult) {
+    const from = params.get('from') || 'calc-result';
     content = (
       <AmortizationView
         result={app.pendingResult}
         money={money}
-        back={() => setPage('calc-result')}
+        back={() => setPage(from)}
       />
     );
   } else if (page === 'amortization') {
     content = <RedirectCalc />;
+  } else if (page === 'compare') {
+    const from = params.get('from') || 'calc';
+    content = (
+      <CompareView
+        money={money}
+        calculations={app.calculations}
+        compareIds={app.compareIds}
+        pendingResult={app.pendingResult}
+        onBack={() => setPage(from)}
+        onRemove={(id) => app.persistCompareIds(app.compareIds.filter((x) => x !== id))}
+        onOpenSaved={() => setHashPage('profile-saved', { from: 'compare' })}
+        onPick={(id) => {
+          const ok = app.addToCompare(id);
+          if (!ok) app.showToast(t('compare.max'));
+        }}
+      />
+    );
   } else if (page === 'savings') {
     content = (
       <SavingsList
@@ -186,7 +307,7 @@ function LoanCalculatorApp() {
         onDone={() => setPage('savings')}
         onSave={(goal) => {
           app.persistSavings([goal, ...app.savingsGoals]);
-          app.showToast('目标已创建');
+          app.showToast(t('savings.created'));
           setPage('savings');
         }}
       />
@@ -205,20 +326,36 @@ function LoanCalculatorApp() {
         }}
       />
     ) : (
-      <EmptyRedirect message="目标不存在" onGo={() => setPage('savings')} />
+      <EmptyRedirect message={t('savings.missing')} onGo={() => setPage('savings')} />
     );
-  } else if (page === 'ledger') {
+  } else if (page === 'profile') {
     content = (
-      <LedgerHome
+      <ProfileHome
+        profile={app.profile}
+        setPage={(p) => {
+          if (p === 'profile-saved') setHashPage('profile-saved', { from: 'profile' });
+          else setPage(p);
+        }}
+        savedCount={app.calculations.length}
+        savingsCount={app.savingsGoals.length}
+      />
+    );
+  } else if (page === 'profile-saved') {
+    const savedFrom = params.get('from') || 'profile';
+    content = (
+      <SavedList
         calculations={app.calculations}
-        ledgerEntries={app.ledgerEntries}
         money={money}
-        onNew={() => setPage('ledger-new')}
-        onOpenCalc={(id) => setHashPage('ledger-detail', { id })}
-        onOpenManual={(id) => setHashPage('ledger-manual-detail', { id })}
-        onDeleteCalc={(id) => {
+        compareIds={app.compareIds}
+        onBack={() => setPage(savedFrom)}
+        onOpen={(item) => {
+          app.setPendingResult(item.result);
+          setHashPage('calc-result', { from: 'profile-saved' });
+        }}
+        onDelete={(id) => {
           app.persistCalculations(app.calculations.filter((c) => c.id !== id));
-          app.showToast('已删除');
+          app.persistCompareIds(app.compareIds.filter((x) => x !== id));
+          app.showToast(t('saved.deleted'));
         }}
         onToggleFav={(id) => {
           app.persistCalculations(
@@ -227,73 +364,15 @@ function LoanCalculatorApp() {
             ),
           );
         }}
-        onDeleteManual={(id) => {
-          app.persistLedger(app.ledgerEntries.filter((e) => e.id !== id));
-          app.showToast('已删除');
+        onCompare={(id) => {
+          const ok = app.addToCompare(id);
+          if (!ok) app.showToast(t('compare.max'));
+          else {
+            app.showToast(t('compare.added'));
+            setHashPage('compare', { from: 'profile-saved' });
+          }
         }}
         onGoCalc={() => setPage('calc')}
-      />
-    );
-  } else if (page === 'ledger-new') {
-    content = (
-      <LedgerNew
-        money={money}
-        onBack={() => setPage('ledger')}
-        onSave={(entry) => {
-          app.persistLedger([entry, ...app.ledgerEntries]);
-          app.showToast('已记账');
-          setPage('ledger');
-        }}
-      />
-    );
-  } else if (page === 'ledger-detail') {
-    const item = app.calculations.find((c) => c.id === entityId);
-    content = item ? (
-      <LedgerCalcDetail
-        item={item}
-        money={money}
-        onBack={() => setPage('ledger')}
-        onView={() => {
-          app.setPendingResult(item.result);
-          setPage('calc-result');
-        }}
-        onUpdateTags={(tags) => {
-          app.persistCalculations(
-            app.calculations.map((c) => (c.id === item.id ? { ...c, tags } : c)),
-          );
-        }}
-      />
-    ) : (
-      <EmptyRedirect message="记录不存在" onGo={() => setPage('ledger')} />
-    );
-  } else if (page === 'ledger-manual-detail') {
-    const entry = app.ledgerEntries.find((e) => e.id === entityId);
-    content = entry ? (
-      <LedgerManualDetail
-        entry={entry}
-        money={money}
-        onBack={() => setPage('ledger')}
-        onUpdate={(next) => {
-          app.persistLedger(
-            app.ledgerEntries.map((e) => (e.id === next.id ? next : e)),
-          );
-        }}
-        onDelete={() => {
-          app.persistLedger(app.ledgerEntries.filter((e) => e.id !== entry.id));
-          app.showToast('已删除');
-          setPage('ledger');
-        }}
-      />
-    ) : (
-      <EmptyRedirect message="记录不存在" onGo={() => setPage('ledger')} />
-    );
-  } else if (page === 'profile') {
-    content = (
-      <ProfileHome
-        profile={app.profile}
-        setPage={setPage}
-        ledgerCount={app.calculations.length + app.ledgerEntries.length}
-        savingsCount={app.savingsGoals.length}
       />
     );
   } else if (page === 'profile-settings') {
@@ -312,9 +391,9 @@ function LoanCalculatorApp() {
         onBack={() => setPage('profile')}
         onExport={app.exportData}
         onClear={() => {
-          if (window.confirm('确定清空所有计算与储蓄数据？偏好设置将保留。')) {
+          if (window.confirm(t('data.confirm'))) {
             app.clearBusiness();
-            app.showToast('业务数据已清空');
+            app.showToast(t('data.cleared'));
           }
         }}
       />
@@ -328,13 +407,13 @@ function LoanCalculatorApp() {
   const activeTab = tabForPage(page);
 
   return (
-    <div className="loan-app">
+    <div className="loan-app" lang={htmlLang(app.settings.locale)}>
       <div className="loan-shell">
         {app.toast ? <div className="loan-toast">{app.toast}</div> : null}
         <main className="loan-main">{content}</main>
         {showTabBar(page) ? (
-          <nav className="loan-tabbar" aria-label="主导航">
-            {TAB_NAV.map(({ id, label, Icon }) => (
+          <nav className="loan-tabbar" aria-label={t('nav.main')}>
+            {TAB_NAV.map(({ id, labelKey, Icon }) => (
               <button
                 key={id}
                 type="button"
@@ -345,7 +424,7 @@ function LoanCalculatorApp() {
                 <span className="loan-tab-icon" aria-hidden>
                   <Icon size={18} />
                 </span>
-                {label}
+                <span className="loan-tab-label">{t(labelKey)}</span>
               </button>
             ))}
           </nav>
@@ -364,11 +443,12 @@ function RedirectCalc() {
 }
 
 function EmptyRedirect({ message, onGo }: { message: string; onGo: () => void }) {
+  const { t } = useApp();
   return (
     <div className="loan-empty">
       <p>{message}</p>
       <button type="button" className="loan-btn-primary" onClick={onGo}>
-        返回
+        {t('common.back')}
       </button>
     </div>
   );
@@ -382,19 +462,89 @@ function CalcHome({
   money: (n: number) => string;
 }) {
   const app = useApp();
+  const { t } = app;
+  const { setPage } = useHashPage(ROUTE);
+  const [category, setCategory] = useState<Exclude<LoanCategory, 'other'>>('mortgage');
   const [mode, setMode] = useState<RepaymentMode>('equal-payment');
-  const [category, setCategory] = useState<LoanCategory>('mortgage');
   const [principal, setPrincipal] = useState('1000000');
-  const [rate, setRate] = useState('4.2');
+  const [rate, setRate] = useState('3.6');
   const [years, setYears] = useState('30');
   const [months, setMonths] = useState('0');
+  const [vehiclePrice, setVehiclePrice] = useState('180000');
+  const [downPct, setDownPct] = useState('30');
+  const [downPayment, setDownPayment] = useState('54000');
+  const [loanManual, setLoanManual] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
+  const applyCategory = (next: Exclude<LoanCategory, 'other'>) => {
+    setCategory(next);
+    const p = CATEGORY_PRESETS[next];
+    setPrincipal(p.principal);
+    setRate(p.rate);
+    setYears(p.years);
+    setMonths(p.months);
+    setErrors({});
+    if (next === 'auto') {
+      setVehiclePrice(p.vehicle || '180000');
+      setDownPct(p.downPct || '30');
+      const vp = Number(p.vehicle || 180000);
+      const pct = Number(p.downPct || 30);
+      const dp = Math.round((vp * pct) / 100);
+      setDownPayment(String(dp));
+      setPrincipal(String(Math.max(0, vp - dp)));
+      setLoanManual(false);
+    }
+  };
+
+  const syncAutoLoan = (vpStr: string, dpStr: string) => {
+    if (loanManual) return;
+    const vp = Number(vpStr);
+    const dp = Number(dpStr);
+    if (vp > 0 && dp >= 0 && dp < vp) {
+      setPrincipal(String(Math.round(vp - dp)));
+    }
+  };
+
   const preview = useMemo(() => {
+    try {
+      const P = Number(principal);
+      const r = Number(rate);
+      const termMonths = Number(years) * 12 + Number(months);
+      if (!P || P <= 0 || Number.isNaN(r) || r < 0 || !termMonths) return null;
+      const input: Parameters<typeof computeLoan>[0] = {
+        principal: P,
+        annualRatePercent: r,
+        termMonths,
+        mode,
+        category,
+      };
+      if (category === 'auto') {
+        input.vehiclePrice = Number(vehiclePrice) || undefined;
+        input.downPayment = Number(downPayment) || undefined;
+      }
+      return computeLoan(input);
+    } catch {
+      return null;
+    }
+  }, [principal, rate, years, months, mode, category, vehiclePrice, downPayment]);
+
+  const buildResult = (): CalcResult | null => {
     const P = Number(principal);
     const r = Number(rate);
     const termMonths = Number(years) * 12 + Number(months);
-    if (!P || P <= 0 || Number.isNaN(r) || r < 0 || !termMonths) return null;
+    const err: Record<string, boolean> = {};
+    if (category === 'auto') {
+      const vp = Number(vehiclePrice);
+      const dp = Number(downPayment);
+      if (!vp || vp <= 0) err.vehicle = true;
+      if (Number.isNaN(dp) || dp < 0 || dp >= vp) err.down = true;
+    }
+    if (!P || P <= 0) err.principal = true;
+    if (Number.isNaN(r) || r < 0) err.rate = true;
+    if (!termMonths || termMonths <= 0) err.term = true;
+    setErrors(err);
+    if (Object.keys(err).length) return null;
+
     try {
       return computeLoan({
         principal: P,
@@ -402,95 +552,109 @@ function CalcHome({
         termMonths,
         mode,
         category,
+        label: categoryLabel(category, t),
+        ...(category === 'auto'
+          ? { vehiclePrice: Number(vehiclePrice), downPayment: Number(downPayment) }
+          : {}),
       });
-    } catch {
-      return null;
-    }
-  }, [principal, rate, years, months, mode, category]);
-
-  const submit = () => {
-    const P = Number(principal);
-    const r = Number(rate);
-    const termMonths = Number(years) * 12 + Number(months);
-    const err: Record<string, boolean> = {};
-    if (!P || P <= 0) err.principal = true;
-    if (Number.isNaN(r) || r < 0) err.rate = true;
-    if (!termMonths || termMonths <= 0) err.term = true;
-    setErrors(err);
-    if (Object.keys(err).length) return;
-
-    try {
-      const result = computeLoan({
-        principal: P,
-        annualRatePercent: r,
-        termMonths,
-        mode,
-        category,
-      });
-      onResult(result);
     } catch {
       setErrors({ principal: true, term: true });
+      return null;
+    }
+  };
+
+  const submit = () => {
+    const result = buildResult();
+    if (result) onResult(result);
+  };
+
+  const goFeature = (target: 'result' | 'amortization' | 'compare') => {
+    if (target === 'compare') {
+      setHashPage('compare', { from: 'calc' });
+      return;
+    }
+    const result = buildResult();
+    if (!result) {
+      app.showToast(t('home.fillFirst'));
+      return;
+    }
+    app.setPendingResult(result);
+    if (target === 'result') {
+      setHashPage('calc-result', { from: 'calc' });
+    } else {
+      setHashPage('amortization', { from: 'calc' });
     }
   };
 
   const previewPayment =
     preview &&
-    (mode === 'equal-principal'
-      ? preview.firstMonthPayment
-      : preview.monthlyPayment);
+    (mode === 'equal-principal' ? preview.firstMonthPayment : preview.monthlyPayment);
+
+  const downRatio =
+    Number(vehiclePrice) > 0 && Number(downPayment) >= 0
+      ? (Number(downPayment) / Number(vehiclePrice)) * 100
+      : 0;
 
   return (
     <>
-      <div className="loan-hero-banner">
-        <h2>智能贷款试算</h2>
-        <p>输入金额与期限，实时预览月供与总利息，结果可保存并关联储蓄目标。</p>
+      <div className="loan-hero-banner loan-hero-compact">
+        <h2>{t('home.title')}</h2>
+        <p>{t('home.subtitle')}</p>
         <div className="loan-hero-badges">
           <span className="loan-hero-badge">
-            <WifiOff aria-hidden />
-            纯离线
-          </span>
-          <span className="loan-hero-badge">
             <Shield aria-hidden />
-            数据在本地
+            {t('home.badge.local')}
           </span>
           {app.calculations.length > 0 ? (
             <span className="loan-hero-badge">
               <Clock3 aria-hidden />
-              已存 {app.calculations.length} 条方案
+              {t('home.badge.saved', { count: app.calculations.length })}
             </span>
           ) : null}
         </div>
       </div>
 
-      <div className="loan-feature-row">
-        <div className="loan-feature-item">
-          <PieChart aria-hidden />
-          <div>本息占比图</div>
+      <div className="loan-card">
+        <div className="loan-section-head">
+          <Wallet aria-hidden />
+          <span>{t('home.loanType')}</span>
         </div>
-        <div className="loan-feature-item">
-          <TableProperties aria-hidden />
-          <div>摊还明细表</div>
-        </div>
-        <div className="loan-feature-item">
-          <PiggyBank aria-hidden />
-          <div>月供储蓄</div>
+        <div className="loan-type-grid loan-type-grid-3">
+          {(Object.keys(LOAN_TYPE_META) as Exclude<LoanCategory, 'other'>[]).map((k) => {
+            const { Icon } = LOAN_TYPE_META[k];
+            return (
+              <button
+                key={k}
+                type="button"
+                className="loan-type-tile"
+                data-active={category === k}
+                onClick={() => applyCategory(k)}
+              >
+                <Icon size={20} />
+                {categoryLabel(k, t)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {preview && previewPayment != null ? (
-        <div className="loan-preview-card">
+        <div className="loan-preview-card loan-preview-sticky">
           <div className="loan-preview-label">
             <Sparkles size={14} style={{ verticalAlign: -2, marginRight: 4 }} />
-            实时预览 · {modeLabel(mode)}
+            {t('home.preview', { mode: modeLabel(mode, t) })}
+            {category === 'auto'
+              ? t('home.previewDown', { pct: downRatio.toFixed(0) })
+              : ''}
           </div>
           <div className="loan-preview-amount">{money(previewPayment)}</div>
           <div className="loan-preview-meta">
             <div>
-              总利息
+              {t('home.totalInterest')}
               <strong>{money(preview.totalInterest)}</strong>
             </div>
             <div>
-              还款总额
+              {t('home.totalPayment')}
               <strong>{money(preview.totalPayment)}</strong>
             </div>
           </div>
@@ -500,7 +664,7 @@ function CalcHome({
       <div className="loan-card">
         <div className="loan-section-head">
           <Landmark aria-hidden />
-          <span>还款方式</span>
+          <span>{t('home.repayMode')}</span>
         </div>
         <div className="loan-segment">
           <button
@@ -508,76 +672,161 @@ function CalcHome({
             data-active={mode === 'equal-payment'}
             onClick={() => setMode('equal-payment')}
           >
-            等额本息
+            {t('mode.equalPayment')}
           </button>
           <button
             type="button"
             data-active={mode === 'equal-principal'}
             onClick={() => setMode('equal-principal')}
           >
-            等额本金
+            {t('mode.equalPrincipal')}
           </button>
-        </div>
-        <p className="loan-muted" style={{ fontSize: 12, margin: '10px 0 0', lineHeight: 1.5 }}>
-          {mode === 'equal-payment'
-            ? '每月还款额固定，前期利息占比较高。'
-            : '每月本金固定，月供逐月递减。'}
-        </p>
-      </div>
-
-      <div className="loan-card">
-        <div className="loan-section-head">
-          <Wallet aria-hidden />
-          <span>贷款类型</span>
-        </div>
-        <div className="loan-type-grid">
-          {(Object.keys(LOAN_TYPE_META) as LoanCategory[]).map((k) => {
-            const { label, Icon } = LOAN_TYPE_META[k];
-            return (
-              <button
-                key={k}
-                type="button"
-                className="loan-type-tile"
-                data-active={category === k}
-                onClick={() => setCategory(k)}
-              >
-                <Icon size={20} />
-                {label}
-              </button>
-            );
-          })}
         </div>
       </div>
 
       <div className="loan-card">
         <div className="loan-section-head">
           <Calculator aria-hidden />
-          <span>贷款参数</span>
+          <span>{category === 'auto' ? t('home.paramsAuto') : t('home.params')}</span>
         </div>
-        <div className="loan-label">贷款本金</div>
-        <div className="loan-input-wrap">
-          <input
-            className={`loan-input ${errors.principal ? 'loan-input-error' : ''}`}
-            inputMode="decimal"
-            value={principal}
-            onChange={(e) => setPrincipal(e.target.value.replace(/[^\d.]/g, ''))}
-          />
-          <span className="loan-input-suffix">元</span>
-        </div>
-        <div className="loan-chip-row">
-          {[500_000, 1_000_000, 1_500_000, 2_000_000].map((v) => (
-            <button
-              key={v}
-              type="button"
-              className="loan-quick-chip"
-              onClick={() => setPrincipal(String(v))}
-            >
-              {v >= 1_000_000 ? `${v / 1_000_000} 百万` : `${v / 10_000} 万`}
-            </button>
-          ))}
-        </div>
+
+        {category === 'auto' ? (
+          <>
+            <div className="loan-label">{t('home.vehiclePrice')}</div>
+            <div className="loan-input-wrap">
+              <input
+                className={`loan-input ${errors.vehicle ? 'loan-input-error' : ''}`}
+                inputMode="decimal"
+                value={vehiclePrice}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d.]/g, '');
+                  setVehiclePrice(v);
+                  const vp = Number(v);
+                  const pct = Number(downPct) || 0;
+                  if (vp > 0) {
+                    const dp = Math.round((vp * pct) / 100);
+                    setDownPayment(String(dp));
+                    syncAutoLoan(v, String(dp));
+                  }
+                }}
+              />
+              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+            </div>
+            <div className="loan-chip-row">
+              {[150_000, 180_000, 250_000, 350_000].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className="loan-quick-chip"
+                  onClick={() => {
+                    setVehiclePrice(String(v));
+                    const dp = Math.round((v * (Number(downPct) || 30)) / 100);
+                    setDownPayment(String(dp));
+                    syncAutoLoan(String(v), String(dp));
+                  }}
+                >
+                  {t('home.wan', { n: v / 10_000 })}
+                </button>
+              ))}
+            </div>
+
+            <div className="loan-label" style={{ marginTop: 14 }}>
+              {t('home.downPct')}
+            </div>
+            <div className="loan-chip-row">
+              {['20', '30', '40', '50'].map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  className="loan-quick-chip"
+                  data-active={downPct === pct}
+                  onClick={() => {
+                    setDownPct(pct);
+                    const vp = Number(vehiclePrice) || 0;
+                    const dp = Math.round((vp * Number(pct)) / 100);
+                    setDownPayment(String(dp));
+                    setLoanManual(false);
+                    syncAutoLoan(vehiclePrice, String(dp));
+                  }}
+                >
+                  {pct}%
+                </button>
+              ))}
+            </div>
+            <div className="loan-label" style={{ marginTop: 10 }}>
+              {t('home.downAmount')}
+            </div>
+            <div className="loan-input-wrap">
+              <input
+                className={`loan-input ${errors.down ? 'loan-input-error' : ''}`}
+                inputMode="decimal"
+                value={downPayment}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d.]/g, '');
+                  setDownPayment(v);
+                  const vp = Number(vehiclePrice) || 0;
+                  const dp = Number(v) || 0;
+                  if (vp > 0) setDownPct(String(Math.round((dp / vp) * 100)));
+                  setLoanManual(false);
+                  syncAutoLoan(vehiclePrice, v);
+                }}
+              />
+              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+            </div>
+
+            <div className="loan-label" style={{ marginTop: 14 }}>
+              {t('home.loanAmount')}
+            </div>
+            <div className="loan-input-wrap">
+              <input
+                className={`loan-input ${errors.principal ? 'loan-input-error' : ''}`}
+                inputMode="decimal"
+                value={principal}
+                onChange={(e) => {
+                  setPrincipal(e.target.value.replace(/[^\d.]/g, ''));
+                  setLoanManual(true);
+                }}
+              />
+              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+            </div>
+            <p className="loan-muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
+              {t('home.loanHint')}
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="loan-label">{t('home.principal')}</div>
+            <div className="loan-input-wrap">
+              <input
+                className={`loan-input ${errors.principal ? 'loan-input-error' : ''}`}
+                inputMode="decimal"
+                value={principal}
+                onChange={(e) => setPrincipal(e.target.value.replace(/[^\d.]/g, ''))}
+              />
+              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+            </div>
+            <div className="loan-chip-row">
+              {(category === 'mortgage'
+                ? [500_000, 1_000_000, 1_500_000, 2_000_000]
+                : [20_000, 50_000, 100_000, 200_000]
+              ).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className="loan-quick-chip"
+                  onClick={() => setPrincipal(String(v))}
+                >
+                  {v >= 1_000_000
+                    ? t('home.million', { n: v / 1_000_000 })
+                    : t('home.wan', { n: v / 10_000 })}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
         <div className="loan-label" style={{ marginTop: 14 }}>
-          年利率
+          {t('home.rate')}
         </div>
         <div className="loan-input-wrap">
           <input
@@ -589,19 +838,21 @@ function CalcHome({
           <span className="loan-input-suffix">%</span>
         </div>
         <div className="loan-chip-row">
-          {['3.1', '3.85', '4.2', '4.9'].map((v) => (
-            <button
-              key={v}
-              type="button"
-              className="loan-quick-chip"
-              onClick={() => setRate(v)}
-            >
-              {v}%
-            </button>
-          ))}
+          {(category === 'personal' ? ['6.5', '8.5', '12', '15'] : ['3.1', '3.6', '4.2', '4.9']).map(
+            (v) => (
+              <button
+                key={v}
+                type="button"
+                className="loan-quick-chip"
+                onClick={() => setRate(v)}
+              >
+                {v}%
+              </button>
+            ),
+          )}
         </div>
         <div className="loan-label" style={{ marginTop: 14 }}>
-          贷款期限
+          {t('home.term')}
         </div>
         <div className="loan-term-grid">
           <div className="loan-input-wrap">
@@ -612,7 +863,7 @@ function CalcHome({
               placeholder="0"
               onChange={(e) => setYears(e.target.value.replace(/\D/g, ''))}
             />
-            <span className="loan-input-suffix">年</span>
+            <span className="loan-input-suffix">{t('home.year')}</span>
           </div>
           <div className="loan-input-wrap">
             <input
@@ -622,16 +873,24 @@ function CalcHome({
               placeholder="0"
               onChange={(e) => setMonths(e.target.value.replace(/\D/g, ''))}
             />
-            <span className="loan-input-suffix">月</span>
+            <span className="loan-input-suffix">{t('home.month')}</span>
           </div>
         </div>
         <div className="loan-chip-row">
-          {[
-            ['30', '0'],
-            ['20', '0'],
-            ['10', '0'],
-            ['5', '0'],
-          ].map(([y, m]) => (
+          {(category === 'mortgage'
+            ? [
+                ['30', '0'],
+                ['20', '0'],
+                ['10', '0'],
+                ['5', '0'],
+              ]
+            : [
+                ['5', '0'],
+                ['3', '0'],
+                ['2', '0'],
+                ['1', '0'],
+              ]
+          ).map(([y, m]) => (
             <button
               key={`${y}-${m}`}
               type="button"
@@ -641,93 +900,177 @@ function CalcHome({
                 setMonths(m);
               }}
             >
-              {y} 年
+              {t('home.yearsN', { n: y })}
             </button>
           ))}
         </div>
       </div>
 
+      <div className="loan-feature-row">
+        <button
+          type="button"
+          className="loan-feature-item"
+          onClick={() => goFeature('result')}
+        >
+          <PieChart aria-hidden />
+          <div>{t('home.feature.ratio')}</div>
+        </button>
+        <button
+          type="button"
+          className="loan-feature-item"
+          onClick={() => goFeature('amortization')}
+        >
+          <TableProperties aria-hidden />
+          <div>{t('home.feature.amort')}</div>
+        </button>
+        <button
+          type="button"
+          className="loan-feature-item"
+          onClick={() => goFeature('compare')}
+        >
+          <Columns2 aria-hidden />
+          <div>{t('home.feature.compare')}</div>
+        </button>
+      </div>
+
       <button type="button" className="loan-btn-primary" onClick={submit}>
-        开始计算
+        {t('home.cta')}
       </button>
       <p className="loan-muted" style={{ fontSize: 12, marginTop: 12, textAlign: 'center' }}>
-        试算结果仅供参考，不构成任何放贷承诺
+        {t('home.disclaimer')}
       </p>
     </>
   );
 }
 
+
 function CalcResultView({
   result,
   money,
+  showSave,
   onAmortization,
   onSave,
+  onCompare,
   onSavings,
   back,
 }: {
   result: CalcResult;
   money: (n: number) => string;
+  showSave: boolean;
   onAmortization: () => void;
   onSave: () => void;
+  onCompare: () => void;
   onSavings: () => void;
   back: () => void;
 }) {
+  const { t } = useApp();
   const isEqualPrincipal = result.input.mode === 'equal-principal';
   const hero = isEqualPrincipal
     ? `${money(result.firstMonthPayment)} → ${money(result.lastMonthPayment)}`
     : money(result.monthlyPayment);
+  const insights = insightLines(result, t);
+  const interestShare =
+    result.totalPayment > 0
+      ? ((result.totalInterest / result.totalPayment) * 100).toFixed(0)
+      : '0';
 
   return (
     <>
       <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={back} aria-label="返回">
+        <button type="button" className="loan-back" onClick={back} aria-label={t('nav.back')}>
           ←
         </button>
         <div>
-          <h1 className="loan-title">计算结果</h1>
-          <p className="loan-subtitle">{modeLabel(result.input.mode)}</p>
+          <h1 className="loan-title">{t('result.title')}</h1>
+          <p className="loan-subtitle">
+            {categoryLabel(result.input.category, t)} · {modeLabel(result.input.mode, t)}
+          </p>
         </div>
       </header>
 
       <div className="loan-card">
-        <div className="loan-label">{isEqualPrincipal ? '首月 → 末月还款' : '月供'}</div>
+        <div className="loan-label">
+          {isEqualPrincipal ? t('result.firstLast') : t('result.monthly')}
+        </div>
         <div className="loan-hero-amount">{hero}</div>
         <Donut
           segments={[
             {
               value: result.input.principal,
               color: '#5b6bff',
-              label: '本金',
+              label: t('result.principal'),
+              amountText: money(result.input.principal),
             },
             {
               value: result.totalInterest,
               color: '#9c6bff',
-              label: '利息',
+              label: t('result.interest'),
+              amountText: money(result.totalInterest),
             },
           ]}
-          centerLabel={money(result.totalPayment)}
-          centerSub="还款总额"
+          centerValue={`${interestShare}%`}
+          centerCaption={t('result.interestShare')}
         />
         <div className="loan-row">
-          <span>总利息</span>
-          <span className="loan-text-spend">{money(result.totalInterest)}</span>
+          <span>{t('result.totalPayment')}</span>
+          <strong>{money(result.totalPayment)}</strong>
         </div>
-        <div className="loan-row">
-          <span>贷款本金</span>
-          <span>{money(result.input.principal)}</span>
+        {result.input.category === 'auto' &&
+        result.input.vehiclePrice != null &&
+        result.input.downPayment != null ? (
+          <>
+            <div className="loan-row">
+              <span>{t('result.vehicle')}</span>
+              <span>{money(result.input.vehiclePrice)}</span>
+            </div>
+            <div className="loan-row">
+              <span>{t('result.downPayment')}</span>
+              <span>
+                {money(result.input.downPayment)}
+                <span className="loan-muted" style={{ marginLeft: 6 }}>
+                  (
+                  {(
+                    (result.input.downPayment / result.input.vehiclePrice) *
+                    100
+                  ).toFixed(0)}
+                  %)
+                </span>
+              </span>
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      <div className="loan-card loan-insight-card">
+        <div className="loan-section-head">
+          <Sparkles aria-hidden />
+          <span>{t('result.insights')}</span>
         </div>
+        <ul className="loan-insight-list">
+          {insights.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
       </div>
 
       <button type="button" className="loan-btn-primary" onClick={onAmortization}>
-        查看摊还明细
+        {t('result.amort')}
       </button>
       <div style={{ height: 8 }} />
-      <button type="button" className="loan-btn-secondary" onClick={onSave}>
-        保存到记账
+      <button type="button" className="loan-btn-secondary" onClick={onCompare}>
+        {t('result.compare')}
       </button>
+      {showSave ? (
+        <>
+          <div style={{ height: 8 }} />
+          <button type="button" className="loan-btn-secondary" onClick={onSave}>
+            {t('result.save')}
+          </button>
+        </>
+      ) : null}
       <div style={{ height: 8 }} />
       <button type="button" className="loan-btn-secondary" onClick={onSavings}>
-        为月供设储蓄目标
+        {t('result.savings')}
       </button>
     </>
   );
@@ -742,54 +1085,164 @@ function AmortizationView({
   money: (n: number) => string;
   back: () => void;
 }) {
-  const [yearly, setYearly] = useState(false);
+  const { t } = useApp();
+  const maxPeriod = result.schedule.length;
+  const [viewMode, setViewMode] = useState<'month' | 'year' | 'custom'>('month');
+  const [fromPeriod, setFromPeriod] = useState('1');
+  const [toPeriod, setToPeriod] = useState(String(Math.min(12, maxPeriod)));
+
+  const clampedRange = useMemo(() => {
+    let from = Number(fromPeriod) || 1;
+    let to = Number(toPeriod) || maxPeriod;
+    from = Math.min(maxPeriod, Math.max(1, Math.floor(from)));
+    to = Math.min(maxPeriod, Math.max(1, Math.floor(to)));
+    if (from > to) [from, to] = [to, from];
+    return { from, to };
+  }, [fromPeriod, toPeriod, maxPeriod]);
 
   const rows = useMemo(() => {
-    if (!yearly) return result.schedule;
-    const byYear: { period: number; payment: number; principal: number; interest: number; balance: number }[] = [];
-    for (let i = 0; i < result.schedule.length; i += 12) {
-      const chunk = result.schedule.slice(i, i + 12);
-      byYear.push({
-        period: Math.floor(i / 12) + 1,
-        payment: chunk.reduce((s, r) => s + r.payment, 0),
-        principal: chunk.reduce((s, r) => s + r.principal, 0),
-        interest: chunk.reduce((s, r) => s + r.interest, 0),
-        balance: chunk[chunk.length - 1]?.balance ?? 0,
-      });
+    if (viewMode === 'year') {
+      const byYear: {
+        period: number;
+        payment: number;
+        principal: number;
+        interest: number;
+        balance: number;
+      }[] = [];
+      for (let i = 0; i < result.schedule.length; i += 12) {
+        const chunk = result.schedule.slice(i, i + 12);
+        byYear.push({
+          period: Math.floor(i / 12) + 1,
+          payment: chunk.reduce((s, r) => s + r.payment, 0),
+          principal: chunk.reduce((s, r) => s + r.principal, 0),
+          interest: chunk.reduce((s, r) => s + r.interest, 0),
+          balance: chunk[chunk.length - 1]?.balance ?? 0,
+        });
+      }
+      return byYear;
     }
-    return byYear;
-  }, [yearly, result.schedule]);
+
+    if (viewMode === 'custom') {
+      return result.schedule.filter(
+        (row) => row.period >= clampedRange.from && row.period <= clampedRange.to,
+      );
+    }
+
+    return result.schedule;
+  }, [viewMode, result.schedule, clampedRange]);
+
+  const rangeTotals = useMemo(() => {
+    if (viewMode !== 'custom' || !rows.length) return null;
+    return {
+      payment: rows.reduce((s, r) => s + r.payment, 0),
+      principal: rows.reduce((s, r) => s + r.principal, 0),
+      interest: rows.reduce((s, r) => s + r.interest, 0),
+    };
+  }, [viewMode, rows]);
 
   return (
     <>
       <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={back} aria-label="返回">
+        <button type="button" className="loan-back" onClick={back} aria-label={t('nav.back')}>
           ←
         </button>
         <div>
-          <h1 className="loan-title">摊还明细</h1>
-          <p className="loan-subtitle">共 {result.schedule.length} 期</p>
+          <h1 className="loan-title">{t('amort.title')}</h1>
+          <p className="loan-subtitle">{t('amort.periods', { n: maxPeriod })}</p>
         </div>
       </header>
 
       <div className="loan-card">
-        <div className="loan-segment">
-          <button type="button" data-active={!yearly} onClick={() => setYearly(false)}>
-            按月
+        <div className="loan-segment loan-amort-segment">
+          <button
+            type="button"
+            data-active={viewMode === 'month'}
+            onClick={() => setViewMode('month')}
+          >
+            {t('amort.byMonth')}
           </button>
-          <button type="button" data-active={yearly} onClick={() => setYearly(true)}>
-            按年
+          <button
+            type="button"
+            data-active={viewMode === 'year'}
+            onClick={() => setViewMode('year')}
+          >
+            {t('amort.byYear')}
+          </button>
+          <button
+            type="button"
+            data-active={viewMode === 'custom'}
+            onClick={() => setViewMode('custom')}
+          >
+            {t('amort.byCustom')}
           </button>
         </div>
+
+        {viewMode === 'custom' ? (
+          <div className="loan-amort-filter">
+            <p className="loan-muted" style={{ fontSize: 12, margin: '0 0 10px' }}>
+              {t('amort.rangeHint', { max: maxPeriod })}
+            </p>
+            <div className="loan-term-grid">
+              <div>
+                <div className="loan-label">{t('amort.fromPeriod')}</div>
+                <div className="loan-input-wrap">
+                  <input
+                    className="loan-input"
+                    inputMode="numeric"
+                    value={fromPeriod}
+                    onChange={(e) => setFromPeriod(e.target.value.replace(/\D/g, ''))}
+                    onBlur={() => setFromPeriod(String(clampedRange.from))}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="loan-label">{t('amort.toPeriod')}</div>
+                <div className="loan-input-wrap">
+                  <input
+                    className="loan-input"
+                    inputMode="numeric"
+                    value={toPeriod}
+                    onChange={(e) => setToPeriod(e.target.value.replace(/\D/g, ''))}
+                    onBlur={() => setToPeriod(String(clampedRange.to))}
+                  />
+                </div>
+              </div>
+            </div>
+            <p className="loan-muted" style={{ fontSize: 12, margin: '10px 0 0' }}>
+              {t('amort.showing', { n: rows.length })}
+            </p>
+          </div>
+        ) : null}
+
+        {rangeTotals ? (
+          <div className="loan-amort-sum">
+            <div className="loan-label">{t('amort.rangeSum')}</div>
+            <div className="loan-row">
+              <span>{t('amort.col.payment')}</span>
+              <span>{money(rangeTotals.payment)}</span>
+            </div>
+            <div className="loan-row">
+              <span>{t('amort.col.principal')}</span>
+              <span>{money(rangeTotals.principal)}</span>
+            </div>
+            <div className="loan-row">
+              <span>{t('amort.col.interest')}</span>
+              <span className="loan-text-spend">{money(rangeTotals.interest)}</span>
+            </div>
+          </div>
+        ) : null}
+
         <div style={{ overflowX: 'auto', marginTop: 12 }}>
           <table className="loan-amort-table">
             <thead>
               <tr>
-                <th>{yearly ? '年' : '期'}</th>
-                <th>还款</th>
-                <th>本金</th>
-                <th>利息</th>
-                <th>余额</th>
+                <th>
+                  {viewMode === 'year' ? t('amort.col.year') : t('amort.col.period')}
+                </th>
+                <th>{t('amort.col.payment')}</th>
+                <th>{t('amort.col.principal')}</th>
+                <th>{t('amort.col.interest')}</th>
+                <th>{t('amort.col.balance')}</th>
               </tr>
             </thead>
             <tbody>
@@ -825,6 +1278,7 @@ function SavingsList({
   onOpen: (id: string) => void;
   onNew: () => void;
 }) {
+  const { t } = useApp();
   const totalSaved = goals.reduce((s, g) => s + g.current, 0);
   const totalTarget = goals.reduce((s, g) => s + g.target, 0);
 
@@ -833,15 +1287,15 @@ function SavingsList({
       <>
         <header className="loan-topbar">
           <div>
-            <h1 className="loan-title">储蓄目标</h1>
-            <p className="loan-subtitle">为月供或缓冲金攒一笔</p>
+            <h1 className="loan-title">{t('savings.title')}</h1>
+            <p className="loan-subtitle">{t('savings.subtitle')}</p>
           </div>
         </header>
         <div className="loan-empty">
           <PiggyBank size={40} strokeWidth={1.6} color="#6b5bff" style={{ marginBottom: 12 }} />
-          <p>还没有储蓄目标。可从计算结果一键创建，或手动新建。</p>
+          <p>{t('savings.empty')}</p>
           <button type="button" className="loan-btn-primary" onClick={onNew}>
-            新建目标
+            {t('savings.new')}
           </button>
         </div>
       </>
@@ -852,23 +1306,23 @@ function SavingsList({
     <>
       <header className="loan-topbar">
         <div>
-          <h1 className="loan-title">储蓄目标</h1>
-          <p className="loan-subtitle">{goals.length} 个进行中</p>
+          <h1 className="loan-title">{t('savings.title')}</h1>
+          <p className="loan-subtitle">{t('savings.inProgress', { n: goals.length })}</p>
         </div>
       </header>
       <div className="loan-stat-row">
         <div className="loan-stat-box">
-          <div className="loan-label">已存合计</div>
+          <div className="loan-label">{t('savings.savedTotal')}</div>
           <strong>{money(totalSaved)}</strong>
         </div>
         <div className="loan-stat-box">
-          <div className="loan-label">目标合计</div>
+          <div className="loan-label">{t('savings.targetTotal')}</div>
           <strong>{money(totalTarget)}</strong>
         </div>
       </div>
       {calcCount > 0 ? (
         <p className="loan-muted" style={{ fontSize: 12, margin: '-4px 0 12px' }}>
-          已关联 {calcCount} 条贷款方案，可在计算结果页快速创建目标
+          {t('savings.linkedHint', { n: calcCount })}
         </p>
       ) : null}
       {goals.map((g) => {
@@ -890,11 +1344,21 @@ function SavingsList({
               size={120}
               stroke={10}
               segments={[
-                { value: g.current, color: '#5b6bff', label: '已存' },
-                { value: Math.max(0, g.target - g.current), color: '#e2e5f0', label: '待存' },
+                {
+                  value: g.current,
+                  color: '#5b6bff',
+                  label: t('savings.done'),
+                  amountText: money(g.current),
+                },
+                {
+                  value: Math.max(0, g.target - g.current),
+                  color: '#e2e5f0',
+                  label: t('savings.todo'),
+                  amountText: money(Math.max(0, g.target - g.current)),
+                },
               ]}
-              centerLabel={money(g.current)}
-              centerSub={`目标 ${money(g.target)}`}
+              centerValue={`${pct.toFixed(0)}%`}
+              centerCaption={t('savings.progress')}
               animate={false}
             />
           </div>
@@ -903,19 +1367,19 @@ function SavingsList({
       {goals.map((g) => (
         <div key={`${g.id}-insights`} className="loan-card loan-savings-insight">
           <div className="loan-label" style={{ marginBottom: 10 }}>
-            智能提示
+            {t('savings.insights')}
           </div>
           <p className="loan-savings-insight-line">
             <Clock3 size={14} style={{ verticalAlign: -2, marginRight: 6 }} aria-hidden />
-            {savingsEtaLine(g, money)}
+            {savingsEtaLine(g, money, t)}
           </p>
           <p className="loan-savings-insight-line loan-muted" style={{ marginBottom: 0 }}>
             <Shield size={14} style={{ verticalAlign: -2, marginRight: 6 }} aria-hidden />
-            {savingsBufferLine(g, calculations, money)}
+            {savingsBufferLine(g, calculations, money, t)}
           </p>
         </div>
       ))}
-      <button type="button" className="loan-fab" aria-label="新建" onClick={onNew}>
+      <button type="button" className="loan-fab" aria-label={t('savings.create')} onClick={onNew}>
         +
       </button>
     </>
@@ -931,22 +1395,23 @@ function SavingsNew({
   onSave: (g: SavingsGoal) => void;
   onDone: () => void;
 }) {
-  const [name, setName] = useState('月供缓冲金');
+  const { t } = useApp();
+  const [name, setName] = useState(() => t('savings.defaultName'));
   const [target, setTarget] = useState(prefillTarget || '15000');
 
   return (
     <>
       <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={onDone} aria-label="返回">
+        <button type="button" className="loan-back" onClick={onDone} aria-label={t('nav.back')}>
           ←
         </button>
-        <h1 className="loan-title">新建目标</h1>
+        <h1 className="loan-title">{t('savings.new')}</h1>
       </header>
       <div className="loan-card">
-        <div className="loan-label">名称</div>
+        <div className="loan-label">{t('savings.name')}</div>
         <input className="loan-input" value={name} onChange={(e) => setName(e.target.value)} />
         <div className="loan-label" style={{ marginTop: 12 }}>
-          目标金额
+          {t('savings.target')}
         </div>
         <input
           className="loan-input"
@@ -959,12 +1424,12 @@ function SavingsNew({
         type="button"
         className="loan-btn-primary"
         onClick={() => {
-          const t = Number(target);
-          if (!name.trim() || !t || t <= 0) return;
+          const tv = Number(target);
+          if (!name.trim() || !tv || tv <= 0) return;
           onSave({
             id: uid('goal'),
             name: name.trim(),
-            target: t,
+            target: tv,
             current: 0,
             deadline: null,
             linkedCalcId: null,
@@ -973,7 +1438,7 @@ function SavingsNew({
           });
         }}
       >
-        创建
+        {t('savings.createCta')}
       </button>
     </>
   );
@@ -990,6 +1455,7 @@ function SavingsDetail({
   onBack: () => void;
   onUpdate: (g: SavingsGoal) => void;
 }) {
+  const { t } = useApp();
   const [amount, setAmount] = useState('');
 
   const addTx = (type: 'deposit' | 'withdraw') => {
@@ -1001,7 +1467,7 @@ function SavingsDetail({
       id: uid('tx'),
       amount: v,
       type,
-      note: type === 'deposit' ? '存入' : '取出',
+      note: type === 'deposit' ? t('savings.deposit') : t('savings.withdraw'),
       at: new Date().toISOString(),
     };
     onUpdate({
@@ -1015,7 +1481,7 @@ function SavingsDetail({
   return (
     <>
       <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={onBack} aria-label="返回">
+        <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
           ←
         </button>
         <div>
@@ -1026,33 +1492,33 @@ function SavingsDetail({
         </div>
       </header>
       <div className="loan-card">
-        <div className="loan-label">存入 / 取出</div>
+        <div className="loan-label">{t('savings.depositWithdraw')}</div>
         <input
           className="loan-input"
           inputMode="decimal"
-          placeholder="金额"
+          placeholder={t('savings.amount')}
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
         />
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button type="button" className="loan-btn-primary" style={{ flex: 1 }} onClick={() => addTx('deposit')}>
-            存入
+            {t('savings.deposit')}
           </button>
           <button type="button" className="loan-btn-secondary" style={{ flex: 1 }} onClick={() => addTx('withdraw')}>
-            取出
+            {t('savings.withdraw')}
           </button>
         </div>
       </div>
       <div className="loan-card">
-        <div className="loan-label">流水</div>
+        <div className="loan-label">{t('savings.flow')}</div>
         {goal.transactions.length === 0 ? (
-          <p className="loan-muted" style={{ fontSize: 14 }}>暂无记录</p>
+          <p className="loan-muted" style={{ fontSize: 14 }}>{t('savings.noTx')}</p>
         ) : (
           goal.transactions.map((tx) => (
             <div key={tx.id} className="loan-row">
               <span>
-                {tx.type === 'deposit' ? '存入' : '取出'} ·{' '}
-                {new Date(tx.at).toLocaleDateString('zh-CN')}
+                {tx.type === 'deposit' ? t('savings.deposit') : t('savings.withdraw')} ·{' '}
+                {new Date(tx.at).toLocaleDateString()}
               </span>
               <span className={tx.type === 'deposit' ? 'loan-text-income' : ''}>
                 {tx.type === 'deposit' ? '+' : '-'}
@@ -1066,452 +1532,274 @@ function SavingsDetail({
   );
 }
 
-function LedgerHome({
-  calculations,
-  ledgerEntries,
+function CompareView({
   money,
-  onNew,
-  onOpenCalc,
-  onOpenManual,
-  onDeleteCalc,
-  onToggleFav,
-  onDeleteManual,
-  onGoCalc,
+  calculations,
+  compareIds,
+  pendingResult,
+  onBack,
+  onRemove,
+  onOpenSaved,
+  onPick,
 }: {
-  calculations: SavedCalculation[];
-  ledgerEntries: ManualLedgerEntry[];
   money: (n: number) => string;
-  onNew: () => void;
-  onOpenCalc: (id: string) => void;
-  onOpenManual: (id: string) => void;
-  onDeleteCalc: (id: string) => void;
-  onToggleFav: (id: string) => void;
-  onDeleteManual: (id: string) => void;
-  onGoCalc: () => void;
+  calculations: SavedCalculation[];
+  compareIds: string[];
+  pendingResult: CalcResult | null;
+  onBack: () => void;
+  onRemove: (id: string) => void;
+  onOpenSaved: () => void;
+  onPick: (id: string) => void;
 }) {
-  const [q, setQ] = useState('');
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const { t } = useApp();
+  const items = compareIds
+    .map((id) => calculations.find((c) => c.id === id))
+    .filter(Boolean) as SavedCalculation[];
 
-  const allTags = collectAllTags(
-    calculations.map((c) => c.tags),
-    ledgerEntries.map((e) => e.tags),
-  );
+  const metrics = [
+    {
+      key: 'monthly',
+      label: t('compare.monthly'),
+      values: items.map((c) =>
+        c.result.input.mode === 'equal-principal'
+          ? c.result.firstMonthPayment
+          : c.result.monthlyPayment,
+      ),
+      lowerBetter: true,
+    },
+    {
+      key: 'interest',
+      label: t('home.totalInterest'),
+      values: items.map((c) => c.result.totalInterest),
+      lowerBetter: true,
+    },
+    {
+      key: 'total',
+      label: t('home.totalPayment'),
+      values: items.map((c) => c.result.totalPayment),
+      lowerBetter: true,
+    },
+  ];
 
-  const favCount = calculations.filter((c) => c.favorite).length;
-  const monthStart = useMemo(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-  }, []);
+  const bestIndex = (values: number[], lowerBetter: boolean) => {
+    if (!values.length) return -1;
+    let best = 0;
+    for (let i = 1; i < values.length; i += 1) {
+      if (lowerBetter ? values[i] < values[best] : values[i] > values[best]) best = i;
+    }
+    return best;
+  };
 
-  const monthManual = ledgerEntries.filter(
-    (e) => new Date(e.createdAt).getTime() >= monthStart,
-  ).length;
-
-  const matchTag = (tags: string[]) => !activeTag || tags.includes(activeTag);
-  const matchQ = (text: string) =>
-    !q.trim() || text.toLowerCase().includes(q.trim().toLowerCase());
-
-  const filteredCalcs = calculations.filter(
-    (c) =>
-      matchTag(c.tags) &&
-      (matchQ(c.note) || matchQ(modeLabel(c.result.input.mode))),
-  );
-  const filteredManual = ledgerEntries.filter(
-    (e) => matchTag(e.tags) && (matchQ(e.title) || matchQ(e.note)),
-  );
-
-  const empty = !calculations.length && !ledgerEntries.length;
+  const candidates = calculations.filter((c) => !compareIds.includes(c.id)).slice(0, 6);
 
   return (
     <>
       <header className="loan-topbar">
+        <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
+          ←
+        </button>
         <div>
-          <h1 className="loan-title">记账</h1>
-          <p className="loan-subtitle">贷款方案与收支，用标签归类</p>
+          <h1 className="loan-title">{t('compare.title')}</h1>
+          <p className="loan-subtitle">{t('compare.subtitle', { n: items.length })}</p>
         </div>
       </header>
 
-      <div className="loan-stat-row loan-stat-row--triple">
-        <div className="loan-stat-box">
-          <div className="loan-label">贷款方案</div>
-          <strong>{calculations.length}</strong>
-        </div>
-        <div className="loan-stat-box">
-          <div className="loan-label">收支笔数</div>
-          <strong>{ledgerEntries.length}</strong>
-        </div>
-        <div className="loan-stat-box">
-          <div className="loan-label">本月收支</div>
-          <strong>{monthManual}</strong>
-        </div>
-      </div>
-
-      <button type="button" className="loan-btn-primary" onClick={onNew}>
-        记一笔
-      </button>
-      <button type="button" className="loan-btn-secondary" style={{ marginTop: 8 }} onClick={onGoCalc}>
-        去试算并保存方案
-      </button>
-
-      {allTags.length > 0 ? (
-        <div className="loan-tag-filter" role="tablist" aria-label="按标签筛选">
+      {items.length < 2 ? (
+        <div className="loan-card">
+          <p className="loan-muted" style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>
+            {t('compare.needTwo')}
+          </p>
           <button
             type="button"
-            className="loan-tag-chip loan-tag-chip--filter"
-            data-active={activeTag === null}
-            onClick={() => setActiveTag(null)}
+            className="loan-btn-secondary"
+            style={{ marginTop: 12 }}
+            onClick={onOpenSaved}
           >
-            全部
+            {t('compare.goSaved')}
           </button>
-          {allTags.map((tag) => (
+        </div>
+      ) : (
+        <div className="loan-card loan-compare-card">
+          <div className="loan-compare-grid" style={{ ['--cols' as string]: items.length }}>
+            <div className="loan-compare-cell loan-compare-head">{t('compare.metric')}</div>
+            {items.map((c) => (
+              <div key={c.id} className="loan-compare-cell loan-compare-head">
+                <div>{categoryLabel(c.result.input.category, t)}</div>
+                <button type="button" className="loan-compare-remove" onClick={() => onRemove(c.id)}>
+                  {t('compare.remove')}
+                </button>
+              </div>
+            ))}
+            <div className="loan-compare-cell">{t('compare.principal')}</div>
+            {items.map((c) => (
+              <div key={`${c.id}-p`} className="loan-compare-cell">
+                {money(c.result.input.principal)}
+              </div>
+            ))}
+            <div className="loan-compare-cell">{t('compare.rate')}</div>
+            {items.map((c) => (
+              <div key={`${c.id}-r`} className="loan-compare-cell">
+                {c.result.input.annualRatePercent}%
+              </div>
+            ))}
+            <div className="loan-compare-cell">{t('compare.term')}</div>
+            {items.map((c) => (
+              <div key={`${c.id}-t`} className="loan-compare-cell">
+                {t('compare.termMonths', { n: c.result.input.termMonths })}
+              </div>
+            ))}
+            {metrics.map((m) => {
+              const bi = bestIndex(m.values, m.lowerBetter);
+              return (
+                <React.Fragment key={m.key}>
+                  <div className="loan-compare-cell">{m.label}</div>
+                  {m.values.map((v, i) => (
+                    <div
+                      key={`${m.key}-${i}`}
+                      className={`loan-compare-cell ${i === bi ? 'loan-compare-best' : ''}`}
+                    >
+                      {money(v)}
+                    </div>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {candidates.length ? (
+        <div className="loan-card">
+          <div className="loan-label">{t('compare.addSaved')}</div>
+          {candidates.map((c) => (
             <button
-              key={tag}
+              key={c.id}
               type="button"
-              className="loan-tag-chip loan-tag-chip--filter"
-              data-active={activeTag === tag}
-              onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+              className="loan-menu-item"
+              onClick={() => onPick(c.id)}
+              disabled={compareIds.length >= 3}
             >
-              {tag}
+              <span>
+                {categoryLabel(c.result.input.category, t)} ·{' '}
+                {t('compare.perMonth', { amount: money(c.result.monthlyPayment) })}
+              </span>
+              <span>+</span>
             </button>
           ))}
         </div>
       ) : null}
 
-      <input
-        className="loan-input"
-        placeholder="搜索标题、备注或还款方式"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        style={{ marginBottom: 12 }}
-      />
-
-      {empty ? (
-        <div className="loan-empty">
-          <NotebookPen size={40} strokeWidth={1.6} color="#6b5bff" style={{ marginBottom: 12 }} />
-          <p>记一笔日常收支，或在计算页保存贷款方案，都会出现在这里。</p>
-        </div>
-      ) : (
-        <>
-          <div className="loan-section-head">
-            <span className="loan-label" style={{ margin: 0 }}>
-              贷款试算
-            </span>
-            {favCount > 0 ? (
-              <span className="loan-chip">{favCount} 个收藏</span>
-            ) : null}
-          </div>
-          <div className="loan-card loan-card--dense">
-            {!filteredCalcs.length ? (
-              <p className="loan-muted" style={{ padding: '12px 0', margin: 0, fontSize: 13 }}>
-                当前筛选下暂无贷款方案
-              </p>
-            ) : (
-              filteredCalcs.map((c) => (
-                <div key={c.id} className="loan-list-item loan-list-item--stack">
-                  <div
-                    style={{ flex: 1 }}
-                    onClick={() => onOpenCalc(c.id)}
-                    role="presentation"
-                  >
-                    <div className="loan-list-item-title">
-                      <span>{c.note}</span>
-                      <span className="loan-badge loan-badge--calc">试算</span>
-                    </div>
-                    <div className="loan-muted" style={{ fontSize: 12 }}>
-                      {modeLabel(c.result.input.mode)} · {money(c.result.monthlyPayment)}/月
-                    </div>
-                    <TagRow tags={c.tags} />
-                  </div>
-                  <div className="loan-list-item-actions">
-                    <button
-                      type="button"
-                      style={{ background: 'none', border: 0, cursor: 'pointer', fontSize: 18 }}
-                      onClick={() => onToggleFav(c.id)}
-                      aria-label="收藏"
-                    >
-                      {c.favorite ? '★' : '☆'}
-                    </button>
-                    <button
-                      type="button"
-                      className="loan-text-spend"
-                      style={{ background: 'none', border: 0, cursor: 'pointer' }}
-                      onClick={() => onDeleteCalc(c.id)}
-                    >
-                      删除
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="loan-section-head" style={{ marginTop: 16 }}>
-            <span className="loan-label" style={{ margin: 0 }}>
-              收支明细
-            </span>
-          </div>
-          <div className="loan-card loan-card--dense">
-            {!filteredManual.length ? (
-              <p className="loan-muted" style={{ padding: '12px 0', margin: 0, fontSize: 13 }}>
-                当前筛选下暂无收支，点上方「记一笔」添加
-              </p>
-            ) : (
-              filteredManual.map((e) => (
-                <div key={e.id} className="loan-list-item loan-list-item--stack">
-                  <div
-                    style={{ flex: 1 }}
-                    onClick={() => onOpenManual(e.id)}
-                    role="presentation"
-                  >
-                    <div className="loan-list-item-title">
-                      <span>{e.title}</span>
-                      <span
-                        className={
-                          e.direction === 'income'
-                            ? 'loan-text-income loan-ledger-amount'
-                            : 'loan-text-spend loan-ledger-amount'
-                        }
-                      >
-                        {e.direction === 'income' ? '+' : '−'}
-                        {money(e.amount)}
-                      </span>
-                    </div>
-                    <div className="loan-muted" style={{ fontSize: 12 }}>
-                      {new Date(e.createdAt).toLocaleDateString('zh-CN')}
-                      {e.note ? ` · ${e.note}` : ''}
-                    </div>
-                    <TagRow tags={e.tags} />
-                  </div>
-                  <div className="loan-list-item-actions">
-                    <button
-                      type="button"
-                      className="loan-text-spend"
-                      style={{ background: 'none', border: 0, cursor: 'pointer' }}
-                      onClick={() => onDeleteManual(e.id)}
-                    >
-                      删除
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </>
-      )}
-    </>
-  );
-}
-
-function LedgerNew({
-  money,
-  onBack,
-  onSave,
-}: {
-  money: (n: number) => string;
-  onBack: () => void;
-  onSave: (entry: ManualLedgerEntry) => void;
-}) {
-  const [title, setTitle] = useState('');
-  const [amount, setAmount] = useState('');
-  const [direction, setDirection] = useState<LedgerDirection>('expense');
-  const [note, setNote] = useState('');
-  const [tags, setTags] = useState<string[]>(['日常']);
-
-  const submit = () => {
-    const n = Number(amount);
-    if (!title.trim() || !n || n <= 0 || !tags.length) return;
-    onSave({
-      id: uid('ledger'),
-      createdAt: new Date().toISOString(),
-      title: title.trim(),
-      amount: n,
-      direction,
-      tags,
-      note: note.trim(),
-    });
-  };
-
-  return (
-    <>
-      <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={onBack} aria-label="返回">
-          ←
-        </button>
-        <div>
-          <h1 className="loan-title">记一笔</h1>
-          <p className="loan-subtitle">记录与贷款相关的收支</p>
-        </div>
-      </header>
-      <div className="loan-card">
-        <div className="loan-segment">
-          <button
-            type="button"
-            data-active={direction === 'expense'}
-            onClick={() => setDirection('expense')}
-          >
-            支出
-          </button>
-          <button
-            type="button"
-            data-active={direction === 'income'}
-            onClick={() => setDirection('income')}
-          >
-            收入
-          </button>
-        </div>
-        <div className="loan-label">标题</div>
-        <input
-          className="loan-input"
-          placeholder="如 本月房贷、保险缴费"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <div className="loan-label" style={{ marginTop: 12 }}>
-          金额
-        </div>
-        <input
-          className="loan-input loan-input--amount"
-          inputMode="decimal"
-          placeholder="0.00"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
-        />
-        <p className="loan-muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
-          预览：{direction === 'income' ? '+' : '−'}
-          {money(Number(amount) || 0)}
+      {pendingResult && items.length < 3 ? (
+        <p className="loan-muted" style={{ fontSize: 12 }}>
+          {t('compare.hint')}
         </p>
-      </div>
-      <TagPicker value={tags} onChange={setTags} />
-      <div className="loan-card">
-        <div className="loan-label">备注（可选）</div>
-        <input
-          className="loan-input"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
-      </div>
-      <button type="button" className="loan-btn-primary" onClick={submit}>
-        保存
-      </button>
+      ) : null}
     </>
   );
 }
 
-function LedgerCalcDetail({
-  item,
+function SavedList({
+  calculations,
   money,
+  compareIds,
   onBack,
-  onView,
-  onUpdateTags,
-}: {
-  item: SavedCalculation;
-  money: (n: number) => string;
-  onBack: () => void;
-  onView: () => void;
-  onUpdateTags: (tags: string[]) => void;
-}) {
-  const [tags, setTags] = useState(item.tags);
-
-  return (
-    <>
-      <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={onBack} aria-label="返回">
-          ←
-        </button>
-        <div>
-          <h1 className="loan-title">{item.note}</h1>
-          <p className="loan-subtitle">
-            {new Date(item.createdAt).toLocaleString('zh-CN')}
-          </p>
-        </div>
-      </header>
-      <div className="loan-card">
-        <div className="loan-row">
-          <span>月供</span>
-          <span>{money(item.result.monthlyPayment)}</span>
-        </div>
-        <div className="loan-row">
-          <span>总利息</span>
-          <span>{money(item.result.totalInterest)}</span>
-        </div>
-        <div className="loan-row">
-          <span>还款总额</span>
-          <span>{money(item.result.totalPayment)}</span>
-        </div>
-      </div>
-      <TagPicker
-        value={tags}
-        onChange={(next) => {
-          setTags(next);
-          onUpdateTags(next);
-        }}
-      />
-      <button type="button" className="loan-btn-primary" onClick={onView}>
-        打开完整结果
-      </button>
-    </>
-  );
-}
-
-function LedgerManualDetail({
-  entry,
-  money,
-  onBack,
-  onUpdate,
+  onOpen,
   onDelete,
+  onToggleFav,
+  onCompare,
+  onGoCalc,
 }: {
-  entry: ManualLedgerEntry;
+  calculations: SavedCalculation[];
   money: (n: number) => string;
+  compareIds: string[];
   onBack: () => void;
-  onUpdate: (e: ManualLedgerEntry) => void;
-  onDelete: () => void;
+  onOpen: (item: SavedCalculation) => void;
+  onDelete: (id: string) => void;
+  onToggleFav: (id: string) => void;
+  onCompare: (id: string) => void;
+  onGoCalc: () => void;
 }) {
-  const [tags, setTags] = useState(entry.tags);
-  const [note, setNote] = useState(entry.note);
+  const { t } = useApp();
+  if (!calculations.length) {
+    return (
+      <>
+        <header className="loan-topbar">
+          <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
+            ←
+          </button>
+          <h1 className="loan-title">{t('saved.title')}</h1>
+        </header>
+        <div className="loan-empty">
+          <p>{t('saved.empty')}</p>
+          <button type="button" className="loan-btn-primary" onClick={onGoCalc}>
+            {t('saved.goCalc')}
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
       <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={onBack} aria-label="返回">
+        <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
           ←
         </button>
         <div>
-          <h1 className="loan-title">{entry.title}</h1>
-          <p className="loan-subtitle">
-            {entry.direction === 'income' ? '收入' : '支出'} ·{' '}
-            {new Date(entry.createdAt).toLocaleString('zh-CN')}
-          </p>
+          <h1 className="loan-title">{t('saved.title')}</h1>
+          <p className="loan-subtitle">{t('saved.count', { n: calculations.length })}</p>
         </div>
       </header>
-      <div className="loan-card">
-        <div className="loan-hero-amount" style={{ fontSize: 28 }}>
-          <span className={entry.direction === 'income' ? 'loan-text-income' : 'loan-text-spend'}>
-            {entry.direction === 'income' ? '+' : '−'}
-            {money(entry.amount)}
-          </span>
-        </div>
-      </div>
-      <TagPicker
-        value={tags}
-        onChange={(next) => {
-          setTags(next);
-          onUpdate({ ...entry, tags: next });
-        }}
-      />
-      <div className="loan-card">
-        <div className="loan-label">备注</div>
-        <input
-          className="loan-input"
-          value={note}
-          onChange={(e) => {
-            setNote(e.target.value);
-            onUpdate({ ...entry, tags, note: e.target.value });
-          }}
-        />
-      </div>
-      <button type="button" className="loan-btn-secondary" onClick={onDelete}>
-        删除此笔
-      </button>
+      {calculations.map((c) => {
+        const pay =
+          c.result.input.mode === 'equal-principal'
+            ? c.result.firstMonthPayment
+            : c.result.monthlyPayment;
+        return (
+          <div key={c.id} className="loan-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <button
+                type="button"
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  flex: 1,
+                }}
+                onClick={() => onOpen(c)}
+              >
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span className="loan-chip">{categoryLabel(c.result.input.category, t)}</span>
+                  {c.favorite ? <span className="loan-chip">{t('saved.fav')}</span> : null}
+                  {compareIds.includes(c.id) ? (
+                    <span className="loan-chip">{t('saved.inCompare')}</span>
+                  ) : null}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 18, marginTop: 8 }}>
+                  {t('compare.perMonth', { amount: money(pay) })}
+                </div>
+                <div className="loan-muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  {t('saved.meta', {
+                    principal: money(c.result.input.principal),
+                    rate: c.result.input.annualRatePercent,
+                    months: c.result.input.termMonths,
+                  })}
+                </div>
+              </button>
+            </div>
+            <div className="loan-saved-actions">
+              <button type="button" className="loan-quick-chip" onClick={() => onToggleFav(c.id)}>
+                {c.favorite ? t('saved.unfav') : t('saved.fav')}
+              </button>
+              <button type="button" className="loan-quick-chip" onClick={() => onCompare(c.id)}>
+                {t('saved.compare')}
+              </button>
+              <button type="button" className="loan-quick-chip" onClick={() => onDelete(c.id)}>
+                {t('saved.delete')}
+              </button>
+            </div>
+          </div>
+        );
+      })}
     </>
   );
 }
@@ -1519,48 +1807,62 @@ function LedgerManualDetail({
 function ProfileHome({
   profile,
   setPage,
-  ledgerCount,
+  savedCount,
   savingsCount,
 }: {
   profile: { nickname: string; avatar: string };
   setPage: (p: string) => void;
-  ledgerCount: number;
+  savedCount: number;
   savingsCount: number;
 }) {
+  const { t } = useApp();
   return (
     <>
       <header className="loan-topbar">
         <div>
-          <h1 className="loan-title">我的</h1>
-          <p className="loan-subtitle">本地资料与偏好</p>
+          <h1 className="loan-title">{t('profile.title')}</h1>
+          <p className="loan-subtitle">{t('profile.subtitle')}</p>
         </div>
       </header>
       <div className="loan-card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <div className="loan-profile-avatar">{profile.avatar}</div>
         <div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>{profile.nickname}</div>
-          <div className="loan-muted" style={{ fontSize: 13 }}>数据仅保存在本设备</div>
+          <div className="loan-muted" style={{ fontSize: 13 }}>
+            {t('profile.localOnly')}
+          </div>
         </div>
       </div>
       <div className="loan-stat-row">
         <div className="loan-stat-box">
-          <div className="loan-label">记账条目</div>
-          <strong>{ledgerCount}</strong>
+          <div className="loan-label">{t('profile.savedCount')}</div>
+          <strong>{savedCount}</strong>
         </div>
         <div className="loan-stat-box">
-          <div className="loan-label">储蓄目标</div>
+          <div className="loan-label">{t('profile.savingsCount')}</div>
           <strong>{savingsCount}</strong>
         </div>
       </div>
       <div className="loan-card" style={{ padding: '0 16px' }}>
-        <button type="button" className="loan-menu-item" onClick={() => setPage('profile-settings')}>
-          偏好设置 <ChevronRight size={18} aria-hidden />
+        <button
+          type="button"
+          className="loan-menu-item"
+          onClick={() => setPage('profile-saved')}
+        >
+          {t('profile.saved')} <ChevronRight size={18} aria-hidden />
+        </button>
+        <button
+          type="button"
+          className="loan-menu-item"
+          onClick={() => setPage('profile-settings')}
+        >
+          {t('profile.settings')} <ChevronRight size={18} aria-hidden />
         </button>
         <button type="button" className="loan-menu-item" onClick={() => setPage('profile-data')}>
-          数据管理 <ChevronRight size={18} aria-hidden />
+          {t('profile.data')} <ChevronRight size={18} aria-hidden />
         </button>
         <button type="button" className="loan-menu-item" onClick={() => setPage('profile-about')}>
-          关于与隐私 <ChevronRight size={18} aria-hidden />
+          {t('profile.about')} <ChevronRight size={18} aria-hidden />
         </button>
       </div>
     </>
@@ -1574,34 +1876,65 @@ function ProfileSettings({
   onSaveSettings,
   onSaveProfile,
 }: {
-  settings: { currencyCode: string; decimals: number; theme: string };
+  settings: {
+    currencyCode: string;
+    decimals: number;
+    theme: string;
+    locale: AppLocale;
+  };
   profile: { nickname: string; avatar: string; createdAt: string };
   onBack: () => void;
-  onSaveSettings: (s: typeof settings & { theme: 'dark' | 'light' | 'system' }) => void;
+  onSaveSettings: (s: typeof settings & { theme: 'dark' | 'light' | 'system'; locale: AppLocale }) => void;
   onSaveProfile: (p: typeof profile) => void;
 }) {
+  const { t } = useApp();
   const [currencyCode, setCurrencyCode] = useState(settings.currencyCode);
   const [decimals, setDecimals] = useState(String(settings.decimals));
   const [nickname, setNickname] = useState(profile.nickname);
   const [avatar, setAvatar] = useState(profile.avatar);
+  const [locale, setLocale] = useState<AppLocale>(settings.locale);
 
   return (
     <>
       <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={onBack} aria-label="返回">
+        <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
           ←
         </button>
-        <h1 className="loan-title">偏好设置</h1>
+        <h1 className="loan-title">{t('settings.title')}</h1>
       </header>
       <div className="loan-card">
-        <div className="loan-label">昵称</div>
+        <div className="loan-label">{t('settings.language')}</div>
+        <div className="loan-segment loan-lang-segment">
+          {APP_LOCALES.map((loc) => (
+            <button
+              key={loc.id}
+              type="button"
+              data-active={locale === loc.id}
+              onClick={() => {
+                setLocale(loc.id);
+                onSaveSettings({
+                  ...settings,
+                  currencyCode,
+                  decimals: Math.min(4, Math.max(0, Number(decimals) || 2)),
+                  theme: 'light',
+                  locale: loc.id,
+                });
+              }}
+            >
+              {loc.nativeLabel}
+            </button>
+          ))}
+        </div>
+        <div className="loan-label" style={{ marginTop: 12 }}>
+          {t('settings.nickname')}
+        </div>
         <input className="loan-input" value={nickname} onChange={(e) => setNickname(e.target.value)} />
         <div className="loan-label" style={{ marginTop: 12 }}>
-          头像（emoji）
+          {t('settings.avatar')}
         </div>
         <input className="loan-input" value={avatar} onChange={(e) => setAvatar(e.target.value)} />
         <div className="loan-label" style={{ marginTop: 12 }}>
-          小数位
+          {t('settings.decimals')}
         </div>
         <input
           className="loan-input"
@@ -1612,6 +1945,7 @@ function ProfileSettings({
       </div>
       <CurrencyPicker
         currencyCode={currencyCode}
+        t={t}
         onChange={(code) => {
           setCurrencyCode(code);
           setDecimals(String(getCurrency(code).defaultDecimals));
@@ -1621,17 +1955,22 @@ function ProfileSettings({
         type="button"
         className="loan-btn-primary"
         onClick={() => {
-          onSaveProfile({ ...profile, nickname: nickname.trim() || '借款人', avatar });
+          onSaveProfile({
+            ...profile,
+            nickname: nickname.trim() || t('settings.defaultNick'),
+            avatar,
+          });
           onSaveSettings({
             ...settings,
             currencyCode,
             decimals: Math.min(4, Math.max(0, Number(decimals) || 2)),
             theme: 'light',
+            locale,
           });
           onBack();
         }}
       >
-        保存
+        {t('settings.save')}
       </button>
     </>
   );
@@ -1646,17 +1985,18 @@ function ProfileData({
   onExport: () => void;
   onClear: () => void;
 }) {
+  const { t } = useApp();
   return (
     <>
       <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={onBack} aria-label="返回">
+        <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
           ←
         </button>
-        <h1 className="loan-title">数据管理</h1>
+        <h1 className="loan-title">{t('data.title')}</h1>
       </header>
       <div className="loan-card" style={{ padding: 0 }}>
         <button type="button" className="loan-menu-item" style={{ padding: '16px' }} onClick={onExport}>
-          导出 JSON 备份 <span>↓</span>
+          {t('data.export')} <span>↓</span>
         </button>
         <button
           type="button"
@@ -1664,29 +2004,29 @@ function ProfileData({
           style={{ padding: '16px' }}
           onClick={onClear}
         >
-          清空计算与储蓄数据 <span>!</span>
+          {t('data.clear')} <span>!</span>
         </button>
       </div>
       <p className="loan-muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
-        清空仅删除贷款方案、收支记账与储蓄目标，不会重置昵称、货币等偏好。
+        {t('data.hint')}
       </p>
     </>
   );
 }
 
 function ProfileAbout({ onBack }: { onBack: () => void }) {
+  const { t } = useApp();
   return (
     <>
       <header className="loan-topbar">
-        <button type="button" className="loan-back" onClick={onBack} aria-label="返回">
+        <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
           ←
         </button>
-        <h1 className="loan-title">关于与隐私</h1>
+        <h1 className="loan-title">{t('about.title')}</h1>
       </header>
       <div className="loan-card">
         <p className="loan-muted" style={{ fontSize: 15, lineHeight: 1.7, margin: 0 }}>
-          本原型为离线贷款计算器演示：所有计算在浏览器内完成，数据写入 localStorage，不连接任何服务器，不上传个人信息。
-          导出文件仅由您自行保存。设计参考 Revolut Mobile 视觉规范，仅供产品原型与后续 App 开发参考。
+          {t('about.body')}
         </p>
       </div>
     </>

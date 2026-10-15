@@ -1,6 +1,7 @@
 import { computeLoan } from './calc';
 import { resolveCurrencyCode } from './currencies';
 import { defaultTagsForCategory, normalizeTagList } from './tags';
+import { isAppLocale } from './i18n';
 import type {
   AppMeta,
   AppSettings,
@@ -18,6 +19,7 @@ const KEYS = {
   calculations: `${PREFIX}calculations`,
   savings: `${PREFIX}savings-goals`,
   ledger: `${PREFIX}ledger-entries`,
+  compare: `${PREFIX}compare-ids`,
   meta: `${PREFIX}meta`,
 } as const;
 
@@ -69,6 +71,7 @@ export function getSettings(): AppSettings {
     currencyCode: 'CNY',
     decimals: 2,
     theme: 'light',
+    locale: 'zh-CN',
   });
   const currencyCode = resolveCurrencyCode(raw);
   const decimals =
@@ -77,6 +80,7 @@ export function getSettings(): AppSettings {
     currencyCode,
     decimals,
     theme: raw.theme === 'dark' || raw.theme === 'system' ? raw.theme : 'light',
+    locale: isAppLocale(raw.locale) ? raw.locale : 'zh-CN',
   };
 }
 
@@ -113,10 +117,20 @@ export function saveSavingsGoals(list: SavingsGoal[]) {
   writeJson(KEYS.savings, list);
 }
 
+export function getCompareIds(): string[] {
+  const raw = readJson<string[]>(KEYS.compare, []);
+  return Array.isArray(raw) ? raw.filter((id) => typeof id === 'string').slice(0, 3) : [];
+}
+
+export function saveCompareIds(ids: string[]) {
+  writeJson(KEYS.compare, ids.slice(0, 3));
+}
+
 export function clearBusinessData() {
   writeJson(KEYS.calculations, []);
   writeJson(KEYS.savings, []);
   writeJson(KEYS.ledger, []);
+  writeJson(KEYS.compare, []);
 }
 
 export function exportAllData(): string {
@@ -136,15 +150,61 @@ export function exportAllData(): string {
 
 export function seedIfNeeded() {
   const meta = getMeta();
-  if (meta.seeded) return;
+  if (meta.seeded) {
+    if ((meta.schemaVersion ?? 1) < 2) {
+      const calcs = getCalculations();
+      const hasAuto = calcs.some((c) => c.result.input.category === 'auto');
+      if (!hasAuto) {
+        const auto = computeLoan({
+          principal: 126_000,
+          annualRatePercent: 4.5,
+          termMonths: 36,
+          mode: 'equal-payment',
+          category: 'auto',
+          label: '示例车贷',
+          vehiclePrice: 180_000,
+          downPayment: 54_000,
+        });
+        const next = [
+          ...calcs,
+          {
+            id: 'seed-calc-2',
+            createdAt: new Date().toISOString(),
+            favorite: false,
+            note: '示例车贷方案',
+            tags: ['车贷'],
+            result: auto,
+          },
+        ];
+        saveCalculations(next);
+        const ids = getCompareIds();
+        if (ids.length < 2 && next.length >= 2) {
+          saveCompareIds([next[0].id, next[next.length - 1].id].slice(0, 3));
+        }
+      }
+      setMeta({ ...meta, schemaVersion: 2 });
+    }
+    return;
+  }
 
-  const sample = computeLoan({
+  const mortgage = computeLoan({
     principal: 1_000_000,
-    annualRatePercent: 4.2,
+    annualRatePercent: 3.6,
     termMonths: 360,
     mode: 'equal-payment',
     category: 'mortgage',
     label: '示例房贷',
+  });
+
+  const auto = computeLoan({
+    principal: 126_000,
+    annualRatePercent: 4.5,
+    termMonths: 36,
+    mode: 'equal-payment',
+    category: 'auto',
+    label: '示例车贷',
+    vehiclePrice: 180_000,
+    downPayment: 54_000,
   });
 
   saveCalculations([
@@ -154,30 +214,19 @@ export function seedIfNeeded() {
       favorite: true,
       note: '示例房贷方案',
       tags: ['房贷', '月供'],
-      result: sample,
+      result: mortgage,
+    },
+    {
+      id: 'seed-calc-2',
+      createdAt: new Date().toISOString(),
+      favorite: false,
+      note: '示例车贷方案',
+      tags: ['车贷'],
+      result: auto,
     },
   ]);
 
-  saveLedgerEntries([
-    {
-      id: 'seed-ledger-1',
-      createdAt: new Date().toISOString(),
-      title: '本月房贷预留',
-      amount: 4890,
-      direction: 'expense',
-      tags: ['房贷', '月供'],
-      note: '与试算方案配套的手动记账',
-    },
-    {
-      id: 'seed-ledger-2',
-      createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-      title: '公积金入账',
-      amount: 3200,
-      direction: 'income',
-      tags: ['房贷'],
-      note: '示例收入',
-    },
-  ]);
+  saveCompareIds(['seed-calc-1', 'seed-calc-2']);
 
   saveSavingsGoals([
     {
@@ -200,5 +249,5 @@ export function seedIfNeeded() {
     },
   ]);
 
-  setMeta({ schemaVersion: 1, seeded: true });
+  setMeta({ schemaVersion: 2, seeded: true });
 }
