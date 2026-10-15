@@ -9,6 +9,7 @@ import '../data/models.dart';
 import '../data/savings_insights.dart';
 import '../state/app_state.dart';
 import '../theme/revolut_theme.dart';
+import '../widgets/compare_bar_chart.dart';
 import '../widgets/currency_picker.dart';
 import '../widgets/donut_chart.dart';
 import '../widgets/loan_widgets.dart';
@@ -684,12 +685,52 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
   String _view = 'month';
   final _from = TextEditingController(text: '1');
   final _to = TextEditingController();
+  bool _toSeeded = false;
+  List<AmortizationRow>? _yearCache;
+  int? _yearCacheLen;
+
+  static const _rowH = 34.0;
+  static const _colPeriod = 40.0;
+  static const _colMoney = 100.0;
+  static const _tableW = _colPeriod + _colMoney * 4;
+
+  List<_AmortLine>? _lines;
+  String? _lineKey;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_toSeeded) return;
+    final len = context.read<AppState>().pendingResult?.schedule.length;
+    if (len != null) {
+      _to.text = '$len';
+      _toSeeded = true;
+    }
+  }
 
   @override
   void dispose() {
     _from.dispose();
     _to.dispose();
     super.dispose();
+  }
+
+  List<AmortizationRow> _rowsFor(CalcResult result) {
+    final max = result.schedule.length;
+    if (_view == 'year') {
+      if (_yearCache == null || _yearCacheLen != max) {
+        _yearCache = _yearlyRows(result);
+        _yearCacheLen = max;
+      }
+      return _yearCache!;
+    }
+    if (_view == 'custom') {
+      final from = (int.tryParse(_from.text) ?? 1).clamp(1, max);
+      final to = (int.tryParse(_to.text) ?? max).clamp(from, max);
+      // 按期切片，避免 where 全表扫描再 toList
+      return result.schedule.sublist(from - 1, to);
+    }
+    return result.schedule;
   }
 
   @override
@@ -699,22 +740,22 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
     if (result == null) return const RedirectCalcScreen();
 
     final max = result.schedule.length;
-    if (_to.text.isEmpty) _to.text = '$max';
+    final rows = _rowsFor(result);
+    final lines = _linesFor(app, result, rows);
+    final headStyle = const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: RevolutColors.textSecondary,
+    );
 
-    List<AmortizationRow> rows;
-    if (_view == 'year') {
-      rows = _yearlyRows(result);
-    } else if (_view == 'custom') {
-      final from = (int.tryParse(_from.text) ?? 1).clamp(1, max);
-      final to = (int.tryParse(_to.text) ?? max).clamp(from, max);
-      rows = result.schedule.where((r) => r.period >= from && r.period <= to).toList();
-    } else {
-      rows = result.schedule;
+    double sumPay = 0, sumPrin = 0, sumInt = 0;
+    if (_view == 'custom') {
+      for (final r in rows) {
+        sumPay += r.payment;
+        sumPrin += r.principal;
+        sumInt += r.interest;
+      }
     }
-
-    final sumPay = rows.fold<double>(0, (s, r) => s + r.payment);
-    final sumPrin = rows.fold<double>(0, (s, r) => s + r.principal);
-    final sumInt = rows.fold<double>(0, (s, r) => s + r.interest);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -724,89 +765,102 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
           title: app.tr('amort.title'),
           subtitle: app.tr('amort.periods', {'n': '$max'}),
         ),
-        LoanCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LoanSegment(
-                options: [
-                  ('month', app.tr('amort.byMonth')),
-                  ('year', app.tr('amort.byYear')),
-                  ('custom', app.tr('amort.byCustom')),
-                ],
-                selected: _view,
-                onSelect: (v) => setState(() => _view = v),
-              ),
-              if (_view == 'custom') ...[
-                const SizedBox(height: 12),
-                LoanMuted(app.tr('amort.rangeHint', {'max': '$max'}), fontSize: 12),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LoanLabel(app.tr('amort.fromPeriod')),
-                          LoanInput(
-                            controller: _from,
-                            keyboardType: TextInputType.number,
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LoanLabel(app.tr('amort.toPeriod')),
-                          LoanInput(
-                            controller: _to,
-                            keyboardType: TextInputType.number,
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ],
-                      ),
-                    ),
+        Expanded(
+          child: LoanCard(
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.fromLTRB(12, 12, 8, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LoanSegment(
+                  options: [
+                    ('month', app.tr('amort.byMonth')),
+                    ('year', app.tr('amort.byYear')),
+                    ('custom', app.tr('amort.byCustom')),
                   ],
+                  selected: _view,
+                  onSelect: (v) => setState(() => _view = v),
                 ),
-                LoanMuted(app.tr('amort.showing', {'n': '${rows.length}'}), fontSize: 12),
-                const SizedBox(height: 8),
-                LoanRow(label: app.tr('amort.rangeSum'), value: app.money(sumPay)),
-                LoanRow(label: app.tr('amort.col.principal'), value: app.money(sumPrin)),
-                LoanRow(label: app.tr('amort.col.interest'), value: app.money(sumInt)),
-              ],
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  headingTextStyle: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: RevolutColors.textSecondary,
+                if (_view == 'custom') ...[
+                  const SizedBox(height: 12),
+                  LoanMuted(app.tr('amort.rangeHint', {'max': '$max'}), fontSize: 12),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            LoanLabel(app.tr('amort.fromPeriod')),
+                            LoanInput(
+                              controller: _from,
+                              keyboardType: TextInputType.number,
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            LoanLabel(app.tr('amort.toPeriod')),
+                            LoanInput(
+                              controller: _to,
+                              keyboardType: TextInputType.number,
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  dataTextStyle: monoStyle(context, size: 11),
-                  columns: [
-                    DataColumn(label: Text(_view == 'year' ? app.tr('amort.col.year') : app.tr('amort.col.period'))),
-                    DataColumn(label: Text(app.tr('amort.col.payment'))),
-                    DataColumn(label: Text(app.tr('amort.col.principal'))),
-                    DataColumn(label: Text(app.tr('amort.col.interest'))),
-                    DataColumn(label: Text(app.tr('amort.col.balance'))),
-                  ],
-                  rows: rows.map((row) {
-                    return DataRow(cells: [
-                      DataCell(Text('${row.period}')),
-                      DataCell(Text(app.money(row.payment))),
-                      DataCell(Text(app.money(row.principal))),
-                      DataCell(Text(app.money(row.interest))),
-                      DataCell(Text(app.money(row.balance))),
-                    ]);
-                  }).toList(),
+                  LoanMuted(app.tr('amort.showing', {'n': '${rows.length}'}), fontSize: 12),
+                  const SizedBox(height: 8),
+                  LoanRow(label: app.tr('amort.rangeSum'), value: app.money(sumPay)),
+                  LoanRow(label: app.tr('amort.col.principal'), value: app.money(sumPrin)),
+                  LoanRow(label: app.tr('amort.col.interest'), value: app.money(sumInt)),
+                ],
+                const SizedBox(height: 8),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.maxWidth > _tableW ? constraints.maxWidth : _tableW;
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: width,
+                          child: Column(
+                            children: [
+                              _AmortHeaderRow(
+                                periodLabel: _view == 'year' ? app.tr('amort.col.year') : app.tr('amort.col.period'),
+                                payment: app.tr('amort.col.payment'),
+                                principal: app.tr('amort.col.principal'),
+                                interest: app.tr('amort.col.interest'),
+                                balance: app.tr('amort.col.balance'),
+                                style: headStyle,
+                              ),
+                              const Divider(height: 1, color: RevolutColors.divider),
+                              Expanded(
+                                child: ListView.builder(
+                                  primary: false,
+                                  itemExtent: _rowH,
+                                  itemCount: lines.length,
+                                  addAutomaticKeepAlives: false,
+                                  physics: const ClampingScrollPhysics(),
+                                  itemBuilder: (context, i) => _AmortDataRow(line: lines[i]),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -815,22 +869,157 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
 
   List<AmortizationRow> _yearlyRows(CalcResult result) {
     final out = <AmortizationRow>[];
-    for (var i = 0; i < result.schedule.length; i += 12) {
-      final chunk = result.schedule.skip(i).take(12).toList();
+    final schedule = result.schedule;
+    for (var i = 0; i < schedule.length; i += 12) {
+      final end = (i + 12).clamp(0, schedule.length);
+      var payment = 0.0, principal = 0.0, interest = 0.0;
+      for (var j = i; j < end; j++) {
+        final r = schedule[j];
+        payment += r.payment;
+        principal += r.principal;
+        interest += r.interest;
+      }
       out.add(AmortizationRow(
         period: i ~/ 12 + 1,
-        payment: chunk.fold(0.0, (s, r) => s + r.payment),
-        principal: chunk.fold(0.0, (s, r) => s + r.principal),
-        interest: chunk.fold(0.0, (s, r) => s + r.interest),
-        balance: chunk.last.balance,
+        payment: payment,
+        principal: principal,
+        interest: interest,
+        balance: schedule[end - 1].balance,
       ));
     }
     return out;
   }
+
+  List<_AmortLine> _linesFor(AppState app, CalcResult result, List<AmortizationRow> rows) {
+    final key =
+        '${identityHashCode(result)}|$_view|${_from.text}|${_to.text}|${rows.length}|${app.settings.currencyCode}|${app.settings.decimals}';
+    final cached = _lines;
+    if (cached != null && _lineKey == key && cached.length == rows.length) return cached;
+    final lines = List<_AmortLine>.generate(rows.length, (i) {
+      final r = rows[i];
+      return _AmortLine(
+        '${r.period}',
+        app.money(r.payment),
+        app.money(r.principal),
+        app.money(r.interest),
+        app.money(r.balance),
+      );
+    }, growable: false);
+    _lines = lines;
+    _lineKey = key;
+    return lines;
+  }
+}
+
+class _AmortLine {
+  const _AmortLine(this.period, this.payment, this.principal, this.interest, this.balance);
+
+  final String period;
+  final String payment;
+  final String principal;
+  final String interest;
+  final String balance;
+}
+
+class _AmortHeaderRow extends StatelessWidget {
+  const _AmortHeaderRow({
+    required this.periodLabel,
+    required this.payment,
+    required this.principal,
+    required this.interest,
+    required this.balance,
+    required this.style,
+  });
+
+  final String periodLabel;
+  final String payment;
+  final String principal;
+  final String interest;
+  final String balance;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 32,
+      child: Row(
+        children: [
+          _cell(periodLabel, _AmortizationScreenState._colPeriod, style),
+          _cell(payment, _AmortizationScreenState._colMoney, style),
+          _cell(principal, _AmortizationScreenState._colMoney, style),
+          _cell(interest, _AmortizationScreenState._colMoney, style),
+          _cell(balance, _AmortizationScreenState._colMoney, style),
+        ],
+      ),
+    );
+  }
+}
+
+class _AmortDataRow extends StatelessWidget {
+  const _AmortDataRow({required this.line});
+
+  final _AmortLine line;
+
+  /// 不继承 Noto Sans SC，数字走系统字体，避免滑动时逐行做中文字形排版。
+  static const _style = TextStyle(
+    inherit: false,
+    fontSize: 12,
+    height: 1.2,
+    fontWeight: FontWeight.w500,
+    color: RevolutColors.text,
+  );
+  static const _deco = BoxDecoration(
+    border: Border(bottom: BorderSide(color: RevolutColors.divider)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: _deco,
+      child: SizedBox(
+        height: _AmortizationScreenState._rowH,
+        child: Row(
+          children: [
+            _num(line.period, _AmortizationScreenState._colPeriod),
+            _num(line.payment, _AmortizationScreenState._colMoney),
+            _num(line.principal, _AmortizationScreenState._colMoney),
+            _num(line.interest, _AmortizationScreenState._colMoney),
+            _num(line.balance, _AmortizationScreenState._colMoney),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _num(String text, double width) {
+    return SizedBox(
+      width: width,
+      child: Text(text, style: _style, textAlign: TextAlign.center, maxLines: 1),
+    );
+  }
+}
+
+Widget _cell(String text, double width, TextStyle style, {TextAlign align = TextAlign.center}) {
+  return SizedBox(
+    width: width,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(text, style: style, textAlign: align, maxLines: 1, overflow: TextOverflow.clip),
+    ),
+  );
 }
 
 class CompareScreen extends StatelessWidget {
   const CompareScreen({super.key});
+
+  int _bestIndex(List<double> values, {required bool lowerBetter}) {
+    if (values.isEmpty) return -1;
+    var best = 0;
+    for (var i = 1; i < values.length; i++) {
+      if (lowerBetter ? values[i] < values[best] : values[i] > values[best]) best = i;
+    }
+    return best;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -840,6 +1029,310 @@ class CompareScreen extends StatelessWidget {
     for (final id in ids) {
       final r = app.resultForCompareId(id);
       if (r != null) results.add((id, r));
+    }
+
+    final monthlyValues = results
+        .map(
+          (e) => e.$2.input.mode == RepaymentMode.equalPrincipal
+              ? e.$2.firstMonthPayment
+              : e.$2.monthlyPayment,
+        )
+        .toList();
+    final interestVals = results.map((e) => e.$2.totalInterest).toList();
+    final totalVals = results.map((e) => e.$2.totalPayment).toList();
+
+    final winInterest = _bestIndex(interestVals, lowerBetter: true);
+    final winMonthly = _bestIndex(monthlyValues, lowerBetter: true);
+    String rateText(double rate) {
+      final text = rate.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+      return '$text%';
+    }
+
+    String rawPlanName(String id, CalcResult result) {
+      final cat = categoryLabel(result.input.category, app.locale);
+      final rate = rateText(result.input.annualRatePercent);
+      for (final c in app.calculations) {
+        if (c.id == id && c.note.trim().isNotEmpty) return c.note.trim();
+      }
+      return '$cat $rate';
+    }
+
+    final planNames = <String>[
+      for (var i = 0; i < results.length; i++) rawPlanName(results[i].$1, results[i].$2),
+    ];
+    final nameCount = <String, int>{};
+    for (final name in planNames) {
+      nameCount[name] = (nameCount[name] ?? 0) + 1;
+    }
+    for (var i = 0; i < planNames.length; i++) {
+      if ((nameCount[planNames[i]] ?? 0) < 2) continue;
+      final result = results[i].$2;
+      planNames[i] =
+          '${categoryLabel(result.input.category, app.locale)} ${rateText(result.input.annualRatePercent)} · ${app.tr('compare.termMonths', {'n': '${result.input.termMonths}'})}';
+    }
+
+    Widget? richCompare;
+    if (results.length >= 2) {
+      int maxIndex(List<double> values) {
+        var best = 0;
+        for (var i = 1; i < values.length; i++) {
+          if (values[i] > values[best]) best = i;
+        }
+        return best;
+      }
+
+      final lowInterest = winInterest < 0 ? 0 : winInterest;
+      final highInterest = maxIndex(interestVals);
+      final lowMonthly = winMonthly < 0 ? 0 : winMonthly;
+      final interestGap = (interestVals[highInterest] - interestVals[lowInterest]).abs();
+      final summary = results.length == 2
+          ? app.tr('compare.summaryTwo', {
+              'low': planNames[lowInterest],
+              'high': planNames[lowInterest == 0 ? 1 : 0],
+              'interestDiff': app.money(interestGap),
+              'monthlyDiff': app.money((monthlyValues[0] - monthlyValues[1]).abs()),
+            })
+          : lowInterest == lowMonthly
+              ? app.tr('compare.summaryManySame', {
+                  'n': '${results.length}',
+                  'low': planNames[lowInterest],
+                  'high': planNames[highInterest],
+                  'interestDiff': app.money(interestGap),
+                })
+              : app.tr('compare.summaryMany', {
+                  'n': '${results.length}',
+                  'low': planNames[lowInterest],
+                  'high': planNames[highInterest],
+                  'interestDiff': app.money(interestGap),
+                  'monthly': planNames[lowMonthly],
+                });
+      final showDown = results.any((e) => e.$2.input.downPayment != null);
+
+      String cellMoney(double v) => app.money(v);
+      String cellPct(double v) => '${v.toStringAsFixed(1)}%';
+
+      List<double> metricVals(String key) => switch (key) {
+            'monthly' => monthlyValues,
+            'first' => results.map((e) => e.$2.firstMonthPayment).toList(),
+            'last' => results.map((e) => e.$2.lastMonthPayment).toList(),
+            'interest' => interestVals,
+            'total' => totalVals,
+            'share' => results
+                .map(
+                  (e) => e.$2.totalPayment > 0
+                      ? (e.$2.totalInterest / e.$2.totalPayment) * 100
+                      : 0.0,
+                )
+                .toList(),
+            'daily' => results.map((e) {
+                final days = (e.$2.input.termMonths * 30).clamp(1, 1000000);
+                return e.$2.totalInterest / days;
+              }).toList(),
+            _ => <double>[],
+          };
+
+      final moneyMetricKeys = ['monthly', 'first', 'last', 'interest', 'total', 'share', 'daily'];
+      final metricLabels = {
+        'monthly': app.tr('compare.monthly'),
+        'first': app.tr('compare.firstMonth'),
+        'last': app.tr('compare.lastMonth'),
+        'interest': app.tr('result.totalInterest'),
+        'total': app.tr('result.totalPayment'),
+        'share': app.tr('compare.interestShare'),
+        'daily': app.tr('compare.dailyInterest'),
+      };
+
+      const labelW = 80.0;
+      const valueW = 118.0;
+      final valueStyle = monoStyle(context, size: 12);
+      const plainStyle = TextStyle(fontSize: 12, height: 1.35, color: RevolutColors.text);
+
+      Widget cell({
+        required Widget child,
+        required double width,
+        bool head = false,
+        bool best = false,
+      }) {
+        return Container(
+          width: width,
+          padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
+          color: best
+              ? RevolutColors.income.withValues(alpha: 0.08)
+              : (head ? RevolutColors.surface2 : RevolutColors.surface1),
+          alignment: Alignment.centerLeft,
+          child: child,
+        );
+      }
+
+      Widget textCell(String text, double width, {bool head = false, bool best = false, bool mono = false}) {
+        return cell(
+          width: width,
+          head: head,
+          best: best,
+          child: Text(
+            text,
+            style: (mono ? valueStyle : plainStyle).copyWith(
+              fontWeight: head || best ? FontWeight.w700 : FontWeight.w500,
+              color: best ? RevolutColors.income : (head ? RevolutColors.text : RevolutColors.text),
+            ),
+          ),
+        );
+      }
+
+      List<Widget> labelAndValues(String label, List<String> values, {List<bool>? best}) {
+        return [
+          textCell(label, labelW),
+          for (var i = 0; i < values.length; i++)
+            textCell(values[i], valueW, best: best != null && best[i], mono: true),
+        ];
+      }
+
+      final rows = <List<Widget>>[
+        [
+          textCell(app.tr('compare.metric'), labelW, head: true),
+          for (var i = 0; i < results.length; i++)
+            cell(
+              width: valueW,
+              head: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    planNames[i],
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, height: 1.3),
+                  ),
+                  GestureDetector(
+                    onTap: () => app.removeFromCompare(results[i].$1),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        app.tr('compare.remove'),
+                        style: const TextStyle(fontSize: 11, color: RevolutColors.textMuted, height: 1.2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+        labelAndValues(
+          app.tr('compare.category'),
+          results.map((e) => categoryLabel(e.$2.input.category, app.locale)).toList(),
+        ),
+        labelAndValues(
+          app.tr('compare.mode'),
+          results.map((e) => modeLabel(e.$2.input.mode, app.locale)).toList(),
+        ),
+        labelAndValues(
+          app.tr('compare.principal'),
+          results.map((e) => app.money(e.$2.input.principal)).toList(),
+        ),
+        if (showDown)
+          labelAndValues(
+            app.tr('compare.downPayment'),
+            results
+                .map((e) => e.$2.input.downPayment != null ? app.money(e.$2.input.downPayment!) : '—')
+                .toList(),
+          ),
+        labelAndValues(
+          app.tr('compare.rate'),
+          results.map((e) => '${e.$2.input.annualRatePercent}%').toList(),
+        ),
+        labelAndValues(
+          app.tr('compare.term'),
+          results.map((e) => app.tr('compare.termMonths', {'n': '${e.$2.input.termMonths}'})).toList(),
+        ),
+        for (final key in moneyMetricKeys)
+          () {
+            final vals = metricVals(key);
+            final bi = _bestIndex(vals, lowerBetter: true);
+            final pct = key == 'share';
+            return labelAndValues(
+              metricLabels[key]!,
+              vals.map((v) => pct ? cellPct(v) : cellMoney(v)).toList(),
+              best: [for (var i = 0; i < vals.length; i++) i == bi],
+            );
+          }(),
+      ];
+
+      richCompare = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LoanCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LoanLabel(app.tr('compare.summaryTitle')),
+                const SizedBox(height: 6),
+                Text(
+                  summary,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.55,
+                    fontWeight: FontWeight.w600,
+                    color: RevolutColors.text,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          LoanCard(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: RevolutColors.divider,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var r = 0; r < rows.length; r++) ...[
+                      if (r > 0) const SizedBox(height: 1),
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (var c = 0; c < rows[r].length; c++) ...[
+                              if (c > 0) const SizedBox(width: 1),
+                              rows[r][c],
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          CompareBarChart(
+            title: app.tr('compare.chartBar'),
+            groupLabels: [
+              app.tr('compare.monthly'),
+              app.tr('result.totalInterest'),
+              app.tr('result.totalPayment'),
+            ],
+            series: [
+              for (var i = 0; i < results.length; i++)
+                CompareBarSeries(
+                  label: planNames[i],
+                  color: comparePlanColors[i % comparePlanColors.length],
+                  monthly: monthlyValues[i],
+                  interest: interestVals[i],
+                  total: totalVals[i],
+                ),
+            ],
+          ),
+          if (_CompareExtras.list(app).isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _CompareExtras(app: app),
+          ],
+        ],
+      );
     }
 
     return Column(
@@ -865,55 +1358,71 @@ class CompareScreen extends StatelessWidget {
             ),
           )
         else
-          LoanCard(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingTextStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                dataTextStyle: monoStyle(context, size: 11),
-                columns: [
-                  DataColumn(label: Text(app.tr('compare.metric'))),
-                  ...results.asMap().entries.map((e) => DataColumn(
-                        label: Text('#${e.key + 1}'),
-                      )),
-                ],
-                rows: [
-                  _cmpRow(app.tr('compare.principal'), results.map((e) => app.money(e.$2.input.principal)).toList()),
-                  _cmpRow(app.tr('compare.rate'), results.map((e) => '${e.$2.input.annualRatePercent}%').toList()),
-                  _cmpRow(
-                    app.tr('compare.term'),
-                    results.map((e) => app.tr('compare.termMonths', {'n': '${e.$2.input.termMonths}'})).toList(),
-                  ),
-                  _cmpRow(app.tr('compare.monthly'), results.map((e) => app.money(e.$2.monthlyPayment)).toList()),
-                  _cmpRow(app.tr('result.totalInterest'), results.map((e) => app.money(e.$2.totalInterest)).toList()),
-                  _cmpRow(app.tr('result.totalPayment'), results.map((e) => app.money(e.$2.totalPayment)).toList()),
-                ],
-              ),
-            ),
-          ),
-        if (results.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          ...results.map((e) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: LoanSecondaryButton(
-                  label: '${app.tr('compare.remove')} #${results.indexOf(e) + 1}',
-                  onPressed: () => app.removeFromCompare(e.$1),
-                ),
-              )),
-        ],
-        LoanMuted(app.tr('compare.hint'), fontSize: 12),
-        const SizedBox(height: 8),
-        LoanSecondaryButton(
-          label: app.tr('compare.addSaved'),
-          onPressed: () => app.push(AppRoute.savedList),
-        ),
+          richCompare!,
+        if (results.length < 2) _CompareExtras(app: app),
       ],
     );
   }
+}
 
-  DataRow _cmpRow(String label, List<String> values) => DataRow(
-        cells: [DataCell(Text(label)), ...values.map((v) => DataCell(Text(v)))],
-      );
+class _CompareExtras extends StatelessWidget {
+  const _CompareExtras({required this.app});
+
+  final AppState app;
+
+  static List<SavedCalculation> list(AppState app) {
+    if (app.compareIds.length >= 3) return const <SavedCalculation>[];
+    return app.calculations.where((c) => !app.compareIds.contains(c.id)).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final extras = list(app);
+    if (extras.isEmpty) return const SizedBox.shrink();
+    return LoanCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LoanLabel(app.tr('compare.addSaved')),
+          for (var i = 0; i < extras.length; i++) ...[
+            if (i > 0) const Divider(height: 16, color: RevolutColors.divider),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        extras[i].note.isNotEmpty
+                            ? extras[i].note
+                            : categoryLabel(extras[i].result.input.category, app.locale),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
+                      LoanMuted(
+                        app.tr('compare.perMonth', {
+                          'amount': app.money(
+                            extras[i].result.input.mode == RepaymentMode.equalPrincipal
+                                ? extras[i].result.firstMonthPayment
+                                : extras[i].result.monthlyPayment,
+                          ),
+                        }),
+                        fontSize: 12,
+                      ),
+                    ],
+                  ),
+                ),
+                LoanQuickChip(
+                  label: app.tr('compare.addOne'),
+                  onTap: () => app.addToCompare(extras[i].id, openCompare: false),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 // --- Savings ---
@@ -1312,50 +1821,59 @@ class SavedListScreen extends StatelessWidget {
           ...list.map((c) {
             final inCompare = app.compareIds.contains(c.id);
             return LoanCard(
-              onTap: () {
-                app.setPendingResult(c.result, savedId: c.id);
-                app.push(AppRoute.savedDetail, id: c.id);
-              },
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          c.note.isNotEmpty ? c.note : categoryLabel(c.result.input.category, app.locale),
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      app.setPendingResult(c.result, savedId: c.id);
+                      app.push(AppRoute.savedDetail, id: c.id);
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                c.note.isNotEmpty ? c.note : categoryLabel(c.result.input.category, app.locale),
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            if (c.favorite) const Icon(LucideIcons.star, size: 16, color: RevolutColors.brandSolid),
+                            if (inCompare) ...[
+                              const SizedBox(width: 6),
+                              LoanChip(app.tr('saved.inCompare')),
+                            ],
+                          ],
                         ),
-                      ),
-                      if (c.favorite) const Icon(LucideIcons.star, size: 16, color: RevolutColors.brandSolid),
-                      if (inCompare) ...[
-                        const SizedBox(width: 6),
-                        LoanChip(app.tr('saved.inCompare')),
+                        const SizedBox(height: 6),
+                        LoanMuted(
+                          app.tr('saved.meta', {
+                            'principal': app.money(c.result.input.principal),
+                            'rate': '${c.result.input.annualRatePercent}',
+                            'months': '${c.result.input.termMonths}',
+                          }),
+                          fontSize: 12,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          app.tr('compare.perMonth', {'amount': app.money(c.result.monthlyPayment)}),
+                          style: monoStyle(context, size: 16, w: FontWeight.w700)
+                              .copyWith(color: RevolutColors.brandSolid),
+                        ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  LoanMuted(
-                    app.tr('saved.meta', {
-                      'principal': app.money(c.result.input.principal),
-                      'rate': '${c.result.input.annualRatePercent}',
-                      'months': '${c.result.input.termMonths}',
-                    }),
-                    fontSize: 12,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    app.tr('compare.perMonth', {'amount': app.money(c.result.monthlyPayment)}),
-                    style: monoStyle(context, size: 16, w: FontWeight.w700)
-                        .copyWith(color: RevolutColors.brandSolid),
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      LoanLedgerInlineAction(
+                      LoanQuickChip(
                         label: c.favorite ? app.tr('saved.unfav') : app.tr('saved.fav'),
-                        danger: false,
-                        onPressed: () {
+                        onTap: () {
                           app.persistCalculations(
                             app.calculations
                                 .map((x) => x.id == c.id ? x.copyWith(favorite: !x.favorite) : x)
@@ -1363,15 +1881,35 @@ class SavedListScreen extends StatelessWidget {
                           );
                         },
                       ),
-                      LoanLedgerInlineAction(
+                      LoanQuickChip(
                         label: app.tr('saved.compare'),
-                        danger: false,
-                        onPressed: () => app.addToCompare(c.id),
+                        onTap: () => app.addToCompare(c.id),
                       ),
-                      LoanLedgerInlineAction(
+                      LoanQuickChip(
                         label: app.tr('saved.delete'),
-                        onPressed: () async {
-                          await app.persistCalculations(app.calculations.where((x) => x.id != c.id).toList());
+                        onTap: () async {
+                          final ok = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(app.tr('saved.deleteTitle')),
+                              content: Text(app.tr('saved.deleteConfirm')),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: Text(app.tr('common.back')),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: Text(app.tr('saved.delete')),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (ok != true) return;
+                          app.removeFromCompare(c.id);
+                          await app.persistCalculations(
+                            app.calculations.where((x) => x.id != c.id).toList(),
+                          );
                           app.showToast(app.tr('saved.deleted'));
                         },
                       ),

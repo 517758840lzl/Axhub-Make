@@ -107,6 +107,10 @@ class LoanRoot extends StatelessWidget {
           fab: onSavingsList
               ? LoanFab(onPressed: () => app.push(AppRoute.savingsNew))
               : null,
+          scrollResetKey: ValueKey(
+            '${app.route.name}|${app.detailId ?? ''}|${app.savingsPrefill ?? ''}',
+          ),
+          expandBody: app.route == AppRoute.amortization,
           body: _screenForRoute(app),
         );
       },

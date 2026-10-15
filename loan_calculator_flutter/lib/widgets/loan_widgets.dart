@@ -22,6 +22,8 @@ class LoanShell extends StatelessWidget {
     required this.tabLabels,
     this.toast,
     this.fab,
+    this.scrollResetKey,
+    this.expandBody = false,
   });
 
   final Widget body;
@@ -32,6 +34,10 @@ class LoanShell extends StatelessWidget {
   final String? toast;
   /// 浮在内容之上、Tab 之上（不占布局条带）
   final Widget? fab;
+  /// 路由变化时换 key，避免沿用上一页滚动位置（如结果页滑到底再进摊还）
+  final Key? scrollResetKey;
+  /// 子页面自己占满剩余高度（摊还明细），不要再套一层可滚矮盒子
+  final bool expandBody;
 
   @override
   Widget build(BuildContext context) {
@@ -56,16 +62,22 @@ class LoanShell extends StatelessWidget {
                     Column(
                       children: [
                         Expanded(
-                          child: SingleChildScrollView(
-                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                            padding: EdgeInsets.fromLTRB(
-                              12,
-                              12,
-                              12,
-                              showTabBar ? 16 + fabClearance : 12,
-                            ),
-                            child: body,
-                          ),
+                          child: expandBody
+                              ? Padding(
+                                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                                  child: body,
+                                )
+                              : SingleChildScrollView(
+                                  key: scrollResetKey,
+                                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                  padding: EdgeInsets.fromLTRB(
+                                    12,
+                                    12,
+                                    12,
+                                    showTabBar ? 16 + fabClearance : 12,
+                                  ),
+                                  child: body,
+                                ),
                         ),
                         if (showTabBar)
                           _LoanTabBar(activeTab: activeTab, onTab: onTab, labels: tabLabels),
@@ -204,6 +216,7 @@ class LoanCard extends StatelessWidget {
     required this.child,
     this.dense = false,
     this.padding,
+    this.margin,
     this.onTap,
     this.backgroundGradient,
   });
@@ -211,6 +224,7 @@ class LoanCard extends StatelessWidget {
   final Widget child;
   final bool dense;
   final EdgeInsets? padding;
+  final EdgeInsets? margin;
   final VoidCallback? onTap;
   /// 储蓄「智能提示」等（对应 Web `.loan-savings-insight`）
   final Gradient? backgroundGradient;
@@ -250,7 +264,7 @@ class LoanCard extends StatelessWidget {
     );
     final spaced = Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: margin ?? const EdgeInsets.only(bottom: 12),
       child: onTap == null ? card : GestureDetector(onTap: onTap, child: card),
     );
     return spaced;

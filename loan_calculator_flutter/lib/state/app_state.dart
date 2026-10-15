@@ -213,18 +213,22 @@ class AppState extends ChangeNotifier {
     showToast(tr('toast.savedProfile'));
   }
 
-  void addToCompare(String id) {
-    if (_compareIds.contains(id)) {
-      showToast(tr('compare.added'));
+  /// 加入对比槽。只有 1 个时提示再选一个；满 2 个直接进入对比，不再弹提示。已满 3 个则只提示。
+  void addToCompare(String id, {bool openCompare = true}) {
+    if (!_compareIds.contains(id)) {
+      if (_compareIds.length >= 3) {
+        showToast(tr('compare.max'));
+        return;
+      }
+      _compareIds.add(id);
+      notifyListeners();
+    }
+    if (_compareIds.length >= 2) {
+      if (openCompare) push(AppRoute.compare);
       return;
     }
-    if (_compareIds.length >= 3) {
-      showToast(tr('compare.max'));
-      return;
-    }
-    _compareIds.add(id);
-    notifyListeners();
-    showToast(tr('compare.added'));
+    showToast(tr('compare.addedNeedOne'));
+    if (openCompare) push(AppRoute.compare);
   }
 
   void addPendingToCompare() {
@@ -240,22 +244,7 @@ class AppState extends ChangeNotifier {
         }
       }
     }
-    if (id != null) {
-      addToCompare(id);
-      return;
-    }
-    final tempId = 'pending:${calcFingerprint(r)}';
-    if (_compareIds.contains(tempId)) {
-      showToast(tr('compare.added'));
-      return;
-    }
-    if (_compareIds.length >= 3) {
-      showToast(tr('compare.max'));
-      return;
-    }
-    _compareIds.add(tempId);
-    notifyListeners();
-    showToast(tr('compare.added'));
+    addToCompare(id ?? 'pending:${calcFingerprint(r)}');
   }
 
   void removeFromCompare(String id) {
