@@ -50,8 +50,8 @@ flutter run -d <deviceId>
 ## 品牌
 
 - **桌面图标**：`assets/branding/app_icon.png`（紫蓝渐变 fintech 风格）；`dart run flutter_launcher_icons` 可重新生成 Android/iOS 图标
-- **启动页**：原生闪屏底色 `#F4F4F8` + Flutter **启动动画**（计算器+% Logo 显现、弹性缩放、标语淡入，约 1.6～2.2s 后进入主界面）
-- **品牌标**：紫渐变底 + 白色「计算器 + %」，一眼表达贷款试算；矢量 `BrandLogo` 与 `assets/branding/app_icon.png` 同语义
+- **启动页**：原生闪屏底色 `#F4F4F8` + Flutter **启动动画**（桌面同款 `app_icon.png` 显现、弹性缩放、标语淡入，约 1.6～2.2s 后进入主界面）
+- **品牌标**：`BrandLogo` 直接使用 `assets/branding/app_icon.png`，与桌面图标一致
 
 ## 说明
 
