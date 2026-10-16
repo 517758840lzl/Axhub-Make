@@ -2073,11 +2073,7 @@ function CompareView({
     const rate = rateText(c.result.input.annualRatePercent);
     return `${cat} ${rate}`;
   });
-  const planNames = rawNames.map((name, i) => {
-    if (rawNames.filter((n) => n === name).length < 2) return name;
-    const c = items[i]!;
-    return `${name} · ${t('compare.termMonths', { n: c.result.input.termMonths })}`;
-  });
+  const planNames = rawNames;
   const winInterest = bestIndex(interestVals, true);
   const winMonthly = bestIndex(monthlyValues, true);
   const lowInterest = winInterest < 0 ? 0 : winInterest;

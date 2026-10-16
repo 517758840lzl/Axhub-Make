@@ -1230,16 +1230,6 @@ class CompareScreen extends StatelessWidget {
     final planNames = <String>[
       for (var i = 0; i < results.length; i++) rawPlanName(results[i].$2),
     ];
-    final nameCount = <String, int>{};
-    for (final name in planNames) {
-      nameCount[name] = (nameCount[name] ?? 0) + 1;
-    }
-    for (var i = 0; i < planNames.length; i++) {
-      if ((nameCount[planNames[i]] ?? 0) < 2) continue;
-      final result = results[i].$2;
-      planNames[i] =
-          '${planNames[i]} · ${app.tr('compare.termMonths', {'n': '${result.input.termMonths}'})}';
-    }
 
     Widget? richCompare;
     if (results.length >= 2) {
