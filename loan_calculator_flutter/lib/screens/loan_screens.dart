@@ -71,12 +71,59 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
   int _term(TextEditingController y, TextEditingController m) =>
       (int.tryParse(y.text) ?? 0) * 12 + (int.tryParse(m.text) ?? 0);
 
-  CalcResult? _preview() {
+  LoanSummary? _preview() {
     try {
-      return _buildResult();
+      return _summarizeInput();
     } catch (_) {
       return null;
     }
+  }
+
+  LoanSummary? _summarizeInput() {
+    if (_category == LoanCategory.dual) {
+      final ap = double.tryParse(_aPrincipal.text);
+      final ar = double.tryParse(_aRate.text);
+      final at = _term(_aYears, _aMonths);
+      final bp = double.tryParse(_bPrincipal.text);
+      final br = double.tryParse(_bRate.text);
+      final bt = _term(_bYears, _bMonths);
+      if (ap == null || ap <= 0 || ar == null || ar < 0 || at <= 0) return null;
+      if (bp == null || bp <= 0 || br == null || br < 0 || bt <= 0) return null;
+      return summarizeLoan(CalcInput(
+        principal: ap + bp,
+        annualRatePercent: ar,
+        termMonths: at > bt ? at : bt,
+        mode: _aMode,
+        category: LoanCategory.dual,
+        parts: [
+          DualLoanPart(principal: ap, annualRatePercent: ar, termMonths: at, mode: _aMode),
+          DualLoanPart(principal: bp, annualRatePercent: br, termMonths: bt, mode: _bMode),
+        ],
+      ));
+    }
+
+    if (_category == LoanCategory.auto) _syncAutoLoan();
+    final p = double.tryParse(_principal.text);
+    final r = double.tryParse(_rate.text);
+    final termMonths = _term(_years, _months);
+    if (p == null || p <= 0 || r == null || r < 0 || termMonths <= 0) return null;
+
+    double? vehicle;
+    double? down;
+    if (_category == LoanCategory.auto) {
+      vehicle = double.tryParse(_vehicle.text);
+      down = double.tryParse(_down.text);
+    }
+
+    return summarizeLoan(CalcInput(
+      principal: p,
+      annualRatePercent: r,
+      termMonths: termMonths,
+      mode: _mode,
+      category: _category,
+      vehiclePrice: vehicle,
+      downPayment: down,
+    ));
   }
 
   CalcResult? _buildResult() {
@@ -815,9 +862,6 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
   static const _flexPeriod = 40;
   static const _flexMoney = 100;
 
-  List<_AmortLine>? _lines;
-  String? _lineKey;
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -856,13 +900,15 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final result = app.pendingResult;
+    final result = context.select<AppState, CalcResult?>((s) => s.pendingResult);
+    final locale = context.select<AppState, AppLocale>((s) => s.locale);
+    final currencyCode = context.select<AppState, String>((s) => s.settings.currencyCode);
+    final decimals = context.select<AppState, int>((s) => s.settings.decimals);
     if (result == null) return const RedirectCalcScreen();
 
+    final app = context.read<AppState>();
     final max = result.schedule.length;
     final rows = _rowsFor(result);
-    final lines = _linesFor(app, result, rows);
     final headStyle = const TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w600,
@@ -878,79 +924,122 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
       }
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LoanTopBar(
-          onBack: () => app.pop(),
-          title: app.tr('amort.title'),
-          subtitle: app.tr('amort.periods', {'n': '$max'}),
-        ),
-        LoanCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-        LoanSegment(
-          options: [
-            ('month', app.tr('amort.byMonth')),
-            ('year', app.tr('amort.byYear')),
-            ('custom', app.tr('amort.byCustom')),
-          ],
-          selected: _view,
-          onSelect: (v) => setState(() => _view = v),
-        ),
-        if (_view == 'custom') ...[
-          const SizedBox(height: 12),
-          LoanMuted(app.tr('amort.rangeHint', {'max': '$max'}), fontSize: 12),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    LoanLabel(app.tr('amort.fromPeriod')),
-                    LoanInput(
-                      controller: _from,
-                      keyboardType: TextInputType.number,
-                      onChanged: (_) => setState(() {}),
+    return CustomScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          sliver: SliverMainAxisGroup(
+            slivers: [
+              SliverToBoxAdapter(
+                child: LoanTopBar(
+                  onBack: () => app.pop(),
+                  title: app.tr('amort.title'),
+                  subtitle: app.tr('amort.periods', {'n': '$max'}),
+                ),
+              ),
+              DecoratedSliver(
+                decoration: BoxDecoration(
+                  color: RevolutColors.surface1,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: RevolutColors.divider),
+                  boxShadow: [RevolutColors.softShadow],
+                ),
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            LoanSegment(
+                              options: [
+                                ('month', app.tr('amort.byMonth')),
+                                ('year', app.tr('amort.byYear')),
+                                ('custom', app.tr('amort.byCustom')),
+                              ],
+                              selected: _view,
+                              onSelect: (v) => setState(() => _view = v),
+                            ),
+                            if (_view == 'custom') ...[
+                              const SizedBox(height: 12),
+                              LoanMuted(app.tr('amort.rangeHint', {'max': '$max'}), fontSize: 12),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        LoanLabel(app.tr('amort.fromPeriod')),
+                                        LoanInput(
+                                          controller: _from,
+                                          keyboardType: TextInputType.number,
+                                          onChanged: (_) => setState(() {}),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        LoanLabel(app.tr('amort.toPeriod')),
+                                        LoanInput(
+                                          controller: _to,
+                                          keyboardType: TextInputType.number,
+                                          onChanged: (_) => setState(() {}),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              LoanMuted(app.tr('amort.showing', {'n': '${rows.length}'}), fontSize: 12),
+                              const SizedBox(height: 8),
+                              LoanRow(label: app.tr('amort.rangeSum'), value: app.money(sumPay)),
+                              LoanRow(label: app.tr('amort.col.principal'), value: app.money(sumPrin)),
+                              LoanRow(label: app.tr('amort.col.interest'), value: app.money(sumInt)),
+                            ],
+                            const SizedBox(height: 8),
+                            _AmortHeaderRow(
+                              periodLabel: _view == 'year' ? app.tr('amort.col.year') : app.tr('amort.col.period'),
+                              payment: app.tr('amort.col.payment'),
+                              principal: app.tr('amort.col.principal'),
+                              interest: app.tr('amort.col.interest'),
+                              balance: app.tr('amort.col.balance'),
+                              style: headStyle,
+                            ),
+                            const Divider(height: 1, color: RevolutColors.divider),
+                          ],
+                        ),
+                      ),
                     ),
+                    SliverFixedExtentList.builder(
+                      key: ValueKey('${locale.name}|$currencyCode|$decimals'),
+                      itemExtent: _rowH,
+                      itemCount: rows.length,
+                      addAutomaticKeepAlives: false,
+                      itemBuilder: (context, i) {
+                        final r = rows[i];
+                        return _AmortDataRow(
+                          line: _AmortLine(
+                            '${r.period}',
+                            app.money(r.payment),
+                            app.money(r.principal),
+                            app.money(r.interest),
+                            app.money(r.balance),
+                          ),
+                        );
+                      },
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    LoanLabel(app.tr('amort.toPeriod')),
-                    LoanInput(
-                      controller: _to,
-                      keyboardType: TextInputType.number,
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          LoanMuted(app.tr('amort.showing', {'n': '${rows.length}'}), fontSize: 12),
-          const SizedBox(height: 8),
-          LoanRow(label: app.tr('amort.rangeSum'), value: app.money(sumPay)),
-          LoanRow(label: app.tr('amort.col.principal'), value: app.money(sumPrin)),
-          LoanRow(label: app.tr('amort.col.interest'), value: app.money(sumInt)),
-        ],
-        const SizedBox(height: 8),
-        _AmortHeaderRow(
-          periodLabel: _view == 'year' ? app.tr('amort.col.year') : app.tr('amort.col.period'),
-          payment: app.tr('amort.col.payment'),
-          principal: app.tr('amort.col.principal'),
-          interest: app.tr('amort.col.interest'),
-          balance: app.tr('amort.col.balance'),
-          style: headStyle,
-        ),
-        const Divider(height: 1, color: RevolutColors.divider),
-        for (final line in lines) _AmortDataRow(line: line),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
             ],
           ),
         ),
@@ -979,26 +1068,6 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
       ));
     }
     return out;
-  }
-
-  List<_AmortLine> _linesFor(AppState app, CalcResult result, List<AmortizationRow> rows) {
-    final key =
-        '${identityHashCode(result)}|$_view|${_from.text}|${_to.text}|${rows.length}|${app.settings.currencyCode}|${app.settings.decimals}';
-    final cached = _lines;
-    if (cached != null && _lineKey == key && cached.length == rows.length) return cached;
-    final lines = List<_AmortLine>.generate(rows.length, (i) {
-      final r = rows[i];
-      return _AmortLine(
-        '${r.period}',
-        app.money(r.payment),
-        app.money(r.principal),
-        app.money(r.interest),
-        app.money(r.balance),
-      );
-    }, growable: false);
-    _lines = lines;
-    _lineKey = key;
-    return lines;
   }
 }
 
@@ -1065,18 +1134,21 @@ class _AmortDataRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: _deco,
-      child: SizedBox(
-        height: _AmortizationScreenState._rowH,
-        child: Row(
-          children: [
-            _num(line.period, _AmortizationScreenState._flexPeriod),
-            _num(line.payment, _AmortizationScreenState._flexMoney),
-            _num(line.principal, _AmortizationScreenState._flexMoney),
-            _num(line.interest, _AmortizationScreenState._flexMoney),
-            _num(line.balance, _AmortizationScreenState._flexMoney),
-          ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DecoratedBox(
+        decoration: _deco,
+        child: SizedBox(
+          height: _AmortizationScreenState._rowH,
+          child: Row(
+            children: [
+              _num(line.period, _AmortizationScreenState._flexPeriod),
+              _num(line.payment, _AmortizationScreenState._flexMoney),
+              _num(line.principal, _AmortizationScreenState._flexMoney),
+              _num(line.interest, _AmortizationScreenState._flexMoney),
+              _num(line.balance, _AmortizationScreenState._flexMoney),
+            ],
+          ),
         ),
       ),
     );
@@ -2153,17 +2225,25 @@ class ProfileHomeScreen extends StatelessWidget {
             ),
           ],
         ),
-        LoanMenuItem(
-          label: app.tr('profile.settings'),
-          onTap: () => app.push(AppRoute.profileSettings),
-        ),
-        LoanMenuItem(
-          label: app.tr('profile.data'),
-          onTap: () => app.push(AppRoute.profileData),
-        ),
-        LoanMenuItem(
-          label: app.tr('profile.about'),
-          onTap: () => app.push(AppRoute.profileAbout),
+        LoanCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              LoanMenuItem(
+                label: app.tr('profile.settings'),
+                onTap: () => app.push(AppRoute.profileSettings),
+              ),
+              LoanMenuItem(
+                label: app.tr('profile.data'),
+                onTap: () => app.push(AppRoute.profileData),
+              ),
+              LoanMenuItem(
+                label: app.tr('profile.about'),
+                onTap: () => app.push(AppRoute.profileAbout),
+                divider: false,
+              ),
+            ],
+          ),
         ),
       ],
     );

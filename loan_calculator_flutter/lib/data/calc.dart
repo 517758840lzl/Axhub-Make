@@ -3,6 +3,23 @@ import 'models.dart';
 
 double _round2(double n) => (n * 100).roundToDouble() / 100;
 
+/// 首页实时摘要。舍入与 [computeLoan] 相同，但不生成逐期明细。
+class LoanSummary {
+  const LoanSummary({
+    required this.input,
+    required this.monthlyPayment,
+    required this.firstMonthPayment,
+    required this.totalInterest,
+    required this.totalPayment,
+  });
+
+  final CalcInput input;
+  final double monthlyPayment;
+  final double firstMonthPayment;
+  final double totalInterest;
+  final double totalPayment;
+}
+
 CalcResult computeLoan(CalcInput input) {
   if (input.category == LoanCategory.dual && input.parts?.length == 2) {
     return computeDualLoan(input);
@@ -62,76 +79,30 @@ CalcResult computeDualLoan(CalcInput input) {
 }
 
 CalcResult _equalPayment(double p, double r, int n, CalcInput input) {
-  var monthly = 0.0;
-  if (r == 0) {
-    monthly = p / n;
-  } else {
-    final pow = _pow1p(r, n);
-    monthly = (p * r * pow) / (pow - 1);
-  }
-  monthly = _round2(monthly);
-
+  final monthly = _monthlyInstallment(p, r, n);
   final schedule = <AmortizationRow>[];
-  var balance = p;
-  var totalInterest = 0.0;
-
-  for (var period = 1; period <= n; period++) {
-    final interest = r == 0 ? 0.0 : _round2(balance * r);
-    var principalPart = _round2(monthly - interest);
-    if (period == n) principalPart = _round2(balance);
-    final payment = _round2(principalPart + interest);
-    balance = _round2(balance - principalPart);
-    if (balance < 0) balance = 0;
-    totalInterest += interest;
-    schedule.add(AmortizationRow(
-      period: period,
-      payment: payment,
-      principal: principalPart,
-      interest: interest,
-      balance: balance,
-    ));
-  }
-
+  final walked = _walkEqualPayment(p, r, n, monthly, schedule);
   return CalcResult(
     input: input,
     monthlyPayment: monthly,
-    firstMonthPayment: schedule.first.payment,
-    lastMonthPayment: schedule.last.payment,
-    totalInterest: _round2(totalInterest),
-    totalPayment: _round2(p + totalInterest),
+    firstMonthPayment: walked.first,
+    lastMonthPayment: walked.last,
+    totalInterest: _round2(walked.interest),
+    totalPayment: _round2(p + walked.interest),
     schedule: schedule,
   );
 }
 
 CalcResult _equalPrincipal(double p, double r, int n, CalcInput input) {
-  final monthlyPrincipal = p / n;
   final schedule = <AmortizationRow>[];
-  var balance = p;
-  var totalInterest = 0.0;
-
-  for (var period = 1; period <= n; period++) {
-    final interest = r == 0 ? 0.0 : _round2(balance * r);
-    final principalPart = _round2(period == n ? balance : monthlyPrincipal);
-    final payment = _round2(principalPart + interest);
-    balance = _round2(balance - principalPart);
-    if (balance < 0) balance = 0;
-    totalInterest += interest;
-    schedule.add(AmortizationRow(
-      period: period,
-      payment: payment,
-      principal: principalPart,
-      interest: interest,
-      balance: balance,
-    ));
-  }
-
+  final walked = _walkEqualPrincipal(p, r, n, schedule);
   return CalcResult(
     input: input,
-    monthlyPayment: schedule.first.payment,
-    firstMonthPayment: schedule.first.payment,
-    lastMonthPayment: schedule.last.payment,
-    totalInterest: _round2(totalInterest),
-    totalPayment: _round2(p + totalInterest),
+    monthlyPayment: walked.first,
+    firstMonthPayment: walked.first,
+    lastMonthPayment: walked.last,
+    totalInterest: _round2(walked.interest),
+    totalPayment: _round2(p + walked.interest),
     schedule: schedule,
   );
 }
@@ -156,6 +127,135 @@ String categoryLabel(LoanCategory c, AppLocale locale) => switch (c) {
     };
 
 /// Fingerprint for duplicate-save detection (matches Web intent).
+LoanSummary summarizeLoan(CalcInput input) {
+  if (input.category == LoanCategory.dual && input.parts?.length == 2) {
+    return _summarizeDual(input);
+  }
+  final p = input.principal;
+  final n = input.termMonths;
+  final r = input.annualRatePercent / 100 / 12;
+  if (p <= 0 || n <= 0) throw ArgumentError('invalid');
+  if (input.mode == RepaymentMode.equalPayment) {
+    final monthly = _monthlyInstallment(p, r, n);
+    final walked = _walkEqualPayment(p, r, n, monthly, null);
+    return LoanSummary(
+      input: input,
+      monthlyPayment: monthly,
+      firstMonthPayment: walked.first,
+      totalInterest: _round2(walked.interest),
+      totalPayment: _round2(p + walked.interest),
+    );
+  }
+  final walked = _walkEqualPrincipal(p, r, n, null);
+  return LoanSummary(
+    input: input,
+    monthlyPayment: walked.first,
+    firstMonthPayment: walked.first,
+    totalInterest: _round2(walked.interest),
+    totalPayment: _round2(p + walked.interest),
+  );
+}
+
+LoanSummary _summarizeDual(CalcInput input) {
+  final parts = input.parts;
+  if (parts == null || parts.length != 2) throw ArgumentError('invalid dual');
+  final a = summarizeLoan(_partToInput(parts[0], 0));
+  final b = summarizeLoan(_partToInput(parts[1], 1));
+  final principal = _round2(parts[0].principal + parts[1].principal);
+  final totalInterest = _round2(a.totalInterest + b.totalInterest);
+  return LoanSummary(
+    input: CalcInput(
+      principal: principal,
+      annualRatePercent: parts[0].annualRatePercent,
+      termMonths: parts[0].termMonths > parts[1].termMonths
+          ? parts[0].termMonths
+          : parts[1].termMonths,
+      mode: parts[0].mode,
+      category: LoanCategory.dual,
+      label: input.label,
+      parts: parts,
+    ),
+    monthlyPayment: _round2(a.monthlyPayment + b.monthlyPayment),
+    firstMonthPayment: _round2(a.firstMonthPayment + b.firstMonthPayment),
+    totalInterest: totalInterest,
+    totalPayment: _round2(principal + totalInterest),
+  );
+}
+
+({double first, double last, double interest}) _walkEqualPayment(
+  double p,
+  double r,
+  int n,
+  double monthly,
+  List<AmortizationRow>? schedule,
+) {
+  var balance = p;
+  var totalInterest = 0.0;
+  var first = monthly;
+  var last = monthly;
+  for (var period = 1; period <= n; period++) {
+    final interest = r == 0 ? 0.0 : _round2(balance * r);
+    var principalPart = _round2(monthly - interest);
+    if (period == n) principalPart = _round2(balance);
+    final payment = _round2(principalPart + interest);
+    balance = _round2(balance - principalPart);
+    if (balance < 0) balance = 0;
+    totalInterest += interest;
+    if (period == 1) first = payment;
+    last = payment;
+    schedule?.add(AmortizationRow(
+      period: period,
+      payment: payment,
+      principal: principalPart,
+      interest: interest,
+      balance: balance,
+    ));
+  }
+  return (first: first, last: last, interest: totalInterest);
+}
+
+({double first, double last, double interest}) _walkEqualPrincipal(
+  double p,
+  double r,
+  int n,
+  List<AmortizationRow>? schedule,
+) {
+  final monthlyPrincipal = p / n;
+  var balance = p;
+  var totalInterest = 0.0;
+  var first = 0.0;
+  var last = 0.0;
+  for (var period = 1; period <= n; period++) {
+    final interest = r == 0 ? 0.0 : _round2(balance * r);
+    final principalPart = _round2(period == n ? balance : monthlyPrincipal);
+    final payment = _round2(principalPart + interest);
+    balance = _round2(balance - principalPart);
+    if (balance < 0) balance = 0;
+    totalInterest += interest;
+    if (period == 1) first = payment;
+    last = payment;
+    schedule?.add(AmortizationRow(
+      period: period,
+      payment: payment,
+      principal: principalPart,
+      interest: interest,
+      balance: balance,
+    ));
+  }
+  return (first: first, last: last, interest: totalInterest);
+}
+
+double _monthlyInstallment(double p, double r, int n) {
+  var monthly = 0.0;
+  if (r == 0) {
+    monthly = p / n;
+  } else {
+    final pow = _pow1p(r, n);
+    monthly = (p * r * pow) / (pow - 1);
+  }
+  return _round2(monthly);
+}
+
 String calcFingerprint(CalcResult r) {
   final i = r.input;
   final parts = i.parts

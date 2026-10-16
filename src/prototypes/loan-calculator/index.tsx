@@ -29,7 +29,7 @@ import { CurrencyPicker } from './components/CurrencyPicker';
 import { CompareCharts, COMPARE_PLAN_COLORS } from './components/CompareCharts';
 import { Donut } from './components/Donut';
 import { AppProvider, useApp } from './context';
-import { computeLoan } from './lib/calc';
+import { computeLoan, summarizeLoan } from './lib/calc';
 import { savingsBufferLine, savingsEtaLine } from './lib/savings_insights';
 import { getCurrency } from './lib/currencies';
 import { formatMoney, parseHashParams, setHashPage, uid } from './lib/format';
@@ -645,7 +645,7 @@ function CalcHome({
       if (category === 'dual') {
         const parts = buildDualParts();
         if (!parts) return null;
-        return computeLoan({
+        return summarizeLoan({
           principal: parts[0].principal + parts[1].principal,
           annualRatePercent: parts[0].annualRatePercent,
           termMonths: Math.max(parts[0].termMonths, parts[1].termMonths),
@@ -670,7 +670,7 @@ function CalcHome({
         input.vehiclePrice = Number(vehiclePrice) || undefined;
         input.downPayment = Number(downPayment) || undefined;
       }
-      return computeLoan(input);
+      return summarizeLoan(input);
     } catch {
       return null;
     }

@@ -63,10 +63,7 @@ class LoanShell extends StatelessWidget {
                       children: [
                         Expanded(
                           child: expandBody
-                              ? Padding(
-                                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                                  child: body,
-                                )
+                              ? body
                               : SingleChildScrollView(
                                   key: scrollResetKey,
                                   keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -1182,12 +1179,20 @@ class LoanFab extends StatelessWidget {
 }
 
 class LoanMenuItem extends StatelessWidget {
-  const LoanMenuItem({super.key, required this.label, required this.onTap, this.trailing, this.danger = false});
+  const LoanMenuItem({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.trailing,
+    this.danger = false,
+    this.divider = true,
+  });
 
   final String label;
   final VoidCallback onTap;
   final Widget? trailing;
   final bool danger;
+  final bool divider;
 
   @override
   Widget build(BuildContext context) {
@@ -1195,7 +1200,9 @@ class LoanMenuItem extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: RevolutColors.divider))),
+        decoration: divider
+            ? const BoxDecoration(border: Border(bottom: BorderSide(color: RevolutColors.divider)))
+            : null,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
