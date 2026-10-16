@@ -21,8 +21,10 @@ enum AppRoute {
   savingsDetail,
   savingsNew,
   profile,
+  profileEdit,
   profileSettings,
   profileData,
+  profileAboutUs,
   profileAbout,
   savedList,
   savedDetail,
@@ -127,8 +129,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get canPopRoute => _routeStack.length > 1;
+
   void pop() {
-    if (_routeStack.length <= 1) return;
+    if (!canPopRoute) return;
     _routeStack.removeLast();
     final current = _routeStack.last;
     if (!_needsDetailId(current)) detailId = null;

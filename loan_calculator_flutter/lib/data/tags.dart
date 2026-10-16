@@ -1,5 +1,24 @@
 import 'models.dart';
 
+const tagMessageKey = <String, String>{
+  '房贷': 'tag.mortgage',
+  '车贷': 'tag.auto',
+  '消费贷': 'tag.consumer',
+  '月供': 'tag.payment',
+  '保险': 'tag.insurance',
+  '装修': 'tag.reno',
+  '教育': 'tag.edu',
+  '医疗': 'tag.medical',
+  '日常': 'tag.daily',
+  '其他': 'tag.other',
+  '组合贷': 'cat.dual',
+};
+
+String tagLabel(String tag, String Function(String key, [Map<String, String>? params]) tr) {
+  final key = tagMessageKey[tag];
+  return key == null ? tag : tr(key);
+}
+
 const suggestedTags = [
   '房贷',
   '车贷',

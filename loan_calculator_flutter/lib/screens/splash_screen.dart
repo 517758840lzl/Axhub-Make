@@ -115,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       child: Column(
                         children: [
                           Text(
-                            '贷款计算器',
+                            context.watch<AppState>().tr('home.title'),
                             style: GoogleFonts.notoSansSc(
                               fontSize: 26,
                               fontWeight: FontWeight.w600,
@@ -126,7 +126,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '智能试算 · 本地隐私 · 储蓄规划',
+                            context.watch<AppState>().tr('splash.subtitle'),
                             style: GoogleFonts.notoSansSc(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,

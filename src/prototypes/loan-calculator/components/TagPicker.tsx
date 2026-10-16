@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { SUGGESTED_TAGS, normalizeTagList } from '../lib/tags';
+import { useApp } from '../context';
+import { SUGGESTED_TAGS, normalizeTagList, tagLabel } from '../lib/tags';
 
 type TagPickerProps = {
   value: string[];
@@ -7,9 +8,11 @@ type TagPickerProps = {
   label?: string;
 };
 
-export function TagPicker({ value, onChange, label = '标签' }: TagPickerProps) {
+export function TagPicker({ value, onChange, label }: TagPickerProps) {
+  const { t } = useApp();
   const [draft, setDraft] = useState('');
   const tags = normalizeTagList(value);
+  const fieldLabel = label ?? t('tag.label');
 
   const toggle = (tag: string) => {
     if (tags.includes(tag)) {
@@ -28,8 +31,8 @@ export function TagPicker({ value, onChange, label = '标签' }: TagPickerProps)
 
   return (
     <div className="loan-tag-picker">
-      <div className="loan-label">{label}</div>
-      <div className="loan-tag-grid" role="group" aria-label={label}>
+      <div className="loan-label">{fieldLabel}</div>
+      <div className="loan-tag-grid" role="group" aria-label={fieldLabel}>
         {SUGGESTED_TAGS.map((tag) => (
           <button
             key={tag}
@@ -38,14 +41,14 @@ export function TagPicker({ value, onChange, label = '标签' }: TagPickerProps)
             data-active={tags.includes(tag)}
             onClick={() => toggle(tag)}
           >
-            {tag}
+            {tagLabel(tag, t)}
           </button>
         ))}
       </div>
       <div className="loan-tag-custom">
         <input
           className="loan-input"
-          placeholder="自定义标签，回车添加"
+          placeholder={t('tag.custom')}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
@@ -56,18 +59,18 @@ export function TagPicker({ value, onChange, label = '标签' }: TagPickerProps)
           }}
         />
         <button type="button" className="loan-btn-secondary loan-tag-add-btn" onClick={addCustom}>
-          添加
+          {t('tag.add')}
         </button>
       </div>
       {tags.length > 0 ? (
         <div className="loan-tag-selected">
-          {tags.map((t) => (
-            <span key={t} className="loan-tag-pill">
-              {t}
+          {tags.map((tag) => (
+            <span key={tag} className="loan-tag-pill">
+              {tagLabel(tag, t)}
               <button
                 type="button"
-                aria-label={`移除 ${t}`}
-                onClick={() => onChange(tags.filter((x) => x !== t))}
+                aria-label={t('tag.remove', { name: tagLabel(tag, t) })}
+                onClick={() => onChange(tags.filter((x) => x !== tag))}
               >
                 ×
               </button>
@@ -76,7 +79,7 @@ export function TagPicker({ value, onChange, label = '标签' }: TagPickerProps)
         </div>
       ) : (
         <p className="loan-muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
-          至少选一个标签，便于筛选
+          {t('tag.needOne')}
         </p>
       )}
     </div>
@@ -84,12 +87,13 @@ export function TagPicker({ value, onChange, label = '标签' }: TagPickerProps)
 }
 
 export function TagRow({ tags }: { tags: string[] }) {
+  const { t } = useApp();
   if (!tags.length) return null;
   return (
     <div className="loan-tag-row">
-      {tags.map((t) => (
-        <span key={t} className="loan-tag-pill loan-tag-pill--readonly">
-          {t}
+      {tags.map((tag) => (
+        <span key={tag} className="loan-tag-pill loan-tag-pill--readonly">
+          {tagLabel(tag, t)}
         </span>
       ))}
     </div>

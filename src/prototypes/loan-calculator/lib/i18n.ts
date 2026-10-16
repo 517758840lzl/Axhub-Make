@@ -1,5 +1,8 @@
 import type { AppLocale } from './types';
 
+/** 产品显示名。换名时改这一处。 */
+export const appTitle = '贷款计算器';
+
 export type { AppLocale };
 
 export const APP_LOCALES: {
@@ -109,7 +112,6 @@ const zhCN = {
   'amort.col.balance': '余额',
 
   'compare.title': '方案对比',
-  'compare.subtitle': '最多 3 个 · 已选 {n}',
   'compare.needTwo': '至少选择 2 个方案才能对比。可从已保存列表加入，或再算一笔后点「加入对比」。',
   'compare.goSaved': '去已保存方案',
   'compare.metric': '指标',
@@ -181,15 +183,20 @@ const zhCN = {
   'profile.title': '我的',
   'profile.subtitle': '本地资料与已保存方案',
   'profile.localOnly': '数据仅保存在本设备',
+  'profile.editTitle': '编辑资料',
+  'profile.gender': '性别',
+  'profile.gender.male': '男',
+  'profile.gender.female': '女',
+  'profile.gender.private': '保密',
   'profile.savedCount': '已保存方案',
   'profile.savingsCount': '储蓄目标',
   'profile.saved': '已保存方案',
   'profile.settings': '偏好设置',
   'profile.data': '数据管理',
-  'profile.about': '关于与隐私',
+  'profile.aboutUs': '关于我们',
+  'profile.about': '隐私协议',
 
   'saved.title': '已保存方案',
-  'saved.count': '{n} 条',
   'saved.empty': '还没有保存的试算。去计算一笔并保存吧。',
   'saved.goCalc': '去计算',
   'saved.fav': '收藏',
@@ -233,14 +240,40 @@ const zhCN = {
   'data.confirm': '确定清空所有计算与储蓄数据？偏好设置将保留。',
   'data.cleared': '业务数据已清空',
 
-  'about.title': '关于与隐私',
+  'aboutUs.title': '关于我们',
+  'aboutUs.body':
+    `${appTitle}致力于服务于准备借款的用户，打造可核对的还款测算与可对照的方案比较。录入金额、年利率与期限，即可查看月供、利息总额与还款总额，以便在正式申请之前判断支出是否可控。\n\n测算覆盖房贷、车贷、消费贷与组合贷。组合贷将两笔贷款并列展示，分别列示本金、利率与月供，并给出合计结果。车贷可根据车价与首付计算实际贷款金额。还款方式包括等额本息与等额本金：等额本息各期金额固定，等额本金前期月供较高，利息总额通常更低。\n\n摊还明细逐期列示本金、利息与剩余本金。方案对比最多纳入 3 个方案，纳入 2 个即可对照总利息与月供。储蓄目标可按约 3 倍月供预填缓冲金额，并记录此后的存入与取出。\n\n界面提供简体中文、English 与 Español。金额可按 12 种货币符号展示；切换货币只改变符号与小数位，不按汇率折算已录入的金额。方案可保存在「我的」中再次打开，也可加入收藏。`,
+  'about.title': '隐私协议',
   'about.body':
-    '本原型为贷款计算器演示：所有计算在浏览器内完成，数据写入本地存储。支持房贷、车贷与消费贷试算、摊还明细与多方案对比。设计参考 Revolut Mobile，仅供产品原型参考。',
+    '本应用不设置账号，也不连接服务器。昵称、头像、贷款方案与储蓄记录仅保存在当前设备。\n\n计算均在本机完成。本应用不收集姓名、手机号码或身份证件号码，也不向外部服务传输试算结果。数据以明文存放于本机。卸载应用或清除本站数据后，上述记录将一并删除，且无法从其他渠道恢复。\n\n「数据管理」可将贷款方案与储蓄目标导出为 JSON 文件，供自行备份；也可清空上述数据。清空不涉及昵称、头像、语言、货币与小数位。导出文件包含试算金额，请自行保管，勿向不可信的对象提供。\n\n切换显示货币不改写已保存的金额，仅调整货币符号与数字格式。',
 
   'toast.savedProfile': '已保存到「我的」',
   'toast.alreadySaved': '相同方案已保存，未重复添加',
   'common.back': '返回',
   'common.missing': '页面不存在',
+  'splash.subtitle': '智能试算 · 本地隐私 · 储蓄规划',
+  'savings.fab': '新建储蓄目标',
+  'savings.detailTitle': '储蓄详情',
+  'savings.newTitle': '新建储蓄',
+  'tag.label': '标签',
+  'tag.custom': '自定义标签，回车添加',
+  'tag.add': '添加',
+  'tag.needOne': '至少选一个标签，便于筛选',
+  'tag.remove': '移除 {name}',
+  'tag.all': '全部',
+  'tag.calcBadge': '试算',
+  'tag.mortgage': '房贷',
+  'tag.auto': '车贷',
+  'tag.consumer': '消费贷',
+  'tag.payment': '月供',
+  'tag.insurance': '保险',
+  'tag.reno': '装修',
+  'tag.edu': '教育',
+  'tag.medical': '医疗',
+  'tag.daily': '日常',
+  'tag.other': '其他',
+  'seed.mortgageNote': '示例房贷方案',
+  'seed.autoNote': '示例车贷方案',
 } as const;
 
 const en: Record<MessageKey, string> = {
@@ -342,7 +375,6 @@ const en: Record<MessageKey, string> = {
   'amort.col.balance': 'Balance',
 
   'compare.title': 'Compare',
-  'compare.subtitle': 'Up to 3 · {n} selected',
   'compare.needTwo':
     'Select at least 2 plans to compare. Add from Saved, or calculate again and tap Add to compare.',
   'compare.goSaved': 'Open saved plans',
@@ -415,15 +447,20 @@ const en: Record<MessageKey, string> = {
   'profile.title': 'Profile',
   'profile.subtitle': 'Local profile & saved plans',
   'profile.localOnly': 'Data stays on this device',
+  'profile.editTitle': 'Edit profile',
+  'profile.gender': 'Gender',
+  'profile.gender.male': 'Male',
+  'profile.gender.female': 'Female',
+  'profile.gender.private': 'Private',
   'profile.savedCount': 'Saved plans',
   'profile.savingsCount': 'Savings goals',
   'profile.saved': 'Saved plans',
   'profile.settings': 'Preferences',
   'profile.data': 'Data',
-  'profile.about': 'About & privacy',
+  'profile.aboutUs': 'About us',
+  'profile.about': 'Privacy policy',
 
   'saved.title': 'Saved plans',
-  'saved.count': '{n} plans',
   'saved.empty': 'No saved plans yet. Run a calculation and save it.',
   'saved.goCalc': 'Go calculate',
   'saved.fav': 'Favorite',
@@ -469,14 +506,40 @@ const en: Record<MessageKey, string> = {
     'Clear all calculation and savings data? Preferences will be kept.',
   'data.cleared': 'Business data cleared',
 
-  'about.title': 'About & privacy',
+  'aboutUs.title': 'About us',
+  'aboutUs.body':
+    'Dedicated to people preparing to borrow, this calculator builds repayment estimates you can check and plan comparisons you can set side by side. Enter an amount, annual rate, and term to see the monthly payment, total interest, and total amount due before you apply.\n\nIt covers home, auto, personal, and combined loans. A combined loan lists both parts side by side, with principal, rate, and monthly payment, plus the combined total. An auto loan can derive the amount from the vehicle price and down payment. Repayment methods are equal installments and equal principal: the former keeps each payment the same; the latter starts higher and usually costs less interest overall.\n\nThe amortization schedule lists principal, interest, and remaining principal for each period. Compare holds up to 3 plans; 2 are enough to contrast total interest and the monthly payment. A savings goal can be prefilled at about 3 times the monthly payment, then record later deposits and withdrawals.\n\nThe interface is available in Simplified Chinese, English, and Spanish. Amounts can be shown with 12 currency symbols. Switching currency changes the symbol and decimal places only; saved amounts are not converted at an exchange rate. Plans can be saved under Profile and opened again, and can be marked as favorites.',
+  'about.title': 'Privacy policy',
   'about.body':
-    'This prototype runs loan math in the browser and stores data locally. It covers home, auto, and personal loans, amortization, and plan compare. Visuals follow Revolut Mobile for product reference only.',
+    'This app has no account and does not connect to a server. Your nickname, avatar, loan plans, and savings records stay on this device only.\n\nAll calculations run on the device. The app does not collect your name, phone number, or identity document number, and it does not send estimates to any external service. Data is stored on the device in plain text. If you uninstall the app or clear this site’s data, those records are deleted with it and cannot be recovered elsewhere.\n\nData can export loan plans and savings goals as a JSON file for your own backup, or clear that data. Clearing does not remove your nickname, avatar, language, currency, or decimal places. The export contains your estimated amounts. Keep it yourself, and do not give it to anyone you do not trust.\n\nSwitching the display currency does not rewrite saved amounts. It only changes the currency symbol and number format.',
 
   'toast.savedProfile': 'Saved to Profile',
   'toast.alreadySaved': 'This plan is already saved',
   'common.back': 'Back',
   'common.missing': 'Not found',
+  'splash.subtitle': 'Instant estimates · On-device privacy · Savings',
+  'savings.fab': 'New savings goal',
+  'savings.detailTitle': 'Savings detail',
+  'savings.newTitle': 'New savings',
+  'tag.label': 'Tags',
+  'tag.custom': 'Custom tag, press Enter to add',
+  'tag.add': 'Add',
+  'tag.needOne': 'Pick at least one tag to filter',
+  'tag.remove': 'Remove {name}',
+  'tag.all': 'All',
+  'tag.calcBadge': 'Calc',
+  'tag.mortgage': 'Mortgage',
+  'tag.auto': 'Auto',
+  'tag.consumer': 'Personal',
+  'tag.payment': 'Payment',
+  'tag.insurance': 'Insurance',
+  'tag.reno': 'Renovation',
+  'tag.edu': 'Education',
+  'tag.medical': 'Medical',
+  'tag.daily': 'Daily',
+  'tag.other': 'Other',
+  'seed.mortgageNote': 'Sample mortgage plan',
+  'seed.autoNote': 'Sample auto plan',
 };
 
 const es: Record<MessageKey, string> = {
@@ -578,7 +641,6 @@ const es: Record<MessageKey, string> = {
   'amort.col.balance': 'Saldo',
 
   'compare.title': 'Comparar',
-  'compare.subtitle': 'Máx. 3 · {n} elegidos',
   'compare.needTwo':
     'Elige al menos 2 planes. Añade desde Guardados o calcula de nuevo y pulsa Añadir a comparar.',
   'compare.goSaved': 'Ir a planes guardados',
@@ -651,15 +713,20 @@ const es: Record<MessageKey, string> = {
   'profile.title': 'Perfil',
   'profile.subtitle': 'Perfil local y planes guardados',
   'profile.localOnly': 'Los datos quedan en este dispositivo',
+  'profile.editTitle': 'Editar perfil',
+  'profile.gender': 'Género',
+  'profile.gender.male': 'Hombre',
+  'profile.gender.female': 'Mujer',
+  'profile.gender.private': 'Privado',
   'profile.savedCount': 'Planes guardados',
   'profile.savingsCount': 'Metas de ahorro',
   'profile.saved': 'Planes guardados',
   'profile.settings': 'Preferencias',
   'profile.data': 'Datos',
-  'profile.about': 'Acerca de y privacidad',
+  'profile.aboutUs': 'Sobre nosotros',
+  'profile.about': 'Política de privacidad',
 
   'saved.title': 'Planes guardados',
-  'saved.count': '{n} planes',
   'saved.empty': 'Aún no hay planes. Calcula y guarda uno.',
   'saved.goCalc': 'Ir a calcular',
   'saved.fav': 'Favorito',
@@ -705,14 +772,40 @@ const es: Record<MessageKey, string> = {
     '¿Borrar todos los cálculos y el ahorro? Se conservan las preferencias.',
   'data.cleared': 'Datos de negocio borrados',
 
-  'about.title': 'Acerca de y privacidad',
+  'aboutUs.title': 'Sobre nosotros',
+  'aboutUs.body':
+    'Dedicado a quien se prepara para pedir un préstamo, ofrece un cálculo de cuotas que se puede revisar y una comparación de planes que se puede contrastar. Introduce importe, tasa anual y plazo para ver la cuota, los intereses totales y el importe total antes de solicitarlo.\n\nCubre hipoteca, auto, crédito personal y combinado. El combinado muestra las dos partes en paralelo, con capital, tasa y cuota, además del total conjunto. El de auto puede calcular el importe a partir del precio del vehículo y la entrada. Los métodos son cuota fija y capital fijo: el primero mantiene el mismo pago; el segundo empieza más alto y suele generar menos intereses.\n\nLa amortización detalla capital, intereses y capital pendiente de cada período. La comparación admite hasta 3 planes; con 2 ya se contrastan los intereses totales y la cuota. La meta de ahorro puede rellenarse con unas 3 cuotas y registrar después ingresos y retiros.\n\nLa interfaz está en chino simplificado, English y Español. Los importes pueden mostrarse con 12 símbolos de moneda. Cambiar de moneda solo ajusta el símbolo y los decimales; los importes guardados no se convierten por tipo de cambio. Los planes pueden guardarse en Perfil para abrirlos de nuevo y marcarse como favoritos.',
+  'about.title': 'Política de privacidad',
   'about.body':
-    'Este prototipo calcula préstamos en el navegador y guarda datos en local. Incluye hipoteca, auto, personal, amortización y comparación. La UI sigue Revolut Mobile solo como referencia de producto.',
+    'Esta aplicación no tiene cuenta ni se conecta a un servidor. El apodo, el avatar, los planes de préstamo y los registros de ahorro permanecen solo en este dispositivo.\n\nTodo el cálculo se realiza en el dispositivo. La aplicación no recoge nombre, número de teléfono ni documento de identidad, y no envía los resultados a ningún servicio externo. Los datos se guardan en el dispositivo en texto sin formato. Al desinstalar la aplicación o borrar los datos de este sitio, esos registros se eliminan y no pueden recuperarse por otra vía.\n\nEn Datos se pueden exportar los planes y las metas de ahorro como un archivo JSON para copia propia, o borrar esos datos. El borrado no afecta al apodo, el avatar, el idioma, la moneda ni los decimales. El archivo exportado contiene los importes calculados. Consérvelo usted y no lo entregue a quien no sea de confianza.\n\nCambiar la moneda de visualización no reescribe los importes guardados. Solo ajusta el símbolo y el formato numérico.',
 
   'toast.savedProfile': 'Guardado en Perfil',
   'toast.alreadySaved': 'Este plan ya está guardado',
   'common.back': 'Atrás',
   'common.missing': 'No encontrado',
+  'splash.subtitle': 'Cálculo al instante · Privado en el dispositivo · Ahorro',
+  'savings.fab': 'Nueva meta de ahorro',
+  'savings.detailTitle': 'Detalle de ahorro',
+  'savings.newTitle': 'Nuevo ahorro',
+  'tag.label': 'Etiquetas',
+  'tag.custom': 'Etiqueta personalizada, Enter para añadir',
+  'tag.add': 'Añadir',
+  'tag.needOne': 'Elige al menos una etiqueta para filtrar',
+  'tag.remove': 'Quitar {name}',
+  'tag.all': 'Todas',
+  'tag.calcBadge': 'Cálculo',
+  'tag.mortgage': 'Hipoteca',
+  'tag.auto': 'Auto',
+  'tag.consumer': 'Consumo',
+  'tag.payment': 'Cuota',
+  'tag.insurance': 'Seguro',
+  'tag.reno': 'Reforma',
+  'tag.edu': 'Educación',
+  'tag.medical': 'Salud',
+  'tag.daily': 'Diario',
+  'tag.other': 'Otro',
+  'seed.mortgageNote': 'Plan de hipoteca de ejemplo',
+  'seed.autoNote': 'Plan de auto de ejemplo',
 };
 
 const TABLES: Record<AppLocale, Record<MessageKey, string>> = {
@@ -797,4 +890,19 @@ export function isDefaultSavingsName(name: string): boolean {
 
 export function displaySavingsName(name: string, t: TranslateFn): string {
   return isDefaultSavingsName(name) ? t('savings.defaultName') : name;
+}
+
+const KNOWN_COPY: Record<string, MessageKey> = {
+  示例房贷方案: 'seed.mortgageNote',
+  示例车贷方案: 'seed.autoNote',
+  'Sample mortgage plan': 'seed.mortgageNote',
+  'Sample auto plan': 'seed.autoNote',
+  'Plan de hipoteca de ejemplo': 'seed.mortgageNote',
+  'Plan de auto de ejemplo': 'seed.autoNote',
+};
+
+/** 种子方案名随当前语言展示，用户自己写的文字保持原样。 */
+export function displayKnownCopy(text: string, t: TranslateFn): string {
+  const key = KNOWN_COPY[text.trim()];
+  return key ? t(key) : text;
 }

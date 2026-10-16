@@ -3,7 +3,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 
+import '../data/tags.dart';
+import '../state/app_state.dart';
 import '../theme/revolut_theme.dart';
 
 const loanShellMaxWidth = 430.0;
@@ -225,6 +228,7 @@ class LoanCard extends StatelessWidget {
     this.margin,
     this.onTap,
     this.backgroundGradient,
+    this.expand = false,
   });
 
   final Widget child;
@@ -234,6 +238,8 @@ class LoanCard extends StatelessWidget {
   final VoidCallback? onTap;
   /// 储蓄「智能提示」等（对应 Web `.loan-savings-insight`）
   final Gradient? backgroundGradient;
+  /// 白底铺满父级剩余高度（关于我们、隐私协议）
+  final bool expand;
 
   /// 与 Web `.loan-savings-insight`：`180deg`，#f5f6ff → 45% 起为 `#fff`（6% brand on white）
   static const Color savingsInsightTop = Color(0xFFF5F6FF);
@@ -257,6 +263,8 @@ class LoanCard extends StatelessWidget {
       shadowColor: Colors.transparent,
       child: Container(
         width: double.infinity,
+        height: expand ? double.infinity : null,
+        alignment: expand ? Alignment.topLeft : null,
         padding: padding ?? EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 4 : 16),
         decoration: BoxDecoration(
           color: backgroundGradient == null ? RevolutColors.surface1 : null,
@@ -504,11 +512,10 @@ class LoanTopBar extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (onBack != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: LoanBackButton(onPressed: onBack!),
-            ),
+          if (onBack != null) ...[
+            LoanBackButton(onPressed: onBack!),
+            const SizedBox(width: 4),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,18 +549,13 @@ class LoanBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: RevolutColors.surface1,
-      elevation: 0,
-      shadowColor: RevolutColors.softShadow.color,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: RevolutColors.divider),
-      ),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: const SizedBox(width: 40, height: 40, child: Center(child: Text('←', style: TextStyle(fontSize: 18)))),
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: const SizedBox(
+        width: 28,
+        height: 28,
+        child: Icon(LucideIcons.arrowLeft, size: 22, color: RevolutColors.text),
       ),
     );
   }
@@ -900,13 +902,15 @@ class LoanTagFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    String labelOf(String tag) => tagLabel(tag, app.tr);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          _filterChip('全部', activeTag == null, () => onSelect(null)),
-          ...tags.map((t) => _filterChip(t, activeTag == t, () => onSelect(activeTag == t ? null : t))),
+          _filterChip(app.tr('tag.all'), activeTag == null, () => onSelect(null)),
+          ...tags.map((t) => _filterChip(labelOf(t), activeTag == t, () => onSelect(activeTag == t ? null : t))),
         ],
       ),
     );
@@ -990,7 +994,10 @@ class LoanBadgeCalc extends StatelessWidget {
         color: RevolutColors.brandStart.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: const Text('试算', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: RevolutColors.brandSolid)),
+      child: Text(
+        context.watch<AppState>().tr('tag.calcBadge'),
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: RevolutColors.brandSolid),
+      ),
     );
   }
 }
@@ -1149,14 +1156,15 @@ class LoanEmpty extends StatelessWidget {
 }
 
 class LoanFab extends StatelessWidget {
-  const LoanFab({super.key, required this.onPressed});
+  const LoanFab({super.key, required this.label, required this.onPressed});
+  final String label;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '新建储蓄目标',
+      label: label,
       child: Material(
         elevation: 0,
         shape: const CircleBorder(),

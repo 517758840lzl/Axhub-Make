@@ -4,6 +4,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ArrowLeft,
   Bookmark,
   Calculator,
   Car,
@@ -36,6 +37,7 @@ import { formatMoney, parseHashParams, setHashPage, uid } from './lib/format';
 import {
   APP_LOCALES,
   categoryMessageKey,
+  displayKnownCopy,
   displayNickname,
   displaySavingsName,
   htmlLang,
@@ -57,20 +59,24 @@ import type {
 } from './lib/types';
 import './style.css';
 
+const pageTitle = (key: Parameters<TranslateFn>[0]) => translate('zh-CN', key);
+
 const ROUTE = defineHashPageRoute(
   [
-    { id: 'calc', title: '计算' },
-    { id: 'calc-result', title: '计算结果' },
-    { id: 'amortization', title: '摊还明细' },
-    { id: 'compare', title: '方案对比' },
-    { id: 'savings', title: '储蓄' },
-    { id: 'savings-detail', title: '储蓄详情' },
-    { id: 'savings-new', title: '新建储蓄' },
-    { id: 'profile', title: '我的' },
-    { id: 'profile-saved', title: '已保存方案' },
-    { id: 'profile-settings', title: '偏好设置' },
-    { id: 'profile-data', title: '数据管理' },
-    { id: 'profile-about', title: '关于与隐私' },
+    { id: 'calc', title: pageTitle('tab.calc') },
+    { id: 'calc-result', title: pageTitle('result.title') },
+    { id: 'amortization', title: pageTitle('amort.title') },
+    { id: 'compare', title: pageTitle('compare.title') },
+    { id: 'savings', title: pageTitle('tab.savings') },
+    { id: 'savings-detail', title: pageTitle('savings.detailTitle') },
+    { id: 'savings-new', title: pageTitle('savings.newTitle') },
+    { id: 'profile', title: pageTitle('profile.title') },
+    { id: 'profile-edit', title: pageTitle('profile.editTitle') },
+    { id: 'profile-saved', title: pageTitle('saved.title') },
+    { id: 'profile-settings', title: pageTitle('settings.title') },
+    { id: 'profile-data', title: pageTitle('data.title') },
+    { id: 'profile-about-us', title: pageTitle('aboutUs.title') },
+    { id: 'profile-about', title: pageTitle('about.title') },
   ],
   { defaultPageId: 'calc' },
 );
@@ -438,14 +444,20 @@ function LoanCalculatorApp() {
         onGoCalc={() => setPage('calc')}
       />
     );
+  } else if (page === 'profile-edit') {
+    content = (
+      <ProfileEdit
+        profile={app.profile}
+        onBack={() => setPage('profile')}
+        onSave={app.updateProfile}
+      />
+    );
   } else if (page === 'profile-settings') {
     content = (
       <ProfileSettings
         settings={app.settings}
-        profile={app.profile}
         onBack={() => setPage('profile')}
         onSaveSettings={app.updateSettings}
-        onSaveProfile={app.updateProfile}
       />
     );
   } else if (page === 'profile-data') {
@@ -461,8 +473,22 @@ function LoanCalculatorApp() {
         }}
       />
     );
+  } else if (page === 'profile-about-us') {
+    content = (
+      <ProfileTextPage
+        titleKey="aboutUs.title"
+        bodyKey="aboutUs.body"
+        onBack={() => setPage('profile')}
+      />
+    );
   } else if (page === 'profile-about') {
-    content = <ProfileAbout onBack={() => setPage('profile')} />;
+    content = (
+      <ProfileTextPage
+        titleKey="about.title"
+        bodyKey="about.body"
+        onBack={() => setPage('profile')}
+      />
+    );
   } else {
     content = <RedirectCalc />;
   }
@@ -474,7 +500,9 @@ function LoanCalculatorApp() {
       <div className="loan-shell">
         {app.toast ? <div className="loan-toast">{app.toast}</div> : null}
         <main
-          className="loan-main"
+          className={
+            page === 'profile-about' || page === 'profile-about-us' ? 'loan-main loan-main--fill' : 'loan-main'
+          }
           onScroll={() => {
             const el = document.activeElement;
             if (el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
@@ -1288,18 +1316,16 @@ function CalcResultView({
     <>
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={back} aria-label={t('nav.back')}>
-          ←
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
         </button>
-        <div>
-          <h1 className="loan-title">{t('result.title')}</h1>
-          <p className="loan-subtitle">
-            {categoryLabel(result.input.category, t)}
-            {!isDual ? ` · ${modeLabel(result.input.mode, t)}` : ''}
-          </p>
-        </div>
+        <h1 className="loan-title">{t('result.title')}</h1>
       </header>
 
       <div className="loan-card">
+        <p className="loan-muted" style={{ margin: '0 0 12px', fontSize: 13 }}>
+          {categoryLabel(result.input.category, t)}
+          {!isDual ? ` · ${modeLabel(result.input.mode, t)}` : ''}
+        </p>
         <div className="loan-label">
           {isDual
             ? t('dual.combinedMonthly')
@@ -1517,13 +1543,13 @@ function AmortizationView({
     <>
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={back} aria-label={t('nav.back')}>
-          ←
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
         </button>
-        <div>
-          <h1 className="loan-title">{t('amort.title')}</h1>
-          <p className="loan-subtitle">{t('amort.periods', { n: maxPeriod })}</p>
-        </div>
+        <h1 className="loan-title">{t('amort.title')}</h1>
       </header>
+      <p className="loan-muted" style={{ fontSize: 13, margin: '0 0 12px' }}>
+        {t('amort.periods', { n: maxPeriod })}
+      </p>
 
       <div className="loan-card">
         {isDual ? (
@@ -1803,7 +1829,7 @@ function SavingsNew({
     <>
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={onDone} aria-label={t('nav.back')}>
-          ←
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
         </button>
         <h1 className="loan-title">{t('savings.new')}</h1>
       </header>
@@ -1882,15 +1908,21 @@ function SavingsDetail({
     <>
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
-          ←
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
         </button>
-        <div>
-          <h1 className="loan-title">{displaySavingsName(goal.name, t)}</h1>
-          <p className="loan-subtitle">
-            {money(goal.current)} / {money(goal.target)}
-          </p>
-        </div>
+        <h1 className="loan-title">{displaySavingsName(goal.name, t)}</h1>
       </header>
+      <div className="loan-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div className="loan-label">{t('savings.progress')}</div>
+          <strong>
+            {money(goal.current)} / {money(goal.target)}
+          </strong>
+        </div>
+        <span className="loan-chip">
+          {goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100).toFixed(0) : '0'}%
+        </span>
+      </div>
       <div className="loan-card">
         <div className="loan-label">{t('savings.depositWithdraw')}</div>
         <input
@@ -2119,12 +2151,9 @@ function CompareView({
     <>
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
-          ←
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
         </button>
-        <div>
-          <h1 className="loan-title">{t('compare.title')}</h1>
-          <p className="loan-subtitle">{t('compare.subtitle', { n: items.length })}</p>
-        </div>
+        <h1 className="loan-title">{t('compare.title')}</h1>
       </header>
 
       {items.length < 2 ? (
@@ -2247,7 +2276,9 @@ function CompareView({
               c.result.input.mode === 'equal-principal'
                 ? c.result.firstMonthPayment
                 : c.result.monthlyPayment;
-            const title = c.note.trim() || categoryLabel(c.result.input.category, t);
+            const title = c.note.trim()
+              ? displayKnownCopy(c.note.trim(), t)
+              : categoryLabel(c.result.input.category, t);
             return (
               <div key={c.id} className="loan-row" style={{ alignItems: 'center' }}>
                 <div>
@@ -2298,12 +2329,9 @@ function SavedList({
       <>
         <header className="loan-topbar">
           <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
-            ←
+            <ArrowLeft size={22} strokeWidth={2} aria-hidden />
           </button>
-          <div>
-            <h1 className="loan-title">{t('saved.title')}</h1>
-            <p className="loan-subtitle">{t('saved.count', { n: 0 })}</p>
-          </div>
+          <h1 className="loan-title">{t('saved.title')}</h1>
         </header>
         <div className="loan-empty">
           <Bookmark size={40} strokeWidth={1.6} color="#6b5bff" style={{ marginBottom: 12 }} />
@@ -2320,12 +2348,9 @@ function SavedList({
     <>
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
-          ←
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
         </button>
-        <div>
           <h1 className="loan-title">{t('saved.title')}</h1>
-          <p className="loan-subtitle">{t('saved.count', { n: calculations.length })}</p>
-        </div>
       </header>
       {calculations.map((c) => {
         return (
@@ -2333,7 +2358,9 @@ function SavedList({
             <div className="loan-saved-body" onClick={() => onOpen(c)} role="presentation">
               <div className="loan-saved-head">
                 <div className="loan-saved-title">
-                  {c.note.trim() || categoryLabel(c.result.input.category, t)}
+                  {c.note.trim()
+                    ? displayKnownCopy(c.note.trim(), t)
+                    : categoryLabel(c.result.input.category, t)}
                 </div>
                 {compareIds.includes(c.id) ? (
                   <button
@@ -2424,9 +2451,13 @@ function ProfileHome({
           <p className="loan-subtitle">{t('profile.subtitle')}</p>
         </div>
       </header>
-      <div className="loan-card" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <button
+        type="button"
+        className="loan-card loan-profile-entry"
+        onClick={() => setPage('profile-edit')}
+      >
         <div className="loan-profile-avatar">{profile.avatar}</div>
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 700 }}>
             {displayNickname(profile.nickname, t)}
           </div>
@@ -2434,7 +2465,8 @@ function ProfileHome({
             {t('profile.localOnly')}
           </div>
         </div>
-      </div>
+        <ChevronRight size={18} aria-hidden />
+      </button>
       <div className="loan-stat-row">
         <button type="button" className="loan-stat-box loan-stat-box--btn" onClick={() => setPage('profile-saved')}>
           <div className="loan-label">{t('profile.savedCount')}</div>
@@ -2456,6 +2488,9 @@ function ProfileHome({
         <button type="button" className="loan-menu-item" onClick={() => setPage('profile-data')}>
           {t('profile.data')} <ChevronRight size={18} aria-hidden />
         </button>
+        <button type="button" className="loan-menu-item" onClick={() => setPage('profile-about-us')}>
+          {t('profile.aboutUs')} <ChevronRight size={18} aria-hidden />
+        </button>
         <button type="button" className="loan-menu-item" onClick={() => setPage('profile-about')}>
           {t('profile.about')} <ChevronRight size={18} aria-hidden />
         </button>
@@ -2464,12 +2499,82 @@ function ProfileHome({
   );
 }
 
-function ProfileSettings({
-  settings,
+function ProfileEdit({
   profile,
   onBack,
+  onSave,
+}: {
+  profile: { nickname: string; avatar: string; createdAt: string; gender?: 'male' | 'female' | 'private' };
+  onBack: () => void;
+  onSave: (p: { nickname: string; avatar: string; createdAt: string; gender: 'male' | 'female' | 'private' }) => void;
+}) {
+  const { t } = useApp();
+  const [nickname, setNickname] = useState(() =>
+    isDefaultNickname(profile.nickname) ? t('settings.defaultNick') : profile.nickname,
+  );
+  const [avatar, setAvatar] = useState(profile.avatar);
+  const [gender, setGender] = useState<'male' | 'female' | 'private'>(profile.gender ?? 'private');
+
+  return (
+    <>
+      <header className="loan-topbar">
+        <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
+        </button>
+        <h1 className="loan-title">{t('profile.editTitle')}</h1>
+      </header>
+      <div className="loan-card">
+        <div className="loan-label">{t('settings.nickname')}</div>
+        <input className="loan-input" value={nickname} onChange={(e) => setNickname(e.target.value)} />
+        <div className="loan-label" style={{ marginTop: 12 }}>
+          {t('settings.avatar')}
+        </div>
+        <input className="loan-input" value={avatar} onChange={(e) => setAvatar(e.target.value)} />
+        <div className="loan-label" style={{ marginTop: 12 }}>
+          {t('profile.gender')}
+        </div>
+        <div className="loan-segment">
+          {(
+            [
+              ['male', 'profile.gender.male'],
+              ['female', 'profile.gender.female'],
+              ['private', 'profile.gender.private'],
+            ] as const
+          ).map(([id, key]) => (
+            <button
+              key={id}
+              type="button"
+              data-active={gender === id}
+              onClick={() => setGender(id)}
+            >
+              {t(key)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <button
+        type="button"
+        className="loan-btn-primary"
+        onClick={() => {
+          onSave({
+            ...profile,
+            nickname: nickname.trim() || t('settings.defaultNick'),
+            avatar: avatar.trim() || '🧑‍💼',
+            gender,
+          });
+          onBack();
+        }}
+      >
+        {t('settings.save')}
+      </button>
+    </>
+  );
+}
+
+function ProfileSettings({
+  settings,
+  onBack,
   onSaveSettings,
-  onSaveProfile,
 }: {
   settings: {
     currencyCode: string;
@@ -2477,28 +2582,19 @@ function ProfileSettings({
     theme: string;
     locale: AppLocale;
   };
-  profile: { nickname: string; avatar: string; createdAt: string };
   onBack: () => void;
   onSaveSettings: (s: typeof settings & { theme: 'dark' | 'light' | 'system'; locale: AppLocale }) => void;
-  onSaveProfile: (p: typeof profile) => void;
 }) {
   const { t } = useApp();
   const [currencyCode, setCurrencyCode] = useState(settings.currencyCode);
   const [decimals, setDecimals] = useState(String(settings.decimals));
-  const [nickname, setNickname] = useState(() =>
-    isDefaultNickname(profile.nickname)
-      ? t('settings.defaultNick')
-      : profile.nickname,
-  );
-  const [avatar, setAvatar] = useState(profile.avatar);
   const [locale, setLocale] = useState<AppLocale>(settings.locale);
-  const nickIsDefault = isDefaultNickname(profile.nickname) || isDefaultNickname(nickname);
 
   return (
     <>
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
-          ←
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
         </button>
         <h1 className="loan-title">{t('settings.title')}</h1>
       </header>
@@ -2519,29 +2615,12 @@ function ProfileSettings({
                   theme: 'light',
                   locale: loc.id,
                 });
-                if (nickIsDefault) {
-                  const nextNick = translate(loc.id, 'settings.defaultNick');
-                  setNickname(nextNick);
-                  onSaveProfile({ ...profile, nickname: nextNick, avatar });
-                }
               }}
             >
               {loc.nativeLabel}
             </button>
           ))}
         </div>
-        <div className="loan-label" style={{ marginTop: 12 }}>
-          {t('settings.nickname')}
-        </div>
-        <input
-          className="loan-input"
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-        />
-        <div className="loan-label" style={{ marginTop: 12 }}>
-          {t('settings.avatar')}
-        </div>
-        <input className="loan-input" value={avatar} onChange={(e) => setAvatar(e.target.value)} />
         <div className="loan-label" style={{ marginTop: 12 }}>
           {t('settings.decimals')}
         </div>
@@ -2564,11 +2643,6 @@ function ProfileSettings({
         type="button"
         className="loan-btn-primary"
         onClick={() => {
-          onSaveProfile({
-            ...profile,
-            nickname: nickname.trim() || t('settings.defaultNick'),
-            avatar,
-          });
           onSaveSettings({
             ...settings,
             currencyCode,
@@ -2599,7 +2673,7 @@ function ProfileData({
     <>
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
-          ←
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
         </button>
         <h1 className="loan-title">{t('data.title')}</h1>
       </header>
@@ -2623,22 +2697,39 @@ function ProfileData({
   );
 }
 
-function ProfileAbout({ onBack }: { onBack: () => void }) {
+function ProfileTextPage({
+  titleKey,
+  bodyKey,
+  onBack,
+}: {
+  titleKey: 'aboutUs.title' | 'about.title';
+  bodyKey: 'aboutUs.body' | 'about.body';
+  onBack: () => void;
+}) {
   const { t } = useApp();
   return (
-    <>
+    <div className="loan-text-page">
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
-          ←
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
         </button>
-        <h1 className="loan-title">{t('about.title')}</h1>
+        <h1 className="loan-title">{t(titleKey)}</h1>
       </header>
       <div className="loan-card">
-        <p className="loan-muted" style={{ fontSize: 15, lineHeight: 1.7, margin: 0 }}>
-          {t('about.body')}
-        </p>
+        {t(bodyKey)
+          .split(/\n\s*\n/)
+          .filter((paragraph) => paragraph.trim())
+          .map((paragraph, index) => (
+            <p
+              key={paragraph.slice(0, 24)}
+              className="loan-muted"
+              style={{ fontSize: 15, lineHeight: 1.7, margin: index === 0 ? 0 : '12px 0 0' }}
+            >
+              {paragraph}
+            </p>
+          ))}
       </div>
-    </>
+    </div>
   );
 }
 

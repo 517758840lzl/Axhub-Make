@@ -88,10 +88,14 @@ export interface SavingsGoal {
   createdAt: string;
 }
 
+export type ProfileGender = 'male' | 'female' | 'private';
+
 export interface UserProfile {
   nickname: string;
   avatar: string;
   createdAt: string;
+  /** 未写入旧数据时按 private 展示 */
+  gender?: ProfileGender;
 }
 
 export type AppLocale = 'zh-CN' | 'en' | 'es';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'data/i18n.dart';
 import 'screens/loan_screens.dart';
 import 'screens/splash_screen.dart';
 import 'state/app_state.dart';
@@ -51,9 +52,21 @@ class _AppHostState extends State<_AppHost> {
   @override
   Widget build(BuildContext context) {
     // 底层始终铺画布色，避免 Splash 切换瞬间露出系统黑底
-    return ColoredBox(
-      color: RevolutColors.canvas,
-      child: AnimatedSwitcher(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        final app = context.read<AppState>();
+        if (app.canPopRoute) {
+          app.pop();
+          return;
+        }
+        // 根页面退到后台，不结束 Activity，再次打开不用重走启动页
+        SystemNavigator.pop();
+      },
+      child: ColoredBox(
+        color: RevolutColors.canvas,
+        child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 320),
         switchInCurve: Curves.easeOut,
         switchOutCurve: Curves.easeIn,
@@ -72,6 +85,7 @@ class _AppHostState extends State<_AppHost> {
                 onComplete: () => setState(() => _showSplash = false),
               )
             : const LoanRoot(key: ValueKey('main')),
+        ),
       ),
     );
   }
@@ -105,12 +119,17 @@ class LoanRoot extends StatelessWidget {
             app.tr('tab.profile'),
           ],
           fab: onSavingsList
-              ? LoanFab(onPressed: () => app.push(AppRoute.savingsNew))
+              ? LoanFab(
+                  label: app.tr('savings.fab'),
+                  onPressed: () => app.push(AppRoute.savingsNew),
+                )
               : null,
           scrollResetKey: ValueKey(
             '${app.route.name}|${app.detailId ?? ''}|${app.savingsPrefill ?? ''}',
           ),
-          expandBody: app.route == AppRoute.amortization,
+          expandBody: app.route == AppRoute.amortization ||
+              app.route == AppRoute.profileAboutUs ||
+              app.route == AppRoute.profileAbout,
           body: _screenForRoute(app),
         );
       },
@@ -135,12 +154,16 @@ class LoanRoot extends StatelessWidget {
         return const SavingsDetailScreen();
       case AppRoute.profile:
         return const ProfileHomeScreen();
+      case AppRoute.profileEdit:
+        return const ProfileEditScreen();
       case AppRoute.profileSettings:
         return const ProfileSettingsScreen();
       case AppRoute.profileData:
         return const ProfileDataScreen();
+      case AppRoute.profileAboutUs:
+        return const ProfileTextScreen(titleKey: 'aboutUs.title', bodyKey: 'aboutUs.body');
       case AppRoute.profileAbout:
-        return const ProfileAboutScreen();
+        return const ProfileTextScreen(titleKey: 'about.title', bodyKey: 'about.body');
       case AppRoute.savedList:
         return const SavedListScreen();
       case AppRoute.savedDetail:

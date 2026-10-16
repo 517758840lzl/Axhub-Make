@@ -49,6 +49,24 @@
   padding: 12px 12px 52px;
 }
 
+.loan-main--fill {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 12px;
+}
+
+.loan-text-page {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.loan-text-page .loan-card {
+  flex: 1 0 auto;
+  margin-bottom: 0;
+}
+
 .loan-tabbar {
   position: fixed;
   bottom: 0;
@@ -117,20 +135,24 @@
 .loan-topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   margin-bottom: 20px;
 }
 
 .loan-back {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: 1px solid var(--rev-divider);
-  background: var(--rev-surface-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
   color: var(--rev-text);
   cursor: pointer;
-  font-size: 18px;
-  box-shadow: var(--rev-shadow-soft);
+  box-shadow: none;
+  flex-shrink: 0;
 }
 
 .loan-title {
@@ -500,6 +522,23 @@ button.loan-chip {
   height: 32px;
   color: var(--rev-text-secondary);
   font-weight: 600;
+}
+
+button.loan-profile-entry {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.loan-profile-entry .loan-profile-avatar {
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .loan-profile-avatar {
@@ -944,7 +983,7 @@ button.loan-chip {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 
 .loan-currency-grid {

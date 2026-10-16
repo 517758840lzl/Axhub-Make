@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/currencies.dart';
+import '../state/app_state.dart';
 import '../theme/revolut_theme.dart';
 import 'loan_widgets.dart';
 
@@ -13,7 +15,9 @@ class CurrencyPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
     final active = getCurrency(currencyCode);
+    final activeName = app.tr('currency.${active.code}');
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(compact ? 14 : 14),
@@ -30,10 +34,11 @@ class CurrencyPicker extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const LoanLabel('显示货币'),
-                LoanChip('当前 ${active.symbol} ${active.name}'),
+                LoanLabel(app.tr('currency.label')),
+                LoanChip(app.tr('currency.current', {'symbol': active.symbol, 'name': activeName})),
               ],
             ),
+          if (!compact) const SizedBox(height: 16),
           GridView.count(
             crossAxisCount: compact ? 6 : 4,
             shrinkWrap: true,
@@ -61,7 +66,7 @@ class CurrencyPicker extends StatelessWidget {
                       Text(c.symbol, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                       Text(c.code, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
                       if (!compact)
-                        Text(c.name, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, height: 1.2, color: RevolutColors.textSecondary)),
+                        Text(app.tr('currency.${c.code}'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, height: 1.2, color: RevolutColors.textSecondary)),
                     ],
                   ),
                 ),

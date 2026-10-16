@@ -373,28 +373,41 @@ class SavingsGoal {
 }
 
 class UserProfile {
-  UserProfile({required this.nickname, required this.avatar, required this.createdAt});
+  UserProfile({
+    required this.nickname,
+    required this.avatar,
+    required this.createdAt,
+    this.gender = 'private',
+  });
 
   final String nickname;
   final String avatar;
   final String createdAt;
+  /// male / female / private
+  final String gender;
 
   Map<String, dynamic> toJson() => {
         'nickname': nickname,
         'avatar': avatar,
         'createdAt': createdAt,
+        'gender': gender,
       };
 
-  factory UserProfile.fromJson(Map<String, dynamic> j) => UserProfile(
-        nickname: j['nickname'] as String? ?? '',
-        avatar: j['avatar'] as String? ?? '🧑‍💼',
-        createdAt: j['createdAt'] as String? ?? DateTime.now().toIso8601String(),
-      );
+  factory UserProfile.fromJson(Map<String, dynamic> j) {
+    final raw = j['gender'] as String?;
+    final gender = raw == 'male' || raw == 'female' || raw == 'private' ? raw! : 'private';
+    return UserProfile(
+      nickname: j['nickname'] as String? ?? '',
+      avatar: j['avatar'] as String? ?? '🧑‍💼',
+      createdAt: j['createdAt'] as String? ?? DateTime.now().toIso8601String(),
+      gender: gender,
+    );
+  }
 
   String displayNickname(AppLocale locale) {
     final n = nickname.trim();
     if (n.isEmpty) return t(locale, 'settings.defaultNick');
-    return n;
+    return displayKnownCopy(locale, n);
   }
 }
 

@@ -1,4 +1,24 @@
+import type { MessageKey, TranslateFn } from './i18n';
 import type { LoanCategory } from './types';
+
+const TAG_MESSAGE_KEY: Record<string, MessageKey> = {
+  房贷: 'tag.mortgage',
+  车贷: 'tag.auto',
+  消费贷: 'tag.consumer',
+  月供: 'tag.payment',
+  保险: 'tag.insurance',
+  装修: 'tag.reno',
+  教育: 'tag.edu',
+  医疗: 'tag.medical',
+  日常: 'tag.daily',
+  其他: 'tag.other',
+  组合贷: 'cat.dual',
+};
+
+export function tagLabel(tag: string, t: TranslateFn): string {
+  const key = TAG_MESSAGE_KEY[tag];
+  return key ? t(key) : tag;
+}
 
 /** 常用标签，供选择；用户可自定义追加 */
 export const SUGGESTED_TAGS = [

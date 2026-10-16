@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../data/calc.dart';
+import '../data/currencies.dart';
 import '../data/format.dart';
 import '../data/i18n.dart';
 import '../data/models.dart';
@@ -685,14 +686,18 @@ class CalcResultScreen extends StatelessWidget {
         LoanTopBar(
           onBack: () => app.pop(),
           title: app.tr('result.title'),
-          subtitle: isDual
-              ? categoryLabel(result.input.category, app.locale)
-              : '${categoryLabel(result.input.category, app.locale)} · ${modeLabel(result.input.mode, app.locale)}',
         ),
         LoanCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              LoanMuted(
+                isDual
+                    ? categoryLabel(result.input.category, app.locale)
+                    : '${categoryLabel(result.input.category, app.locale)} · ${modeLabel(result.input.mode, app.locale)}',
+                fontSize: 13,
+              ),
+              const SizedBox(height: 12),
               LoanLabel(
                 isDual
                     ? app.tr('dual.combinedMonthly')
@@ -935,7 +940,12 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
                 child: LoanTopBar(
                   onBack: () => app.pop(),
                   title: app.tr('amort.title'),
-                  subtitle: app.tr('amort.periods', {'n': '$max'}),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: LoanMuted(app.tr('amort.periods', {'n': '$max'}), fontSize: 13),
                 ),
               ),
               DecoratedSliver(
@@ -1522,7 +1532,6 @@ class CompareScreen extends StatelessWidget {
         LoanTopBar(
           onBack: () => app.pop(),
           title: app.tr('compare.title'),
-          subtitle: app.tr('compare.subtitle', {'n': '${results.length}'}),
         ),
         if (results.length < 2)
           LoanCard(
@@ -1574,9 +1583,7 @@ class _CompareExtras extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        extras[i].note.isNotEmpty
-                            ? extras[i].note
-                            : categoryLabel(extras[i].result.input.category, app.locale),
+                        _savedTitle(extras[i].note, extras[i].result, app),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 2),
@@ -1775,12 +1782,12 @@ class SavingsListScreen extends StatelessWidget {
   }
 }
 
-String _savingsName(String name, AppState app) {
-  final n = name.trim();
-  if (n.isEmpty || n == '月供缓冲金' || n == 'Payment buffer') {
-    return app.tr('savings.defaultName');
-  }
-  return n;
+String _savingsName(String name, AppState app) => displaySavingsName(app.locale, name);
+
+String _savedTitle(String note, CalcResult result, AppState app) {
+  final n = note.trim();
+  if (n.isEmpty) return categoryLabel(result.input.category, app.locale);
+  return displayKnownCopy(app.locale, n);
 }
 
 class SavingsNewScreen extends StatefulWidget {
@@ -1915,7 +1922,27 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
         LoanTopBar(
           onBack: () => app.pop(),
           title: _savingsName(goal2.name, app),
-          subtitle: '${app.money(goal2.current)} / ${app.money(goal2.target)}',
+        ),
+        LoanCard(
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LoanLabel(app.tr('savings.progress')),
+                    Text(
+                      '${app.money(goal2.current)} / ${app.money(goal2.target)}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+              LoanChip(
+                '${goal2.target > 0 ? (goal2.current / goal2.target * 100).clamp(0, 100).toStringAsFixed(0) : '0'}%',
+              ),
+            ],
+          ),
         ),
         LoanCard(
           child: Column(
@@ -2035,7 +2062,6 @@ class SavedListScreen extends StatelessWidget {
         LoanTopBar(
           onBack: () => app.pop(),
           title: app.tr('saved.title'),
-          subtitle: app.tr('saved.count', {'n': '${list.length}'}),
         ),
         if (list.isEmpty)
           LoanEmpty(
@@ -2066,7 +2092,7 @@ class SavedListScreen extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                c.note.isNotEmpty ? c.note : categoryLabel(c.result.input.category, app.locale),
+                                _savedTitle(c.note, c.result, app),
                                 style: const TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
@@ -2194,21 +2220,26 @@ class ProfileHomeScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         LoanTopBar(title: app.tr('profile.title'), subtitle: app.tr('profile.subtitle')),
-        LoanCard(
-          child: Row(
-            children: [
-              Text(app.profile.avatar, style: const TextStyle(fontSize: 36)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(app.displayNickname(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                    LoanMuted(app.tr('profile.localOnly'), fontSize: 12),
-                  ],
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => app.push(AppRoute.profileEdit),
+          child: LoanCard(
+            child: Row(
+              children: [
+                Text(app.profile.avatar, style: const TextStyle(fontSize: 36)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(app.displayNickname(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                      LoanMuted(app.tr('profile.localOnly'), fontSize: 12),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const Icon(LucideIcons.chevronRight, size: 18, color: RevolutColors.textSecondary),
+              ],
+            ),
           ),
         ),
         LoanStatRow(
@@ -2238,6 +2269,10 @@ class ProfileHomeScreen extends StatelessWidget {
                 onTap: () => app.push(AppRoute.profileData),
               ),
               LoanMenuItem(
+                label: app.tr('profile.aboutUs'),
+                onTap: () => app.push(AppRoute.profileAboutUs),
+              ),
+              LoanMenuItem(
                 label: app.tr('profile.about'),
                 onTap: () => app.push(AppRoute.profileAbout),
                 divider: false,
@@ -2250,19 +2285,17 @@ class ProfileHomeScreen extends StatelessWidget {
   }
 }
 
-class ProfileSettingsScreen extends StatefulWidget {
-  const ProfileSettingsScreen({super.key});
+class ProfileEditScreen extends StatefulWidget {
+  const ProfileEditScreen({super.key});
 
   @override
-  State<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
+  State<ProfileEditScreen> createState() => _ProfileEditScreenState();
 }
 
-class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
+class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late TextEditingController _nick;
   late TextEditingController _avatar;
-  late int _decimals;
-  late AppLocale _locale;
-  late String _currency;
+  late String _gender;
 
   @override
   void initState() {
@@ -2270,9 +2303,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     final app = context.read<AppState>();
     _nick = TextEditingController(text: app.profile.nickname);
     _avatar = TextEditingController(text: app.profile.avatar);
-    _decimals = app.settings.decimals;
-    _locale = app.settings.locale;
-    _currency = app.settings.currencyCode;
+    _gender = app.profile.gender;
   }
 
   @override
@@ -2288,7 +2319,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LoanTopBar(onBack: () => app.pop(), title: app.tr('settings.title')),
+        LoanTopBar(onBack: () => app.pop(), title: app.tr('profile.editTitle')),
         LoanCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2297,22 +2328,15 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               LoanInput(controller: _nick, onChanged: (_) {}),
               LoanLabel(app.tr('settings.avatar'), marginTop: 12),
               LoanInput(controller: _avatar, onChanged: (_) {}),
-              LoanLabel(app.tr('settings.decimals'), marginTop: 12),
+              LoanLabel(app.tr('profile.gender'), marginTop: 12),
               LoanSegment(
-                options: const [('0', '0'), ('2', '2')],
-                selected: '$_decimals',
-                onSelect: (v) => setState(() => _decimals = int.parse(v)),
-              ),
-              LoanLabel(app.tr('settings.language'), marginTop: 12),
-              LoanSegment(
-                options: appLocales.map((e) => (e.$1.id, e.$2)).toList(),
-                selected: _locale.id,
-                onSelect: (v) => setState(() => _locale = AppLocaleX.fromId(v)),
-              ),
-              LoanLabel(app.tr('currency.label'), marginTop: 12),
-              CurrencyPicker(
-                currencyCode: _currency,
-                onChange: (c) => setState(() => _currency = c),
+                options: [
+                  ('male', app.tr('profile.gender.male')),
+                  ('female', app.tr('profile.gender.female')),
+                  ('private', app.tr('profile.gender.private')),
+                ],
+                selected: _gender,
+                onSelect: (v) => setState(() => _gender = v),
               ),
             ],
           ),
@@ -2324,7 +2348,75 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               nickname: _nick.text.trim(),
               avatar: _avatar.text.trim().isEmpty ? '🧑‍💼' : _avatar.text.trim(),
               createdAt: app.profile.createdAt,
+              gender: _gender,
             ));
+            app.showToast(app.tr('toast.savedProfile'));
+            app.pop();
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class ProfileSettingsScreen extends StatefulWidget {
+  const ProfileSettingsScreen({super.key});
+
+  @override
+  State<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
+}
+
+class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
+  late int _decimals;
+  late AppLocale _locale;
+  late String _currency;
+
+  @override
+  void initState() {
+    super.initState();
+    final app = context.read<AppState>();
+    _decimals = app.settings.decimals;
+    _locale = app.settings.locale;
+    _currency = app.settings.currencyCode;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LoanTopBar(onBack: () => app.pop(), title: app.tr('settings.title')),
+        LoanCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LoanLabel(app.tr('settings.language')),
+              LoanSegment(
+                options: appLocales.map((e) => (e.$1.id, e.$2)).toList(),
+                selected: _locale.id,
+                onSelect: (v) => setState(() => _locale = AppLocaleX.fromId(v)),
+              ),
+              LoanLabel(app.tr('settings.decimals'), marginTop: 12),
+              LoanSegment(
+                options: const [('0', '0'), ('2', '2')],
+                selected: '$_decimals',
+                onSelect: (v) => setState(() => _decimals = int.parse(v)),
+              ),
+              LoanLabel(app.tr('currency.label'), marginTop: 12),
+              CurrencyPicker(
+                currencyCode: _currency,
+                onChange: (c) => setState(() {
+                  _currency = c;
+                  _decimals = getCurrency(c).defaultDecimals;
+                }),
+              ),
+            ],
+          ),
+        ),
+        LoanPrimaryButton(
+          label: app.tr('settings.save'),
+          onPressed: () async {
             await app.updateSettings(app.settings.copyWith(
               decimals: _decimals,
               locale: _locale,
@@ -2378,18 +2470,46 @@ class ProfileDataScreen extends StatelessWidget {
   }
 }
 
-class ProfileAboutScreen extends StatelessWidget {
-  const ProfileAboutScreen({super.key});
+class ProfileTextScreen extends StatelessWidget {
+  const ProfileTextScreen({super.key, required this.titleKey, required this.bodyKey});
+
+  final String titleKey;
+  final String bodyKey;
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LoanTopBar(onBack: () => app.pop(), title: app.tr('about.title')),
-        LoanCard(child: LoanMuted(app.tr('about.body'), fontSize: 14)),
-      ],
+    final paragraphs = app
+        .tr(bodyKey)
+        .split(RegExp(r'\n\s*\n'))
+        .map((paragraph) => paragraph.trim())
+        .where((paragraph) => paragraph.isNotEmpty)
+        .toList();
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LoanTopBar(onBack: () => app.pop(), title: app.tr(titleKey)),
+          Expanded(
+            child: LoanCard(
+              expand: true,
+              margin: EdgeInsets.zero,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < paragraphs.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 12),
+                      LoanMuted(paragraphs[i], fontSize: 14),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -355,7 +355,7 @@
             <li>结果页密度：Hero 月供、环形图、分段解读、摊还 / 加入对比 / 保存 / 设储蓄。当前结果已在已保存方案里时，不显示「保存方案」。</li>
             <li>多方案对比页：顶部摘要写明总利息最少和月供最低的方案，带上利率、期限和金额（表头仍只显示类型和利率，单行）→ 明细表 → 柱状图（月供/总利息/总成本）；表格含还款方式、首末月供、利息占比、日均利息、类型/首付等；可添加/移除（最多 3）。未满 3 个时，底部列出尚未加入的已保存方案，点按即加入当前对比。无剩余本金折线。</li>
             <li>储蓄：目标 CRUD、存入/取出、进度环。</li>
-            <li>我的：资料、已保存方案、偏好、数据管理、关于。</li>
+            <li>我的：资料、已保存方案、偏好、数据管理、关于我们、隐私协议。</li>
           </ul>
           <h3>本次不呈现</h3>
           <ul>
@@ -417,7 +417,7 @@
                 <tr>
                   <td data-label="页面/视图">我的 · 首页 / 已保存方案</td>
                   <td data-label="页面作用">资料、复看方案、设置。</td>
-                  <td data-label="主要模块与内容">头像昵称；已保存方案卡片（备注或类型、收藏星、可点的「对比中」、本金/利率/期限、月供、收藏/对比/删除）。点「对比中」进入对比页；偏好；数据管理；关于。</td>
+                  <td data-label="主要模块与内容">点头像昵称卡片进入编辑资料（昵称、头像、性别）。已保存方案卡片（备注或类型、收藏星、可点的「对比中」、本金/利率/期限、月供、收藏/对比/删除）。点「对比中」进入对比页。偏好设置只含语言、小数位、货币；另有数据管理、关于我们、隐私协议。</td>
                   <td data-label="示例数据或素材">默认昵称「借款人」。</td>
                   <td data-label="与其他页面的关系">打开 → 结果；多选 → 对比。</td>
                 </tr>
@@ -567,7 +567,7 @@
             <table>
               <thead><tr><th>键</th><th>内容</th></tr></thead>
               <tbody>
-                <tr><td data-label="键"><code>loan-calc:profile</code></td><td data-label="内容">昵称、头像、创建时间。</td></tr>
+                <tr><td data-label="键"><code>loan-calc:profile</code></td><td data-label="内容">昵称、头像、性别（male / female / private）、创建时间。</td></tr>
                 <tr><td data-label="键"><code>loan-calc:settings</code></td><td data-label="内容">货币、小数位、主题偏好。</td></tr>
                 <tr><td data-label="键"><code>loan-calc:calculations</code></td><td data-label="内容">方案数组：id、类型（home/auto/personal）、模式、输入（含车价/首付）、输出、摊还摘要、收藏、createdAt。</td></tr>
                 <tr><td data-label="键"><code>loan-calc:compare-ids</code></td><td data-label="内容">当前对比槽中的 calculation id 列表（最多 3）。</td></tr>

@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/tags.dart';
+import '../state/app_state.dart';
 import '../theme/revolut_theme.dart';
 import 'loan_widgets.dart';
 
 class TagPicker extends StatefulWidget {
-  const TagPicker({super.key, required this.value, required this.onChange, this.label = '标签'});
+  const TagPicker({super.key, required this.value, required this.onChange, this.label});
 
   final List<String> value;
   final ValueChanged<List<String>> onChange;
-  final String label;
+  final String? label;
 
   @override
   State<TagPicker> createState() => _TagPickerState();
@@ -42,6 +44,8 @@ class _TagPickerState extends State<TagPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    String labelOf(String tag) => tagLabel(tag, app.tr);
     final tags = normalizeTagList(widget.value);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -55,7 +59,7 @@ class _TagPickerState extends State<TagPicker> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LoanLabel(widget.label),
+          LoanLabel(widget.label ?? app.tr('tag.label')),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -70,7 +74,7 @@ class _TagPickerState extends State<TagPicker> {
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: active ? Colors.transparent : RevolutColors.divider),
                   ),
-                  child: Text(tag, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: active ? RevolutColors.brandSolid : RevolutColors.textSecondary)),
+                  child: Text(labelOf(tag), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: active ? RevolutColors.brandSolid : RevolutColors.textSecondary)),
                 ),
               );
             }).toList(),
@@ -81,23 +85,23 @@ class _TagPickerState extends State<TagPicker> {
               Expanded(
                 child: LoanInput(
                   controller: _draft,
-                  placeholder: '自定义标签，回车添加',
+                  placeholder: app.tr('tag.custom'),
                   onChanged: (_) {},
                 ),
               ),
               const SizedBox(width: 8),
               SizedBox(
                 height: 44,
-                child: LoanSecondaryButton(label: '添加', onPressed: _addCustom),
+                child: LoanSecondaryButton(label: app.tr('tag.add'), onPressed: _addCustom),
               ),
             ],
           ),
           if (tags.isNotEmpty)
             TagRow(tags: tags, onRemove: (t) => widget.onChange(tags.where((x) => x != t).toList()))
           else
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: LoanMuted('至少选一个标签，便于筛选', fontSize: 12),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: LoanMuted(app.tr('tag.needOne'), fontSize: 12),
             ),
         ],
       ),
@@ -114,6 +118,7 @@ class TagRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (tags.isEmpty) return const SizedBox.shrink();
+    final labelOf = context.watch<AppState>().tr;
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Wrap(
@@ -129,7 +134,7 @@ class TagRow extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(t, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: RevolutColors.brandSolid)),
+                Text(tagLabel(t, labelOf), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: RevolutColors.brandSolid)),
                 if (onRemove != null)
                   GestureDetector(
                     onTap: () => onRemove!(t),
