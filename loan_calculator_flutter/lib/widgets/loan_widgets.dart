@@ -228,7 +228,6 @@ class LoanCard extends StatelessWidget {
     this.margin,
     this.onTap,
     this.backgroundGradient,
-    this.expand = false,
   });
 
   final Widget child;
@@ -238,8 +237,6 @@ class LoanCard extends StatelessWidget {
   final VoidCallback? onTap;
   /// 储蓄「智能提示」等（对应 Web `.loan-savings-insight`）
   final Gradient? backgroundGradient;
-  /// 白底铺满父级剩余高度（关于我们、隐私协议）
-  final bool expand;
 
   /// 与 Web `.loan-savings-insight`：`180deg`，#f5f6ff → 45% 起为 `#fff`（6% brand on white）
   static const Color savingsInsightTop = Color(0xFFF5F6FF);
@@ -263,8 +260,6 @@ class LoanCard extends StatelessWidget {
       shadowColor: Colors.transparent,
       child: Container(
         width: double.infinity,
-        height: expand ? double.infinity : null,
-        alignment: expand ? Alignment.topLeft : null,
         padding: padding ?? EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 4 : 16),
         decoration: BoxDecoration(
           color: backgroundGradient == null ? RevolutColors.surface1 : null,

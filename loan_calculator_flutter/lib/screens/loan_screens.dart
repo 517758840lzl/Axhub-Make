@@ -2475,31 +2475,22 @@ class ProfileTextScreen extends StatelessWidget {
         .map((paragraph) => paragraph.trim())
         .where((paragraph) => paragraph.isNotEmpty)
         .toList();
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LoanTopBar(onBack: () => app.pop(), title: app.tr(titleKey)),
-          Expanded(
-            child: LoanCard(
-              expand: true,
-              margin: EdgeInsets.zero,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < paragraphs.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 12),
-                      LoanMuted(paragraphs[i], fontSize: 14),
-                    ],
-                  ],
-                ),
-              ),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LoanTopBar(onBack: () => app.pop(), title: app.tr(titleKey)),
+        LoanCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < paragraphs.length; i++) ...[
+                if (i > 0) const SizedBox(height: 12),
+                LoanMuted(paragraphs[i], fontSize: 14),
+              ],
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

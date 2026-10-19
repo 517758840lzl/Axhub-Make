@@ -500,9 +500,7 @@ function LoanCalculatorApp() {
       <div className="loan-shell">
         {app.toast ? <div className="loan-toast">{app.toast}</div> : null}
         <main
-          className={
-            page === 'profile-about' || page === 'profile-about-us' ? 'loan-main loan-main--fill' : 'loan-main'
-          }
+          className="loan-main"
           onScroll={() => {
             const el = document.activeElement;
             if (el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
@@ -2704,7 +2702,7 @@ function ProfileTextPage({
 }) {
   const { t } = useApp();
   return (
-    <div className="loan-text-page">
+    <>
       <header className="loan-topbar">
         <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
           <ArrowLeft size={22} strokeWidth={2} aria-hidden />
@@ -2725,7 +2723,7 @@ function ProfileTextPage({
             </p>
           ))}
       </div>
-    </div>
+    </>
   );
 }
 

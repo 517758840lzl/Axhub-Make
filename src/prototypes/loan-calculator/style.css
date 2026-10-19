@@ -49,24 +49,6 @@
   padding: 12px 12px 52px;
 }
 
-.loan-main--fill {
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 12px;
-}
-
-.loan-text-page {
-  flex: 1 0 auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-}
-
-.loan-text-page .loan-card {
-  flex: 1 0 auto;
-  margin-bottom: 0;
-}
-
 .loan-tabbar {
   position: fixed;
   bottom: 0;
