@@ -2,7 +2,7 @@
  * @name 贷款计算器
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Bookmark,
@@ -440,6 +440,7 @@ function LoanCalculatorApp() {
           if (nextLen < 2) app.showToast(t('compare.addedNeedOne'));
           setHashPage('compare', { from: 'profile-saved' });
         }}
+        onLeaveCompare={(id) => app.persistCompareIds(app.compareIds.filter((x) => x !== id))}
         onOpenCompare={() => setHashPage('compare', { from: 'profile-saved' })}
         onGoCalc={() => setPage('calc')}
       />
@@ -1879,12 +1880,18 @@ function SavingsDetail({
   onBack: () => void;
   onUpdate: (g: SavingsGoal) => void;
 }) {
-  const { t } = useApp();
+  const { t, showToast } = useApp();
   const [amount, setAmount] = useState('');
+  const amountRef = useRef<HTMLInputElement>(null);
 
   const addTx = (type: 'deposit' | 'withdraw') => {
     const v = Number(amount);
     if (!v || v <= 0) return;
+    amountRef.current?.blur();
+    if (type === 'withdraw' && v > goal.current) {
+      showToast(t('savings.insufficient'));
+      return;
+    }
     const delta = type === 'deposit' ? v : -v;
     const next = Math.max(0, goal.current + delta);
     const tx = {
@@ -1924,6 +1931,7 @@ function SavingsDetail({
       <div className="loan-card">
         <div className="loan-label">{t('savings.depositWithdraw')}</div>
         <input
+          ref={amountRef}
           className="loan-input"
           inputMode="decimal"
           placeholder={t('savings.amount')}
@@ -2302,6 +2310,7 @@ function SavedList({
   onDelete,
   onToggleFav,
   onCompare,
+  onLeaveCompare,
   onOpenCompare,
   onGoCalc,
 }: {
@@ -2313,6 +2322,7 @@ function SavedList({
   onDelete: (id: string) => void;
   onToggleFav: (id: string) => void;
   onCompare: (id: string) => void;
+  onLeaveCompare: (id: string) => void;
   onOpenCompare: () => void;
   onGoCalc: () => void;
 }) {
@@ -2383,8 +2393,12 @@ function SavedList({
               <button type="button" className="loan-quick-chip" onClick={() => onToggleFav(c.id)}>
                 {c.favorite ? t('saved.unfav') : t('saved.fav')}
               </button>
-              <button type="button" className="loan-quick-chip" onClick={() => onCompare(c.id)}>
-                {t('saved.compare')}
+              <button
+                type="button"
+                className="loan-quick-chip"
+                onClick={() => (compareIds.includes(c.id) ? onLeaveCompare(c.id) : onCompare(c.id))}
+              >
+                {compareIds.includes(c.id) ? t('saved.leaveCompare') : t('saved.compare')}
               </button>
               <button type="button" className="loan-quick-chip" onClick={() => setPendingDeleteId(c.id)}>
                 {t('saved.delete')}

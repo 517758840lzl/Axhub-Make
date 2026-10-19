@@ -150,8 +150,8 @@ class SavedListScreen extends StatelessWidget {
                         },
                       ),
                       LoanQuickChip(
-                        label: app.tr('saved.compare'),
-                        onTap: () => app.addToCompare(c.id),
+                        label: inCompare ? app.tr('saved.leaveCompare') : app.tr('saved.compare'),
+                        onTap: () => inCompare ? app.removeFromCompare(c.id) : app.addToCompare(c.id),
                       ),
                       LoanQuickChip(
                         label: app.tr('saved.delete'),
