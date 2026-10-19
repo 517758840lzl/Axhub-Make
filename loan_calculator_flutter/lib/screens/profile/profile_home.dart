@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../data/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/revolut_theme.dart';
 import '../../widgets/loan_widgets.dart';
@@ -22,7 +23,7 @@ class ProfileHomeScreen extends StatelessWidget {
           child: LoanCard(
             child: Row(
               children: [
-                Text(app.profile.avatar, style: const TextStyle(fontSize: 36)),
+                Text(resolvedAvatar(app.profile.avatar, app.profile.gender), style: const TextStyle(fontSize: 36)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

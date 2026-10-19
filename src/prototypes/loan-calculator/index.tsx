@@ -46,6 +46,7 @@ import {
   translate,
   type TranslateFn,
 } from './lib/i18n';
+import { defaultAvatar, isDefaultAvatar, resolvedAvatar } from './lib/avatar';
 import { defaultTagsForCategory } from './lib/tags';
 import type {
   AppLocale,
@@ -2464,7 +2465,7 @@ function ProfileHome({
         className="loan-card loan-profile-entry"
         onClick={() => setPage('profile-edit')}
       >
-        <div className="loan-profile-avatar">{profile.avatar}</div>
+        <div className="loan-profile-avatar">{resolvedAvatar(profile.avatar, profile.gender ?? 'private')}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 700 }}>
             {displayNickname(profile.nickname, t)}
@@ -2520,8 +2521,8 @@ function ProfileEdit({
   const [nickname, setNickname] = useState(() =>
     isDefaultNickname(profile.nickname) ? t('settings.defaultNick') : profile.nickname,
   );
-  const [avatar, setAvatar] = useState(profile.avatar);
   const [gender, setGender] = useState<'male' | 'female' | 'private'>(profile.gender ?? 'private');
+  const [avatar, setAvatar] = useState(() => resolvedAvatar(profile.avatar, profile.gender ?? 'private'));
 
   return (
     <>
@@ -2553,7 +2554,10 @@ function ProfileEdit({
               key={id}
               type="button"
               data-active={gender === id}
-              onClick={() => setGender(id)}
+              onClick={() => {
+                setGender(id);
+                setAvatar((current) => (isDefaultAvatar(current) ? defaultAvatar(id) : current));
+              }}
             >
               {t(key)}
             </button>
@@ -2567,7 +2571,7 @@ function ProfileEdit({
           onSave({
             ...profile,
             nickname: nickname.trim() || t('settings.defaultNick'),
-            avatar: avatar.trim() || '🧑‍💼',
+            avatar: resolvedAvatar(avatar, gender),
             gender,
           });
           onBack();

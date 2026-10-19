@@ -136,6 +136,7 @@ class LoanInput extends StatelessWidget {
     this.onChanged,
     this.marginBottom,
     this.amountStyle = false,
+    this.emoji = false,
   });
 
   final TextEditingController controller;
@@ -146,6 +147,7 @@ class LoanInput extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final double? marginBottom;
   final bool amountStyle;
+  final bool emoji;
 
   @override
   Widget build(BuildContext context) {
@@ -159,10 +161,10 @@ class LoanInput extends StatelessWidget {
           onChanged: onChanged,
           textAlignVertical: TextAlignVertical.center,
           style: TextStyle(
-            fontSize: amountStyle ? 18 : 16,
-            height: 1.2,
+            fontSize: emoji ? 26 : (amountStyle ? 18 : 16),
+            height: emoji ? 1 : 1.2,
             leadingDistribution: TextLeadingDistribution.even,
-            fontFeatures: const [FontFeature.tabularFigures()],
+            fontFeatures: emoji ? null : const [FontFeature.tabularFigures()],
           ),
           decoration: InputDecoration(
             hintText: placeholder,
@@ -170,7 +172,7 @@ class LoanInput extends StatelessWidget {
             fillColor: RevolutColors.surface2,
             isDense: true,
             // 上下对称，避免数字视觉上偏上
-            contentPadding: EdgeInsets.fromLTRB(14, 14, suffix != null ? 36 : 14, 14),
+            contentPadding: EdgeInsets.fromLTRB(14, emoji ? 8 : 14, suffix != null ? 36 : 14, emoji ? 8 : 14),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: RevolutColors.divider)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

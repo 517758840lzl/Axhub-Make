@@ -372,6 +372,29 @@ class SavingsGoal {
       );
 }
 
+const defaultPrivateAvatar = '🧑‍💼';
+const defaultMaleAvatar = '👨';
+const defaultFemaleAvatar = '👩';
+const legacyDefaultAvatars = ['👱‍♀️'];
+
+String defaultAvatarFor(String gender) => switch (gender) {
+      'male' => defaultMaleAvatar,
+      'female' => defaultFemaleAvatar,
+      _ => defaultPrivateAvatar,
+    };
+
+bool isDefaultAvatar(String avatar) {
+  final value = avatar.trim();
+  return value.isEmpty ||
+      value == defaultPrivateAvatar ||
+      value == defaultMaleAvatar ||
+      value == defaultFemaleAvatar ||
+      legacyDefaultAvatars.contains(value);
+}
+
+String resolvedAvatar(String avatar, String gender) =>
+    isDefaultAvatar(avatar) ? defaultAvatarFor(gender) : avatar.trim();
+
 class UserProfile {
   UserProfile({
     required this.nickname,
