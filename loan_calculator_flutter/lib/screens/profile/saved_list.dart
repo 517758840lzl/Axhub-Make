@@ -1,4 +1,11 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+
+import '../../state/app_state.dart';
+import '../../theme/revolut_theme.dart';
+import '../../widgets/loan_widgets.dart';
+import '../screen_shared.dart';
 
 // --- Saved ---
 
@@ -94,7 +101,7 @@ class SavedListScreen extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                _savedTitle(c.note, c.result, app),
+                                savedTitle(c.note, c.result, app),
                                 style: const TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),

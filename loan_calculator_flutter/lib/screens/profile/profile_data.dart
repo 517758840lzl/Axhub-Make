@@ -1,4 +1,8 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../state/app_state.dart';
+import '../../widgets/loan_widgets.dart';
 
 class ProfileDataScreen extends StatelessWidget {
   const ProfileDataScreen({super.key});

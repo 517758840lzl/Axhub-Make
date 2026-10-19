@@ -1,4 +1,10 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+
+import '../../state/app_state.dart';
+import '../../theme/revolut_theme.dart';
+import '../../widgets/loan_widgets.dart';
 
 class ProfileHomeScreen extends StatelessWidget {
   const ProfileHomeScreen({super.key});

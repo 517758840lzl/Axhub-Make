@@ -1,4 +1,12 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/format.dart';
+import '../../data/models.dart';
+import '../../state/app_state.dart';
+import '../../theme/revolut_theme.dart';
+import '../../widgets/loan_widgets.dart';
+import '../screen_shared.dart';
 
 class SavingsDetailScreen extends StatefulWidget {
   const SavingsDetailScreen({super.key});
@@ -56,7 +64,7 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
       children: [
         LoanTopBar(
           onBack: () => app.pop(),
-          title: _savingsName(goal2.name, app),
+          title: savingsName(goal2.name, app),
         ),
         LoanCard(
           child: Row(

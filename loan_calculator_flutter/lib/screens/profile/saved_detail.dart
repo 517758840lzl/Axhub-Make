@@ -1,4 +1,9 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../state/app_state.dart';
+import '../calc/calc_result.dart';
+import '../screen_shared.dart';
 
 class SavedDetailScreen extends StatelessWidget {
   const SavedDetailScreen({super.key});

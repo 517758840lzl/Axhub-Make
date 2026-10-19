@@ -1,4 +1,12 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/calc.dart';
+import '../../data/models.dart';
+import '../../state/app_state.dart';
+import '../../theme/revolut_theme.dart';
+import '../../widgets/loan_widgets.dart';
 
 class CalcHomeScreen extends StatefulWidget {
   const CalcHomeScreen({super.key});

@@ -1,4 +1,13 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/savings_insights.dart';
+import '../../state/app_state.dart';
+import '../../theme/revolut_theme.dart';
+import '../../widgets/donut_chart.dart';
+import '../../widgets/loan_widgets.dart';
+import '../screen_shared.dart';
 
 // --- Savings ---
 
@@ -90,7 +99,7 @@ class SavingsListScreen extends StatelessWidget {
         ...goals.map((g) {
           final pct = g.target > 0 ? (g.current / g.target * 100).clamp(0, 100) : 0.0;
           final left = (g.target - g.current).clamp(0, double.infinity);
-          final name = _savingsName(g.name, app);
+          final name = savingsName(g.name, app);
           return LoanCard(
             onTap: () => app.push(AppRoute.savingsDetail, id: g.id),
             child: Column(

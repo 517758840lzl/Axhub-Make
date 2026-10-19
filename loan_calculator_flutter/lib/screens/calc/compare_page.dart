@@ -1,4 +1,13 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/calc.dart';
+import '../../data/models.dart';
+import '../../state/app_state.dart';
+import '../../theme/revolut_theme.dart';
+import '../../widgets/compare_bar_chart.dart';
+import '../../widgets/loan_widgets.dart';
+import '../screen_shared.dart';
 
 class CompareScreen extends StatelessWidget {
   const CompareScreen({super.key});
@@ -391,7 +400,7 @@ class _CompareExtras extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _savedTitle(extras[i].note, extras[i].result, app),
+                        savedTitle(extras[i].note, extras[i].result, app),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 2),

@@ -1,4 +1,14 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/calc.dart';
+import '../../data/models.dart';
+import '../../state/app_state.dart';
+import '../../theme/revolut_theme.dart';
+import '../../widgets/donut_chart.dart';
+import '../../widgets/loan_widgets.dart';
+import '../screen_shared.dart';
 
 String _interestShare(CalcResult result) {
   if (result.totalPayment <= 0) return '0';

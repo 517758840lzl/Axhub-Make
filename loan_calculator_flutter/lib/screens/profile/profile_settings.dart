@@ -1,4 +1,11 @@
-part of 'loan_screens.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/currencies.dart';
+import '../../data/i18n.dart';
+import '../../state/app_state.dart';
+import '../../widgets/currency_picker.dart';
+import '../../widgets/loan_widgets.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   const ProfileSettingsScreen({super.key});
