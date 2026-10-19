@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/format.dart';
@@ -39,6 +40,12 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
     void addTx(String type) {
       final v = double.tryParse(_amount.text);
       if (v == null || v <= 0) return;
+      FocusManager.instance.primaryFocus?.unfocus();
+      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+      if (type == 'withdraw' && v > goal2.current) {
+        app.showToast(app.tr('savings.insufficient'));
+        return;
+      }
       final delta = type == 'deposit' ? v : -v;
       final next = (goal2.current + delta).clamp(0, double.infinity);
       final tx = SavingsTransaction(
