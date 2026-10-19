@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'data/i18n.dart';
 import 'screens/loan_screens.dart';
 import 'screens/splash_screen.dart';
 import 'state/app_state.dart';
