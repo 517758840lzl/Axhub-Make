@@ -96,14 +96,19 @@ class AppState extends ChangeNotifier {
   String displayNickname() => _profile.displayNickname(locale);
 
   Future<void> _init() async {
-    await _storage.seedIfNeeded();
-    _profile = await _storage.getProfile();
-    _settings = await _storage.getSettings();
-    _calculations = await _storage.getCalculations();
-    _ledgerEntries = await _storage.getLedgerEntries();
-    _savingsGoals = await _storage.getSavingsGoals();
-    _ready = true;
-    notifyListeners();
+    try {
+      await _storage.seedIfNeeded();
+      _profile = await _storage.getProfile();
+      _settings = await _storage.getSettings();
+      _calculations = await _storage.getCalculations();
+      _ledgerEntries = await _storage.getLedgerEntries();
+      _savingsGoals = await _storage.getSavingsGoals();
+    } catch (error, stack) {
+      debugPrint('local store open failed: $error\n$stack');
+    } finally {
+      _ready = true;
+      notifyListeners();
+    }
   }
 
   void setPendingResult(CalcResult? r, {String? savedId}) {
