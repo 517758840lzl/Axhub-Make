@@ -1,5 +1,5 @@
 /**
- * @name 贷款计算器
+ * @name LoanCalcMate
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -47,6 +47,7 @@ import {
   type TranslateFn,
 } from './lib/i18n';
 import { defaultAvatar, isDefaultAvatar, resolvedAvatar } from './lib/avatar';
+import { privacyPolicyUrl } from './lib/privacy';
 import { defaultTagsForCategory } from './lib/tags';
 import type {
   AppLocale,
@@ -484,13 +485,7 @@ function LoanCalculatorApp() {
       />
     );
   } else if (page === 'profile-about') {
-    content = (
-      <ProfileTextPage
-        titleKey="about.title"
-        bodyKey="about.body"
-        onBack={() => setPage('profile')}
-      />
-    );
+    content = <ProfilePrivacyPage onBack={() => setPage('profile')} />;
   } else {
     content = <RedirectCalc />;
   }
@@ -2709,13 +2704,28 @@ function ProfileData({
   );
 }
 
+function ProfilePrivacyPage({ onBack }: { onBack: () => void }) {
+  const { t } = useApp();
+  return (
+    <div className="loan-privacy">
+      <header className="loan-topbar">
+        <button type="button" className="loan-back" onClick={onBack} aria-label={t('nav.back')}>
+          <ArrowLeft size={22} strokeWidth={2} aria-hidden />
+        </button>
+        <h1 className="loan-title">{t('about.title')}</h1>
+      </header>
+      <iframe className="loan-privacy-frame" title={t('about.title')} src={privacyPolicyUrl} />
+    </div>
+  );
+}
+
 function ProfileTextPage({
   titleKey,
   bodyKey,
   onBack,
 }: {
-  titleKey: 'aboutUs.title' | 'about.title';
-  bodyKey: 'aboutUs.body' | 'about.body';
+  titleKey: 'aboutUs.title';
+  bodyKey: 'aboutUs.body';
   onBack: () => void;
 }) {
   const { t } = useApp();

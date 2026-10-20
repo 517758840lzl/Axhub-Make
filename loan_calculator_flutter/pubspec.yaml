@@ -41,6 +41,7 @@ dependencies:
   share_plus: ^10.1.4
   uuid: ^4.5.1
   lucide_icons_flutter: ^3.1.20
+  webview_flutter: ^4.13.0
 
 dev_dependencies:
   flutter_test:
@@ -58,9 +59,10 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: assets/branding/app_icon.png
-  adaptive_icon_background: "#6B5BFF"
-  adaptive_icon_foreground: assets/branding/app_icon.png
+  adaptive_icon_background: "#D2C6FB"
+  adaptive_icon_foreground: assets/branding/app_icon_foreground.png
   remove_alpha_ios: true
+  background_color_ios: "#D2C6FB"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

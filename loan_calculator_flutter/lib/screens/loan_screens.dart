@@ -5,6 +5,7 @@ export 'calc/compare_page.dart';
 export 'profile/profile_data.dart';
 export 'profile/profile_edit.dart';
 export 'profile/profile_home.dart';
+export 'profile/profile_privacy.dart';
 export 'profile/profile_settings.dart';
 export 'profile/profile_text.dart';
 export 'profile/saved_detail.dart';

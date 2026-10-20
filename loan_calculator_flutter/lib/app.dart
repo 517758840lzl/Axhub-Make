@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'data/i18n.dart';
 import 'screens/loan_screens.dart';
 import 'screens/splash_screen.dart';
 import 'state/app_state.dart';
@@ -20,7 +21,7 @@ class LoanCalculatorApp extends StatelessWidget {
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: revolutSystemUi,
         child: MaterialApp(
-          title: '贷款计算器',
+          title: appTitle,
           debugShowCheckedModeBanner: false,
           theme: buildRevolutTheme(),
           builder: (context, child) {
@@ -126,7 +127,7 @@ class LoanRoot extends StatelessWidget {
           scrollResetKey: ValueKey(
             '${app.route.name}|${app.detailId ?? ''}|${app.savingsPrefill ?? ''}',
           ),
-          expandBody: app.route == AppRoute.amortization,
+          expandBody: app.route == AppRoute.amortization || app.route == AppRoute.profileAbout,
           body: _screenForRoute(app),
         );
       },
@@ -160,7 +161,7 @@ class LoanRoot extends StatelessWidget {
       case AppRoute.profileAboutUs:
         return const ProfileTextScreen(titleKey: 'aboutUs.title', bodyKey: 'aboutUs.body');
       case AppRoute.profileAbout:
-        return const ProfileTextScreen(titleKey: 'about.title', bodyKey: 'about.body');
+        return const ProfilePrivacyScreen();
       case AppRoute.savedList:
         return const SavedListScreen();
       case AppRoute.savedDetail:

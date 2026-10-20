@@ -1469,3 +1469,25 @@ button.loan-profile-entry .loan-profile-avatar {
   white-space: normal;
 }
 
+.loan-main:has(.loan-privacy) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.loan-privacy {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.loan-privacy-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 16px;
+  background: var(--rev-surface-1);
+}
+
