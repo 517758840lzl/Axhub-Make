@@ -46,6 +46,7 @@ abstract final class RevolutColors {
     color: const Color(0x475B6BFF),
     blurRadius: 24,
     offset: const Offset(0, 8),
+    blurStyle: BlurStyle.outer,
   );
 }
 

@@ -391,6 +391,11 @@ function LoanCalculatorApp() {
             app.savingsGoals.map((x) => (x.id === g.id ? g : x)),
           );
         }}
+        onDelete={() => {
+          app.persistSavings(app.savingsGoals.filter((x) => x.id !== goal.id));
+          app.showToast(t('saved.deleted'));
+          setPage('savings');
+        }}
       />
     ) : (
       <EmptyRedirect message={t('savings.missing')} onGo={() => setPage('savings')} />
@@ -1870,14 +1875,17 @@ function SavingsDetail({
   money,
   onBack,
   onUpdate,
+  onDelete,
 }: {
   goal: SavingsGoal;
   money: (n: number) => string;
   onBack: () => void;
   onUpdate: (g: SavingsGoal) => void;
+  onDelete: () => void;
 }) {
   const { t, showToast } = useApp();
   const [amount, setAmount] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
 
   const addTx = (type: 'deposit' | 'withdraw') => {
@@ -1962,6 +1970,36 @@ function SavingsDetail({
           ))
         )}
       </div>
+      <button type="button" className="loan-btn-secondary" onClick={() => setConfirmDelete(true)}>
+        {t('saved.delete')}
+      </button>
+      {confirmDelete ? (
+        <div className="loan-dialog-backdrop" role="presentation" onClick={() => setConfirmDelete(false)}>
+          <div
+            className="loan-dialog"
+            role="dialog"
+            aria-labelledby="savings-delete-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="savings-delete-title">{t('savings.deleteTitle')}</h2>
+            <p>{t('savings.deleteConfirm')}</p>
+            <div className="loan-dialog-actions">
+              <button type="button" onClick={() => setConfirmDelete(false)}>
+                {t('common.back')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmDelete(false);
+                  onDelete();
+                }}
+              >
+                {t('saved.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

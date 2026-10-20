@@ -357,12 +357,13 @@ class SavingsGoal {
       );
 
   SavingsGoal copyWith({
+    String? name,
     double? current,
     List<SavingsTransaction>? transactions,
   }) =>
       SavingsGoal(
         id: id,
-        name: name,
+        name: name ?? this.name,
         target: target,
         current: current ?? this.current,
         deadline: deadline,

@@ -228,7 +228,6 @@
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--rev-shadow-cta);
 }
 
 .loan-btn-primary:active {

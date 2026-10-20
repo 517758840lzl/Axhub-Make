@@ -168,6 +168,8 @@ const zhCN = {
   'savings.todo': '待存',
   'savings.progress': '完成度',
   'savings.created': '目标已创建',
+  'savings.deleteTitle': '删除储蓄目标',
+  'savings.deleteConfirm': '确定删除这个储蓄目标？',
   'savings.missing': '目标不存在',
   'savings.eta.done': '已达成目标',
   'savings.eta.start': '还差 {amount}，存入后可估算达标时间',
@@ -274,6 +276,7 @@ const zhCN = {
   'tag.other': '其他',
   'seed.mortgageNote': '示例房贷方案',
   'seed.autoNote': '示例车贷方案',
+  'seed.savingsName': '示例月供缓冲金',
 } as const;
 
 const en: Record<MessageKey, string> = {
@@ -432,6 +435,8 @@ const en: Record<MessageKey, string> = {
   'savings.todo': 'Left',
   'savings.progress': 'Progress',
   'savings.created': 'Goal created',
+  'savings.deleteTitle': 'Delete savings goal',
+  'savings.deleteConfirm': 'Delete this savings goal?',
   'savings.missing': 'Goal not found',
   'savings.eta.done': 'Goal reached',
   'savings.eta.start': '{amount} left — deposit to estimate finish',
@@ -540,6 +545,7 @@ const en: Record<MessageKey, string> = {
   'tag.other': 'Other',
   'seed.mortgageNote': 'Sample mortgage plan',
   'seed.autoNote': 'Sample auto plan',
+  'seed.savingsName': 'Sample payment buffer',
 };
 
 const es: Record<MessageKey, string> = {
@@ -698,6 +704,8 @@ const es: Record<MessageKey, string> = {
   'savings.todo': 'Falta',
   'savings.progress': 'Progreso',
   'savings.created': 'Meta creada',
+  'savings.deleteTitle': 'Eliminar meta de ahorro',
+  'savings.deleteConfirm': '¿Eliminar esta meta de ahorro?',
   'savings.missing': 'Meta no encontrada',
   'savings.eta.done': 'Meta alcanzada',
   'savings.eta.start': 'Faltan {amount}; ingresa para estimar',
@@ -806,6 +814,7 @@ const es: Record<MessageKey, string> = {
   'tag.other': 'Otro',
   'seed.mortgageNote': 'Plan de hipoteca de ejemplo',
   'seed.autoNote': 'Plan de auto de ejemplo',
+  'seed.savingsName': 'Colchón de cuota de ejemplo',
 };
 
 const TABLES: Record<AppLocale, Record<MessageKey, string>> = {
@@ -877,18 +886,30 @@ export function displayNickname(nickname: string, t: TranslateFn): string {
   return isDefaultNickname(nickname) ? t('settings.defaultNick') : nickname;
 }
 
-/** 种子/默认储蓄目标名，随界面语言展示 */
+/** 用户新建时的默认名，随界面语言展示 */
 export const DEFAULT_SAVINGS_NAMES = [
   '月供缓冲金',
   'Payment buffer',
   'Colchón de cuota',
 ] as const;
 
+/** 首次写入的那条示例目标，名称带「示例」 */
+export const EXAMPLE_SAVINGS_NAMES = [
+  '示例月供缓冲金',
+  'Sample payment buffer',
+  'Colchón de cuota de ejemplo',
+] as const;
+
 export function isDefaultSavingsName(name: string): boolean {
   return (DEFAULT_SAVINGS_NAMES as readonly string[]).includes(name.trim());
 }
 
+export function isExampleSavingsName(name: string): boolean {
+  return (EXAMPLE_SAVINGS_NAMES as readonly string[]).includes(name.trim());
+}
+
 export function displaySavingsName(name: string, t: TranslateFn): string {
+  if (isExampleSavingsName(name)) return t('seed.savingsName');
   return isDefaultSavingsName(name) ? t('savings.defaultName') : name;
 }
 

@@ -135,6 +135,36 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
             ],
           ),
         ),
+        LoanSecondaryButton(
+          label: app.tr('saved.delete'),
+          marginTop: 4,
+          onPressed: () async {
+            final id = goal2.id;
+            final ok = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(app.tr('savings.deleteTitle')),
+                content: Text(app.tr('savings.deleteConfirm')),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: Text(app.tr('common.back')),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: Text(app.tr('saved.delete')),
+                  ),
+                ],
+              ),
+            );
+            if (ok != true || !context.mounted) return;
+            final latest = context.read<AppState>();
+            final next = latest.savingsGoals.where((x) => x.id != id).toList();
+            latest.pop();
+            await latest.persistSavings(next);
+            latest.showToast(latest.tr('saved.deleted'));
+          },
+        ),
       ],
     );
   }

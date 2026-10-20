@@ -167,6 +167,8 @@ const _zh = <String, String>{
   'savings.todo': '待存',
   'savings.progress': '完成度',
   'savings.created': '目标已创建',
+  'savings.deleteTitle': '删除储蓄目标',
+  'savings.deleteConfirm': '确定删除这个储蓄目标？',
   'savings.missing': '目标不存在',
   'savings.eta.done': '已达成目标',
   'savings.eta.start': '还差 {amount}，存入后可估算达标时间',
@@ -265,6 +267,7 @@ const _zh = <String, String>{
   'tag.other': '其他',
   'seed.mortgageNote': '示例房贷方案',
   'seed.autoNote': '示例车贷方案',
+  'seed.savingsName': '示例月供缓冲金',
 };
 
 const _en = <String, String>{
@@ -411,6 +414,8 @@ const _en = <String, String>{
   'savings.todo': 'Left',
   'savings.progress': 'Progress',
   'savings.created': 'Goal created',
+  'savings.deleteTitle': 'Delete savings goal',
+  'savings.deleteConfirm': 'Delete this savings goal?',
   'savings.missing': 'Goal not found',
   'savings.eta.done': 'Goal reached',
   'savings.eta.start': '{amount} left — deposit to estimate finish',
@@ -509,6 +514,7 @@ const _en = <String, String>{
   'tag.other': 'Other',
   'seed.mortgageNote': 'Sample mortgage plan',
   'seed.autoNote': 'Sample auto plan',
+  'seed.savingsName': 'Sample payment buffer',
 };
 
 const _es = <String, String>{
@@ -655,6 +661,8 @@ const _es = <String, String>{
   'savings.todo': 'Falta',
   'savings.progress': 'Progreso',
   'savings.created': 'Meta creada',
+  'savings.deleteTitle': 'Eliminar meta de ahorro',
+  'savings.deleteConfirm': '¿Eliminar esta meta de ahorro?',
   'savings.missing': 'Meta no encontrada',
   'savings.eta.done': 'Meta alcanzada',
   'savings.eta.start': 'Faltan {amount}; ingresa para estimar',
@@ -753,6 +761,7 @@ const _es = <String, String>{
   'tag.other': 'Otro',
   'seed.mortgageNote': 'Plan de hipoteca de ejemplo',
   'seed.autoNote': 'Plan de auto de ejemplo',
+  'seed.savingsName': 'Colchón de cuota de ejemplo',
 };
 
 String t(AppLocale locale, String key, [Map<String, String>? params]) {
@@ -776,6 +785,12 @@ const defaultSavingsNames = [
   'Colchón de cuota',
 ];
 
+const exampleSavingsNames = [
+  '示例月供缓冲金',
+  'Sample payment buffer',
+  'Colchón de cuota de ejemplo',
+];
+
 const _knownCopy = <String, String>{
   '示例房贷方案': 'seed.mortgageNote',
   '示例车贷方案': 'seed.autoNote',
@@ -797,6 +812,7 @@ String displayKnownCopy(AppLocale locale, String text) {
 
 String displaySavingsName(AppLocale locale, String name) {
   final n = name.trim();
+  if (exampleSavingsNames.contains(n)) return t(locale, 'seed.savingsName');
   if (n.isEmpty || defaultSavingsNames.contains(n)) return t(locale, 'savings.defaultName');
   return n;
 }

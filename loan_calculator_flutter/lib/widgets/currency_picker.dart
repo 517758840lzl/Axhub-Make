@@ -16,8 +16,6 @@ class CurrencyPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final active = getCurrency(currencyCode);
-    final activeName = app.tr('currency.${active.code}');
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(compact ? 14 : 14),
@@ -35,17 +33,15 @@ class CurrencyPicker extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 LoanLabel(app.tr('currency.label')),
-                LoanChip(app.tr('currency.current', {'symbol': active.symbol, 'name': activeName})),
               ],
             ),
           if (!compact) const SizedBox(height: 16),
           _CurrencyGrid(
             columns: compact ? 6 : 4,
             spacing: compact ? 6 : 8,
-            options: currencyOptions,
+            options: currencyOptions.where((c) => c.code != 'CNY').toList(),
             selectedCode: currencyCode,
             compact: compact,
-            labelFor: (code) => app.tr('currency.$code'),
             onChange: onChange,
           ),
         ],
@@ -61,7 +57,6 @@ class _CurrencyGrid extends StatelessWidget {
     required this.options,
     required this.selectedCode,
     required this.compact,
-    required this.labelFor,
     required this.onChange,
   });
 
@@ -70,7 +65,6 @@ class _CurrencyGrid extends StatelessWidget {
   final List<CurrencyOption> options;
   final String selectedCode;
   final bool compact;
-  final String Function(String code) labelFor;
   final ValueChanged<String> onChange;
 
   @override
@@ -92,7 +86,6 @@ class _CurrencyGrid extends StatelessWidget {
                         option: slice[j],
                         selected: slice[j].code == selectedCode,
                         compact: compact,
-                        label: labelFor(slice[j].code),
                         onTap: () => onChange(slice[j].code),
                       )
                     : const SizedBox.shrink(),
@@ -111,14 +104,12 @@ class _CurrencyTile extends StatelessWidget {
     required this.option,
     required this.selected,
     required this.compact,
-    required this.label,
     required this.onTap,
   });
 
   final CurrencyOption option;
   final bool selected;
   final bool compact;
-  final String label;
   final VoidCallback onTap;
 
   @override
@@ -139,17 +130,26 @@ class _CurrencyTile extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(option.symbol, style: const TextStyle(fontSize: 18, height: 1.1, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 2),
-            Text(option.code, style: const TextStyle(fontSize: 10, height: 1.1, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
-            if (!compact) ...[
-              const SizedBox(height: 1),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 10, height: 1.2, color: RevolutColors.textSecondary),
+            Text(
+              option.symbol,
+              style: TextStyle(
+                fontSize: 18,
+                height: 1.1,
+                fontWeight: FontWeight.w700,
+                color: selected ? RevolutColors.brandSolid : RevolutColors.textSecondary,
               ),
-            ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              option.code,
+              style: TextStyle(
+                fontSize: 10,
+                height: 1.1,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+                color: selected ? RevolutColors.brandSolid : RevolutColors.textSecondary,
+              ),
+            ),
           ],
         ),
       ),

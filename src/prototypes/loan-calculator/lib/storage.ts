@@ -1,7 +1,7 @@
 import { computeLoan } from './calc';
 import { resolveCurrencyCode } from './currencies';
 import { defaultTagsForCategory, normalizeTagList } from './tags';
-import { isAppLocale } from './i18n';
+import { isAppLocale, isDefaultSavingsName } from './i18n';
 import type {
   AppMeta,
   AppSettings,
@@ -148,6 +148,17 @@ export function exportAllData(): string {
   );
 }
 
+function relabelExampleSavings() {
+  const goals = getSavingsGoals();
+  let changed = false;
+  const next = goals.map((g) => {
+    if (g.id !== 'seed-goal-1' || !isDefaultSavingsName(g.name)) return g;
+    changed = true;
+    return { ...g, name: '示例月供缓冲金' };
+  });
+  if (changed) saveSavingsGoals(next);
+}
+
 export function seedIfNeeded() {
   const meta = getMeta();
   if (meta.seeded) {
@@ -184,6 +195,7 @@ export function seedIfNeeded() {
       }
       setMeta({ ...meta, schemaVersion: 2 });
     }
+    relabelExampleSavings();
     return;
   }
 
@@ -231,7 +243,7 @@ export function seedIfNeeded() {
   saveSavingsGoals([
     {
       id: 'seed-goal-1',
-      name: '月供缓冲金',
+      name: '示例月供缓冲金',
       target: 15000,
       current: 5200,
       deadline: null,

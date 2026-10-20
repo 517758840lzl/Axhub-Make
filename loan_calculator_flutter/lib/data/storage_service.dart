@@ -126,8 +126,24 @@ class StorageService {
     });
   }
 
+  Future<void> relabelExampleSavings() async {
+    const storedName = '示例月供缓冲金';
+    const legacyNames = {'月供缓冲金', 'Payment buffer', 'Colchón de cuota'};
+    final goals = await getSavingsGoals();
+    var changed = false;
+    final next = goals.map((g) {
+      if (g.id != 'seed-goal-1' || !legacyNames.contains(g.name)) return g;
+      changed = true;
+      return g.copyWith(name: storedName);
+    }).toList();
+    if (changed) await saveSavingsGoals(next);
+  }
+
   Future<void> seedIfNeeded() async {
-    if (await getSeeded()) return;
+    if (await getSeeded()) {
+      await relabelExampleSavings();
+      return;
+    }
     final sample = computeLoan(CalcInput(
       principal: 1000000,
       annualRatePercent: 4.2,
@@ -149,7 +165,7 @@ class StorageService {
     await saveSavingsGoals([
       SavingsGoal(
         id: 'seed-goal-1',
-        name: '月供缓冲金',
+        name: '示例月供缓冲金',
         target: 15000,
         current: 5200,
         deadline: null,

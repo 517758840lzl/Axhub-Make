@@ -1,6 +1,6 @@
 import React from 'react';
-import { CURRENCY_OPTIONS, getCurrency } from '../lib/currencies';
-import { currencyNameKey, type TranslateFn } from '../lib/i18n';
+import { CURRENCY_OPTIONS } from '../lib/currencies';
+import { type TranslateFn } from '../lib/i18n';
 
 type CurrencyPickerProps = {
   currencyCode: string;
@@ -15,10 +15,6 @@ export function CurrencyPicker({
   t,
   compact,
 }: CurrencyPickerProps) {
-  const active = getCurrency(currencyCode);
-  const activeNameKey = currencyNameKey(active.code);
-  const activeName = activeNameKey ? t(activeNameKey) : active.name;
-
   return (
     <div
       className={
@@ -32,34 +28,23 @@ export function CurrencyPicker({
           <span className="loan-label" style={{ margin: 0 }}>
             {t('currency.label')}
           </span>
-          <span className="loan-chip">
-            {t('currency.current', { symbol: active.symbol, name: activeName })}
-          </span>
         </div>
       ) : null}
       <div className="loan-currency-grid" role="listbox" aria-label={t('currency.pick')}>
-        {CURRENCY_OPTIONS.map((c) => {
-          const nameKey = currencyNameKey(c.code);
-          return (
-            <button
-              key={c.code}
-              type="button"
-              role="option"
-              aria-selected={c.code === currencyCode}
-              className="loan-currency-option"
-              data-active={c.code === currencyCode}
-              onClick={() => onChange(c.code)}
-            >
-              <span className="loan-currency-option-symbol">{c.symbol}</span>
-              <span className="loan-currency-option-code">{c.code}</span>
-              {!compact ? (
-                <span className="loan-currency-option-name">
-                  {nameKey ? t(nameKey) : c.name}
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
+        {CURRENCY_OPTIONS.filter((c) => c.code !== 'CNY').map((c) => (
+          <button
+            key={c.code}
+            type="button"
+            role="option"
+            aria-selected={c.code === currencyCode}
+            className="loan-currency-option"
+            data-active={c.code === currencyCode}
+            onClick={() => onChange(c.code)}
+          >
+            <span className="loan-currency-option-symbol">{c.symbol}</span>
+            <span className="loan-currency-option-code">{c.code}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

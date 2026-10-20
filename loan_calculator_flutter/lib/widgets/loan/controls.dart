@@ -72,18 +72,20 @@ class LoanPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const radius = BorderRadius.all(Radius.circular(16));
     final btn = Material(
       color: Colors.transparent,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(borderRadius: radius),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
+        customBorder: const RoundedRectangleBorder(borderRadius: radius),
         child: Ink(
           height: 52,
-          decoration: BoxDecoration(
-            gradient: RevolutColors.gradient,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [RevolutColors.ctaShadow],
-          ),
+          decoration: const BoxDecoration(gradient: RevolutColors.gradient),
           child: Center(
             child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
           ),
@@ -112,6 +114,7 @@ class LoanSecondaryButton extends StatelessWidget {
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           foregroundColor: RevolutColors.text,
+          backgroundColor: RevolutColors.surface1,
           side: const BorderSide(color: RevolutColors.divider),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
