@@ -1,0 +1,79 @@
+# iOS 签名打包 ipa，完成后用 App Store Connect API（p8）上传。
+# 手动触发。仓库 Secrets：
+# IOS_DIST_P12_BASE64、IOS_DIST_P12_PASSWORD、IOS_PROVISION_PROFILE_BASE64、
+# IOS_TEAM_ID、IOS_PROVISIONING_PROFILE_NAME、
+# APPSTORE_ISSUER_ID、APPSTORE_KEY_ID、APPSTORE_AUTH_KEY_BASE64
+name: Build iOS
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: build-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.47.3"
+  APP_DIR: loan_calculator_flutter
+
+jobs:
+  ios:
+    name: iOS (signed ipa)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Prepare project (CI)
+        run: bash .github/scripts/ci_prepare.sh
+
+      - name: Import signing certificate and profile
+        env:
+          IOS_DIST_P12_BASE64: ${{ secrets.IOS_DIST_P12_BASE64 }}
+          IOS_DIST_P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+        run: bash .github/scripts/ios_ci_sign.sh
+
+      - name: Pub get
+        working-directory: loan_calculator_flutter
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: loan_calculator_flutter
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: CocoaPods
+        working-directory: loan_calculator_flutter/ios
+        run: pod install
+
+      # 不用 flutter build ipa：它会把 xcodebuild 输出攒到结束才刷出来，并带 -allowProvisioningUpdates，CI 上容易干等半小时。
+      - name: Archive and export ipa
+        timeout-minutes: 85
+        env:
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+        run: bash .github/scripts/ios_ci_archive.sh
+
+      - name: Upload ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-ipa
+          path: loan_calculator_flutter/build/ios/ipa/*.ipa
+          if-no-files-found: error
+
+      - name: Upload to App Store Connect
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_AUTH_KEY_BASE64: ${{ secrets.APPSTORE_AUTH_KEY_BASE64 }}
+        run: bash .github/scripts/ios_upload_testflight.sh
