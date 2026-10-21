@@ -9,7 +9,6 @@ export const APP_LOCALES: {
   id: AppLocale;
   nativeLabel: string;
 }[] = [
-  { id: 'zh-CN', nativeLabel: '简体中文' },
   { id: 'en', nativeLabel: 'English' },
   { id: 'es', nativeLabel: 'Español' },
 ];
@@ -34,8 +33,8 @@ const zhCN = {
   'dual.combinedFirst': '合计首月',
   'dual.partBreakdown': '分笔明细',
   'dual.insight': '两笔合计月供约 {monthly}，总利息约 {interest}，总成本约 {total}。',
-  'dual.params': '组合贷参数',
-  'home.subtitle': '房贷 · 车贷 · 消费贷 · 组合贷 · 对比',
+  'dual.params': '贷款信息',
+  'home.subtitle': '车贷 · 房贷 · 消费贷 · 组合贷 · 对比',
 
   'mode.equalPayment': '等额本息',
   'mode.equalPrincipal': '等额本金',
@@ -45,8 +44,8 @@ const zhCN = {
   'home.badge.saved': '已存 {count} 条',
   'home.loanType': '贷款类型',
   'home.repayMode': '还款方式',
-  'home.params': '贷款参数',
-  'home.paramsAuto': '车贷参数',
+  'home.params': '贷款信息',
+  'home.paramsAuto': '贷款信息',
   'home.preview': '实时摘要 · {mode}',
   'home.previewDown': ' · 首付 {pct}%',
   'home.totalInterest': '总利息',
@@ -56,12 +55,15 @@ const zhCN = {
   'home.downPct': '首付比例',
   'home.downAmount': '首付金额',
   'home.loanAmount': '贷款金额',
-  'home.loanHint': '默认 = 车价 − 首付；可手动改贷款额',
   'home.rate': '年利率',
   'home.term': '贷款期限',
   'home.year': '年',
   'home.month': '月',
   'home.yearsN': '{n} 年',
+  'home.monthsN': '{n} 个月',
+  'home.termByMonth': '按月',
+  'home.termByYear': '按年',
+  'home.termCustom': '自定义',
   'home.wan': '{n} 万',
   'home.wanWithUnit': '{n} 万 {symbol}',
   'home.million': '{n} 百万',
@@ -81,9 +83,9 @@ const zhCN = {
   'home.feature.amort': '摊还明细',
   'home.feature.compare': '方案对比',
   'home.cta': '开始计算',
-  'home.disclaimer': '试算结果仅供参考，不构成任何放贷承诺',
+  'home.disclaimer': '试算结果仅供参考',
   'home.unit.yuan': '元',
-  'home.fillFirst': '请先填完整贷款参数',
+  'home.fillFirst': '请先把贷款信息填完整',
   'home.ratePositive': '利率必须大于0',
   'home.downOverPrice': '首付金额不能超过车辆价格',
   'home.loanOverPrice': '贷款额不能超过车辆价格',
@@ -178,7 +180,9 @@ const zhCN = {
   'savings.insightsFor': '{name} · 提示',
   'savings.create': '新建',
   'savings.name': '名称',
+  'savings.namePh': '请输入名称',
   'savings.target': '目标金额',
+  'savings.amountPh': '请输入目标金额',
   'savings.createCta': '创建',
   'savings.defaultName': '月供缓冲金',
   'savings.depositWithdraw': '存入 / 取出',
@@ -270,7 +274,7 @@ const zhCN = {
 
   'aboutUs.title': '关于我们',
   'aboutUs.body':
-    `${appTitle}致力于服务于准备借款的用户，打造可核对的还款测算与可对照的方案比较。录入金额、年利率与期限，即可查看月供、利息总额与还款总额，以便在正式申请之前判断支出是否可控。\n\n测算覆盖房贷、车贷、消费贷与组合贷。组合贷将两笔贷款并列展示，分别列示本金、利率与月供，并给出合计结果。车贷可根据车价与首付计算实际贷款金额。还款方式包括等额本息与等额本金：等额本息各期金额固定，等额本金前期月供较高，利息总额通常更低。\n\n摊还明细逐期列示本金、利息与剩余本金。方案对比最多纳入 3 个方案，纳入 2 个即可对照总利息与月供。储蓄目标可按约 3 倍月供预填缓冲金额，并记录此后的存入与取出。\n\n界面提供简体中文、English 与 Español。金额可按 12 种货币符号展示；切换货币只改变符号与小数位，不按汇率折算已录入的金额。方案可保存在「我的」中再次打开，也可加入收藏。`,
+    `${appTitle}致力于服务于准备借款的用户，打造可核对的还款测算与可对照的方案比较。录入金额、年利率与期限，即可查看月供、利息总额与还款总额，以便在正式申请之前判断支出是否可控。\n\n测算覆盖房贷、车贷、消费贷与组合贷。组合贷将两笔贷款并列展示，分别列示本金、利率与月供，并给出合计结果。车贷可根据车价与首付计算实际贷款金额。还款方式包括等额本息与等额本金：等额本息各期金额固定，等额本金前期月供较高，利息总额通常更低。\n\n摊还明细逐期列示本金、利息与剩余本金。方案对比最多纳入 3 个方案，纳入 2 个即可对照总利息与月供。储蓄目标可按约 3 倍月供预填缓冲金额，并记录此后的存入与取出。\n\n界面提供 English 与 Español。金额可按 多种货币符号展示；切换货币只改变符号与小数位，不按汇率折算已录入的金额。方案可保存在「我的」中再次打开，也可加入收藏。`,
   'about.title': '隐私协议',
 
   'toast.savedProfile': '已保存到「我的」',
@@ -322,19 +326,19 @@ const en: Record<MessageKey, string> = {
   'dual.partBreakdown': 'Per-loan breakdown',
   'dual.insight':
     'Combined monthly about {monthly}; total interest about {interest}; total cost about {total}.',
-  'dual.params': 'Dual loan details',
+  'dual.params': 'Loan details',
 
   'mode.equalPayment': 'Equal payment',
   'mode.equalPrincipal': 'Equal principal',
 
   'home.title': appTitle,
-  'home.subtitle': 'Home · Auto · Personal · Dual · Compare',
+  'home.subtitle': 'Auto · Home · Personal · Dual · Compare',
   'home.badge.local': 'Stored on device',
   'home.badge.saved': '{count} saved',
   'home.loanType': 'Loan type',
   'home.repayMode': 'Repayment',
   'home.params': 'Loan details',
-  'home.paramsAuto': 'Auto loan details',
+  'home.paramsAuto': 'Loan details',
   'home.preview': 'Live preview · {mode}',
   'home.previewDown': ' · Down {pct}%',
   'home.totalInterest': 'Total interest',
@@ -344,12 +348,15 @@ const en: Record<MessageKey, string> = {
   'home.downPct': 'Down payment %',
   'home.downAmount': 'Down payment',
   'home.loanAmount': 'Loan amount',
-  'home.loanHint': 'Default = price − down; you can edit the loan amount',
   'home.rate': 'Annual rate',
   'home.term': 'Term',
   'home.year': 'yr',
   'home.month': 'mo',
   'home.yearsN': '{n} yr',
+  'home.monthsN': '{n} mo',
+  'home.termByMonth': 'By month',
+  'home.termByYear': 'By year',
+  'home.termCustom': 'Custom',
   'home.wan': '{n}0k',
   'home.wanWithUnit': '{symbol}{n}0k',
   'home.million': '{n}M',
@@ -357,7 +364,7 @@ const en: Record<MessageKey, string> = {
   'home.feature.amort': 'Schedule',
   'home.feature.compare': 'Compare',
   'home.cta': 'Calculate',
-  'home.disclaimer': 'Estimates only — not a lending offer',
+  'home.disclaimer': 'Estimates only',
   'home.unit.yuan': '',
   'home.fillFirst': 'Please complete the loan fields first',
   'home.ratePositive': 'Interest rate must be greater than 0',
@@ -457,7 +464,9 @@ const en: Record<MessageKey, string> = {
   'savings.insightsFor': '{name} · tips',
   'savings.create': 'New',
   'savings.name': 'Name',
+  'savings.namePh': 'Enter a name',
   'savings.target': 'Target amount',
+  'savings.amountPh': 'Enter a target amount',
   'savings.createCta': 'Create',
   'savings.defaultName': 'Payment buffer',
   'savings.depositWithdraw': 'Deposit / withdraw',
@@ -551,7 +560,7 @@ const en: Record<MessageKey, string> = {
 
   'aboutUs.title': 'About us',
   'aboutUs.body':
-    'Dedicated to people preparing to borrow, this calculator builds repayment estimates you can check and plan comparisons you can set side by side. Enter an amount, annual rate, and term to see the monthly payment, total interest, and total amount due before you apply.\n\nIt covers home, auto, personal, and combined loans. A combined loan lists both parts side by side, with principal, rate, and monthly payment, plus the combined total. An auto loan can derive the amount from the vehicle price and down payment. Repayment methods are equal installments and equal principal: the former keeps each payment the same; the latter starts higher and usually costs less interest overall.\n\nThe amortization schedule lists principal, interest, and remaining principal for each period. Compare holds up to 3 plans; 2 are enough to contrast total interest and the monthly payment. A savings goal can be prefilled at about 3 times the monthly payment, then record later deposits and withdrawals.\n\nThe interface is available in Simplified Chinese, English, and Spanish. Amounts can be shown with 12 currency symbols. Switching currency changes the symbol and decimal places only; saved amounts are not converted at an exchange rate. Plans can be saved under Profile and opened again, and can be marked as favorites.',
+    'Dedicated to people preparing to borrow, this calculator builds repayment estimates you can check and plan comparisons you can set side by side. Enter an amount, annual rate, and term to see the monthly payment, total interest, and total amount due before you apply.\n\nIt covers home, auto, personal, and combined loans. A combined loan lists both parts side by side, with principal, rate, and monthly payment, plus the combined total. An auto loan can derive the amount from the vehicle price and down payment. Repayment methods are equal installments and equal principal: the former keeps each payment the same; the latter starts higher and usually costs less interest overall.\n\nThe amortization schedule lists principal, interest, and remaining principal for each period. Compare holds up to 3 plans; 2 are enough to contrast total interest and the monthly payment. A savings goal can be prefilled at about 3 times the monthly payment, then record later deposits and withdrawals.\n\nThe interface is available in English and Spanish. Amounts can be shown with common currency symbols. Switching currency changes the symbol and decimal places only; saved amounts are not converted at an exchange rate. Plans can be saved under Profile and opened again, and can be marked as favorites.',
   'about.title': 'Privacy policy',
 
   'toast.savedProfile': 'Saved to Profile',
@@ -603,19 +612,19 @@ const es: Record<MessageKey, string> = {
   'dual.partBreakdown': 'Detalle por préstamo',
   'dual.insight':
     'Cuota combinada ~{monthly}; interés total ~{interest}; costo total ~{total}.',
-  'dual.params': 'Datos del doble préstamo',
+  'dual.params': 'Datos del préstamo',
 
   'mode.equalPayment': 'Cuota fija',
   'mode.equalPrincipal': 'Capital fijo',
 
   'home.title': appTitle,
-  'home.subtitle': 'Hipoteca · Auto · Personal · Doble · Comparar',
+  'home.subtitle': 'Auto · Hipoteca · Personal · Doble · Comparar',
   'home.badge.local': 'Datos en el dispositivo',
   'home.badge.saved': '{count} guardados',
   'home.loanType': 'Tipo de préstamo',
   'home.repayMode': 'Amortización',
   'home.params': 'Datos del préstamo',
-  'home.paramsAuto': 'Datos del auto',
+  'home.paramsAuto': 'Datos del préstamo',
   'home.preview': 'Vista previa · {mode}',
   'home.previewDown': ' · Entrada {pct}%',
   'home.totalInterest': 'Interés total',
@@ -625,12 +634,15 @@ const es: Record<MessageKey, string> = {
   'home.downPct': '% de entrada',
   'home.downAmount': 'Entrada',
   'home.loanAmount': 'Importe del préstamo',
-  'home.loanHint': 'Por defecto = precio − entrada; puedes editar el préstamo',
   'home.rate': 'Tasa anual',
   'home.term': 'Plazo',
   'home.year': 'a',
   'home.month': 'm',
   'home.yearsN': '{n} a',
+  'home.monthsN': '{n} meses',
+  'home.termByMonth': 'Por meses',
+  'home.termByYear': 'Por años',
+  'home.termCustom': 'Otro',
   'home.wan': '{n}0 mil',
   'home.wanWithUnit': '{symbol}{n}0 mil',
   'home.million': '{n}M',
@@ -638,7 +650,7 @@ const es: Record<MessageKey, string> = {
   'home.feature.amort': 'Tabla',
   'home.feature.compare': 'Comparar',
   'home.cta': 'Calcular',
-  'home.disclaimer': 'Solo estimación — no es una oferta de crédito',
+  'home.disclaimer': 'Solo estimación',
   'home.unit.yuan': '',
   'home.fillFirst': 'Completa los campos del préstamo',
   'home.ratePositive': 'La tasa debe ser mayor que 0',
@@ -738,7 +750,9 @@ const es: Record<MessageKey, string> = {
   'savings.insightsFor': '{name} · ideas',
   'savings.create': 'Nueva',
   'savings.name': 'Nombre',
+  'savings.namePh': 'Introduce un nombre',
   'savings.target': 'Importe objetivo',
+  'savings.amountPh': 'Introduce el importe objetivo',
   'savings.createCta': 'Crear',
   'savings.defaultName': 'Colchón de cuota',
   'savings.depositWithdraw': 'Ingresar / retirar',
@@ -832,7 +846,7 @@ const es: Record<MessageKey, string> = {
 
   'aboutUs.title': 'Sobre nosotros',
   'aboutUs.body':
-    'Dedicado a quien se prepara para pedir un préstamo, ofrece un cálculo de cuotas que se puede revisar y una comparación de planes que se puede contrastar. Introduce importe, tasa anual y plazo para ver la cuota, los intereses totales y el importe total antes de solicitarlo.\n\nCubre hipoteca, auto, crédito personal y combinado. El combinado muestra las dos partes en paralelo, con capital, tasa y cuota, además del total conjunto. El de auto puede calcular el importe a partir del precio del vehículo y la entrada. Los métodos son cuota fija y capital fijo: el primero mantiene el mismo pago; el segundo empieza más alto y suele generar menos intereses.\n\nLa amortización detalla capital, intereses y capital pendiente de cada período. La comparación admite hasta 3 planes; con 2 ya se contrastan los intereses totales y la cuota. La meta de ahorro puede rellenarse con unas 3 cuotas y registrar después ingresos y retiros.\n\nLa interfaz está en chino simplificado, English y Español. Los importes pueden mostrarse con 12 símbolos de moneda. Cambiar de moneda solo ajusta el símbolo y los decimales; los importes guardados no se convierten por tipo de cambio. Los planes pueden guardarse en Perfil para abrirlos de nuevo y marcarse como favoritos.',
+    'Dedicado a quien se prepara para pedir un préstamo, ofrece un cálculo de cuotas que se puede revisar y una comparación de planes que se puede contrastar. Introduce importe, tasa anual y plazo para ver la cuota, los intereses totales y el importe total antes de solicitarlo.\n\nCubre hipoteca, auto, crédito personal y combinado. El combinado muestra las dos partes en paralelo, con capital, tasa y cuota, además del total conjunto. El de auto puede calcular el importe a partir del precio del vehículo y la entrada. Los métodos son cuota fija y capital fijo: el primero mantiene el mismo pago; el segundo empieza más alto y suele generar menos intereses.\n\nLa amortización detalla capital, intereses y capital pendiente de cada período. La comparación admite hasta 3 planes; con 2 ya se contrastan los intereses totales y la cuota. La meta de ahorro puede rellenarse con unas 3 cuotas y registrar después ingresos y retiros.\n\nLa interfaz está en English y Español. Los importes pueden mostrarse con símbolos de monedas habituales. Cambiar de moneda solo ajusta el símbolo y los decimales; los importes guardados no se convierten por tipo de cambio. Los planes pueden guardarse en Perfil para abrirlos de nuevo y marcarse como favoritos.',
   'about.title': 'Política de privacidad',
 
   'toast.savedProfile': 'Guardado en Perfil',
@@ -866,13 +880,12 @@ const es: Record<MessageKey, string> = {
 };
 
 const TABLES: Record<AppLocale, Record<MessageKey, string>> = {
-  'zh-CN': zhCN,
   en,
   es,
 };
 
 export function isAppLocale(value: unknown): value is AppLocale {
-  return value === 'zh-CN' || value === 'en' || value === 'es';
+  return value === 'en' || value === 'es';
 }
 
 export function translate(
@@ -880,8 +893,8 @@ export function translate(
   key: MessageKey,
   vars?: Record<string, string | number>,
 ): string {
-  const table = TABLES[locale] ?? TABLES['zh-CN'];
-  let text = table[key] ?? TABLES['zh-CN'][key] ?? String(key);
+  const table = TABLES[locale] ?? TABLES.en;
+  let text = table[key] ?? TABLES.en[key] ?? String(key);
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
       text = text.split(`{${k}}`).join(String(v));
@@ -917,7 +930,6 @@ export function currencyNameKey(code: string): MessageKey | null {
 }
 
 export function htmlLang(locale: AppLocale): string {
-  if (locale === 'zh-CN') return 'zh-CN';
   if (locale === 'es') return 'es';
   return 'en';
 }

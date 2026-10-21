@@ -98,7 +98,7 @@ export interface UserProfile {
   gender?: ProfileGender;
 }
 
-export type AppLocale = 'zh-CN' | 'en' | 'es';
+export type AppLocale = 'en' | 'es';
 
 export interface AppSettings {
   /** ISO 4217，如 CNY、USD */

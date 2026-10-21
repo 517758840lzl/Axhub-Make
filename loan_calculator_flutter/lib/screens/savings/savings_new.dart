@@ -21,10 +21,10 @@ class _SavingsNewScreenState extends State<SavingsNewScreen> {
   void initState() {
     super.initState();
     final app = context.read<AppState>();
-    _name = TextEditingController(text: app.tr('savings.defaultName'));
+    _name = TextEditingController();
     final prefill = app.savingsPrefill;
     _target = TextEditingController(
-      text: formatGroupedAmount(prefill != null && prefill.isNotEmpty ? prefill : '15000'),
+      text: prefill != null && prefill.isNotEmpty ? formatGroupedAmount(prefill) : '',
     );
   }
 
@@ -47,10 +47,15 @@ class _SavingsNewScreenState extends State<SavingsNewScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               LoanLabel(app.tr('savings.name')),
-              LoanInput(controller: _name, onChanged: (_) {}),
+              LoanInput(
+                controller: _name,
+                placeholder: app.tr('savings.namePh'),
+                onChanged: (_) {},
+              ),
               LoanLabel(app.tr('savings.target'), marginTop: 12),
               LoanInput(
                 controller: _target,
+                placeholder: app.tr('savings.amountPh'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: groupedDecimalInputFormatters,
                 amountStyle: true,

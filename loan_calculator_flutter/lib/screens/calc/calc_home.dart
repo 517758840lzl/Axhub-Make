@@ -18,31 +18,42 @@ class CalcHomeScreen extends StatefulWidget {
 
 class _CalcHomeScreenState extends State<CalcHomeScreen> {
   RepaymentMode _mode = RepaymentMode.equalPayment;
-  LoanCategory _category = LoanCategory.mortgage;
-  final _principal = TextEditingController(text: formatGroupedAmount('1000000'));
-  final _rate = TextEditingController(text: '4.2');
-  final _years = TextEditingController(text: '30');
-  final _months = TextEditingController(text: '0');
-  final _vehicle = TextEditingController(text: formatGroupedAmount('200000'));
-  final _down = TextEditingController(text: formatGroupedAmount('40000'));
-  bool _loanManual = false;
+  LoanCategory _category = LoanCategory.auto;
+  final _principal = TextEditingController(text: formatGroupedAmount('100000'));
+  final _rate = TextEditingController(text: '4.5');
+  final _years = TextEditingController(text: '0');
+  final _months = TextEditingController(text: '12');
 
   // Dual parts
-  final _aPrincipal = TextEditingController(text: formatGroupedAmount('800000'));
-  final _aRate = TextEditingController(text: '4.2');
-  final _aYears = TextEditingController(text: '25');
+  final _aPrincipal = TextEditingController(text: formatGroupedAmount('12000'));
+  final _aRate = TextEditingController(text: '6.5');
+  final _aYears = TextEditingController(text: '5');
   final _aMonths = TextEditingController(text: '0');
   RepaymentMode _aMode = RepaymentMode.equalPayment;
-  final _bPrincipal = TextEditingController(text: formatGroupedAmount('300000'));
-  final _bRate = TextEditingController(text: '3.1');
-  final _bYears = TextEditingController(text: '20');
+  final _bPrincipal = TextEditingController(text: formatGroupedAmount('5000'));
+  final _bRate = TextEditingController(text: '8.5');
+  final _bYears = TextEditingController(text: '3');
   final _bMonths = TextEditingController(text: '0');
   RepaymentMode _bMode = RepaymentMode.equalPayment;
 
   final _errors = <String, bool>{};
 
+  static const _loanTypeOrder = [
+    LoanCategory.auto,
+    LoanCategory.mortgage,
+    LoanCategory.personal,
+    LoanCategory.dual,
+  ];
+
+  /// 各类型自己的本金、利率和期限。车贷默认按月 12 个月，房贷仍是按年 30 年。
+  final _formMemory = <LoanCategory, List<String>>{
+    LoanCategory.auto: ['100000', '4.5', '0', '12'],
+    LoanCategory.mortgage: ['100000', '3.5', '30', '0'],
+    LoanCategory.personal: ['8000', '8.5', '3', '0'],
+  };
+
   void _applyGroupedAmounts() {
-    for (final c in [_principal, _vehicle, _down, _aPrincipal, _bPrincipal]) {
+    for (final c in [_principal, _aPrincipal, _bPrincipal]) {
       final next = formatGroupedAmount(c.text.replaceAll(',', ''));
       if (c.text == next) continue;
       c.value = TextEditingValue(
@@ -58,6 +69,31 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
     _applyGroupedAmounts();
   }
 
+  void _rememberStandard() {
+    final slot = _formMemory[_category];
+    if (slot == null) return;
+    slot[0] = _principal.text.replaceAll(',', '');
+    slot[1] = _rate.text;
+    slot[2] = _years.text;
+    slot[3] = _months.text;
+  }
+
+  void _applyStandard(LoanCategory category) {
+    final slot = _formMemory[category];
+    if (slot == null) return;
+    _principal.text = formatGroupedAmount(slot[0]);
+    _rate.text = slot[1];
+    _years.text = slot[2];
+    _months.text = slot[3];
+  }
+
+  void _selectCategory(LoanCategory next) {
+    if (next == _category) return;
+    _rememberStandard();
+    _category = next;
+    _applyStandard(next);
+  }
+
   @override
   void reassemble() {
     super.reassemble();
@@ -67,34 +103,13 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
   @override
   void dispose() {
     for (final c in [
-      _principal, _rate, _years, _months, _vehicle, _down,
+      _principal, _rate, _years, _months,
       _aPrincipal, _aRate, _aYears, _aMonths,
       _bPrincipal, _bRate, _bYears, _bMonths,
     ]) {
       c.dispose();
     }
     super.dispose();
-  }
-
-  String? _overTotalKey() {
-    if (_category != LoanCategory.auto) return null;
-    final price = _amount(_vehicle);
-    if (price == null || price <= 0) return null;
-    final down = _amount(_down);
-    if (down != null && down > price) return 'home.downOverPrice';
-    final loan = _amount(_principal);
-    if (loan != null && loan > price) return 'home.loanOverPrice';
-    return null;
-  }
-
-  bool _rejectIfOver(AppState app) {
-    final key = _overTotalKey();
-    if (key == null) return false;
-    _errors.clear();
-    _errors[key == 'home.downOverPrice' ? 'down' : 'principal'] = true;
-    setState(() {});
-    app.showToast(app.tr(key));
-    return true;
   }
 
   bool _rateNotPositive(TextEditingController controller) {
@@ -122,16 +137,6 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
     return true;
   }
 
-  void _syncAutoLoan() {
-    if (_loanManual) return;
-    final price = _amount(_vehicle);
-    final down = _amount(_down);
-    if (price == null || price <= 0 || down == null || down < 0 || down > price) return;
-    final loan = price - down;
-    final loanText = loan == loan.roundToDouble() ? '${loan.round()}' : loan.toStringAsFixed(2);
-    _principal.text = formatGroupedAmount(loanText);
-  }
-
   int _term(TextEditingController y, TextEditingController m) =>
       (int.tryParse(y.text) ?? 0) * 12 + (int.tryParse(m.text) ?? 0);
 
@@ -146,6 +151,27 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
 
   int _termMaxYears() =>
       _category == LoanCategory.auto || _category == LoanCategory.personal ? 5 : 30;
+
+  Widget _termField(
+    AppState app,
+    TextEditingController years,
+    TextEditingController months, {
+    required int maxYears,
+    bool error = false,
+  }) {
+    return LoanTermSelect(
+      years: int.tryParse(years.text) ?? 0,
+      months: int.tryParse(months.text) ?? 0,
+      maxYears: maxYears,
+      title: app.tr('home.term'),
+      error: error,
+      onChanged: (y, m) {
+        years.text = '$y';
+        months.text = '$m';
+        setState(() {});
+      },
+    );
+  }
 
   LoanSummary? _preview() {
     try {
@@ -178,19 +204,10 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
       ));
     }
 
-    if (_category == LoanCategory.auto) _syncAutoLoan();
-    if (_overTotalKey() != null) return null;
     final p = _amount(_principal);
     final r = double.tryParse(_rate.text);
     final termMonths = _term(_years, _months);
     if (p == null || p <= 0 || r == null || r <= 0 || termMonths <= 0) return null;
-
-    double? vehicle;
-    double? down;
-    if (_category == LoanCategory.auto) {
-      vehicle = _amount(_vehicle);
-      down = _amount(_down);
-    }
 
     return summarizeLoan(CalcInput(
       principal: p,
@@ -198,13 +215,10 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
       termMonths: termMonths,
       mode: _mode,
       category: _category,
-      vehiclePrice: vehicle,
-      downPayment: down,
     ));
   }
 
   CalcResult? _buildResult() {
-    if (_overTotalKey() != null) return null;
     if (_category == LoanCategory.dual) {
       final ap = _amount(_aPrincipal);
       final ar = double.tryParse(_aRate.text);
@@ -227,18 +241,10 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
       ));
     }
 
-    if (_category == LoanCategory.auto) _syncAutoLoan();
     final p = _amount(_principal);
     final r = double.tryParse(_rate.text);
     final termMonths = _term(_years, _months);
     if (p == null || p <= 0 || r == null || r <= 0 || termMonths <= 0) return null;
-
-    double? vehicle;
-    double? down;
-    if (_category == LoanCategory.auto) {
-      vehicle = _amount(_vehicle);
-      down = _amount(_down);
-    }
 
     return computeLoan(CalcInput(
       principal: p,
@@ -246,13 +252,10 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
       termMonths: termMonths,
       mode: _mode,
       category: _category,
-      vehiclePrice: vehicle,
-      downPayment: down,
     ));
   }
 
   void _submit(AppState app) {
-    if (_rejectIfOver(app)) return;
     if (_rejectIfRate(app)) return;
     _errors.clear();
     final result = _buildResult();
@@ -275,7 +278,6 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
   }
 
   void _ensureResultThen(AppState app, AppRoute route) {
-    if (_rejectIfOver(app)) return;
     if (_rejectIfRate(app)) return;
     final result = _buildResult();
     if (result == null) {
@@ -295,14 +297,6 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
         : (preview.input.mode == RepaymentMode.equalPrincipal || preview.input.category == LoanCategory.dual
             ? preview.firstMonthPayment
             : preview.monthlyPayment);
-
-    final downPct = () {
-      if (_category != LoanCategory.auto) return null;
-      final price = _amount(_vehicle) ?? 0;
-      final down = _amount(_down) ?? 0;
-      if (price <= 0) return null;
-      return (down / price * 100).toStringAsFixed(0);
-    }();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -355,20 +349,14 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
               // 一行四等分：类型是轻量切换，不抢主参数区权重
               Row(
                 children: [
-                  for (final (i, k) in LoanCategory.values.where((k) => k != LoanCategory.other).indexed) ...[
+                  for (final (i, k) in _loanTypeOrder.indexed) ...[
                     if (i > 0) const SizedBox(width: 8),
                     Expanded(
                       child: Builder(builder: (context) {
                         final meta = _loanTypeMeta(k, app);
                         final active = _category == k;
                         return GestureDetector(
-                          onTap: () => setState(() {
-                            _category = k;
-                            if (k == LoanCategory.auto) {
-                              _loanManual = false;
-                              _syncAutoLoan();
-                            }
-                          }),
+                          onTap: () => setState(() => _selectCategory(k)),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
                             decoration: BoxDecoration(
@@ -414,8 +402,7 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
         LoanPreviewCard(
           previewTitle: app.tr('home.preview', {
                 'mode': modeLabel(_category == LoanCategory.dual ? _aMode : _mode, app.locale),
-              }) +
-              (downPct != null ? app.tr('home.previewDown', {'pct': downPct}) : ''),
+              }),
           payment: preview != null && previewPayment != null ? app.money(previewPayment) : '—',
           totalInterest: preview != null ? app.money(preview.totalInterest) : '—',
           totalPayment: preview != null ? app.money(preview.totalPayment) : '—',
@@ -482,18 +469,7 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
               ),
             ),
           LoanLabel(app.tr('home.term'), marginTop: 12),
-          LoanTermSelect(
-            value: years.text.trim().isEmpty ? '1' : years.text.trim(),
-            maxYears: 30,
-            title: app.tr('home.term'),
-            error: _errors[errKey] == true,
-            labelBuilder: (y) => app.tr('home.yearsN', {'n': y}),
-            onChanged: (y) {
-              years.text = y;
-              months.text = '0';
-              setState(() {});
-            },
-          ),
+          _termField(app, years, months, maxYears: 30, error: _errors[errKey] == true),
         ],
       ),
     );
@@ -505,116 +481,23 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           LoanSectionHead(icon: LucideIcons.car, title: app.tr('home.paramsAuto')),
-          LoanLabel(app.tr('home.vehiclePrice')),
-          LoanInput(
-            controller: _vehicle,
-            suffix: app.amountUnit,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: groupedDecimalInputFormatters,
-            amountStyle: true,
-            onChanged: (_) {
-              _loanManual = false;
-              _syncAutoLoan();
-              setState(() {});
-            },
-          ),
-          LoanLabel(app.tr('home.downAmount'), marginTop: 12),
-          LoanInput(
-            controller: _down,
-            suffix: app.amountUnit,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: groupedDecimalInputFormatters,
-            amountStyle: true,
-            error: _overTotalKey() == 'home.downOverPrice',
-            onChanged: (_) {
-              _loanManual = false;
-              _syncAutoLoan();
-              setState(() {});
-            },
-          ),
-          if (_overTotalKey() == 'home.downOverPrice')
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                app.tr('home.downOverPrice'),
-                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.spend),
-              ),
-            ),
-          LoanLabel(app.tr('home.loanAmount'), marginTop: 12),
-          LoanInput(
-            controller: _principal,
-            suffix: app.amountUnit,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: groupedDecimalInputFormatters,
-            amountStyle: true,
-            error: _errors['principal'] == true || _overTotalKey() == 'home.loanOverPrice',
-            onChanged: (_) {
-              _loanManual = true;
-              setState(() {});
-            },
-          ),
-          if (_overTotalKey() == 'home.loanOverPrice')
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                app.tr('home.loanOverPrice'),
-                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.spend),
-              ),
-            )
-          else
-            LoanMuted(app.tr('home.loanHint'), fontSize: 12),
-          LoanLabel(app.tr('home.rate'), marginTop: 12),
-          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true || _rateNotPositive(_rate), onChanged: (_) => setState(() {})),
-          if (_rateNotPositive(_rate))
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                app.tr('home.ratePositive'),
-                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.spend),
-              ),
-            ),
-          LoanLabel(app.tr('home.term'), marginTop: 12),
-          LoanTermSelect(
-            value: _years.text.trim().isEmpty ? '1' : _years.text.trim(),
-            maxYears: _termMaxYears(),
-            title: app.tr('home.term'),
-            error: _errors['term'] == true,
-            labelBuilder: (y) => app.tr('home.yearsN', {'n': y}),
-            onChanged: (y) {
-              _years.text = y;
-              _months.text = '0';
-              setState(() {});
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _standardForm(AppState app) {
-    return LoanCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LoanSectionHead(icon: LucideIcons.calculator, title: app.tr('home.params')),
           LoanLabel(app.tr('home.principal')),
           LoanInput(
             controller: _principal,
             suffix: app.amountUnit,
-            error: _errors['principal'] == true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: groupedDecimalInputFormatters,
             amountStyle: true,
+            error: _errors['principal'] == true,
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [500000, 1000000, 1500000, 2000000].map((v) {
-              final label = app.wanQuickLabel(v ~/ 10000);
+            children: [50000, 100000, 250000, 500000].map((v) {
               return LoanQuickChip(
-                label: label,
+                label: '${app.amountUnit}${formatGroupedAmount('$v')}',
                 selected: _principalChipSelected(v),
                 onTap: () {
                   _principal.text = formatGroupedAmount('$v');
@@ -636,7 +519,7 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: ['3.1', '3.85', '4.2', '4.9']
+            children: ['3.5', '4.5', '5.5', '6.5']
                 .map(
                   (v) => LoanQuickChip(
                     label: '$v%',
@@ -650,18 +533,57 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
                 .toList(),
           ),
           LoanLabel(app.tr('home.term'), marginTop: 14),
-          LoanTermSelect(
-            value: _years.text.trim().isEmpty ? '1' : _years.text.trim(),
-            maxYears: _termMaxYears(),
-            title: app.tr('home.term'),
-            error: _errors['term'] == true,
-            labelBuilder: (y) => app.tr('home.yearsN', {'n': y}),
-            onChanged: (y) {
-              _years.text = y;
-              _months.text = '0';
-              setState(() {});
-            },
+          _termField(app, _years, _months, maxYears: _termMaxYears(), error: _errors['term'] == true),
+        ],
+      ),
+    );
+  }
+
+  Widget _standardForm(AppState app) {
+    return LoanCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LoanSectionHead(icon: LucideIcons.calculator, title: app.tr('home.params')),
+          LoanLabel(app.tr('home.principal')),
+          LoanInput(
+            controller: _principal,
+            suffix: app.amountUnit,
+            error: _errors['principal'] == true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: groupedDecimalInputFormatters,
+            amountStyle: true,
+            onChanged: (_) => setState(() {}),
           ),
+          if (_category == LoanCategory.personal) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [2000, 5000, 8000, 15000].map((v) {
+                return LoanQuickChip(
+                  label: '${app.amountUnit}${formatGroupedAmount('$v')}',
+                  selected: _principalChipSelected(v),
+                  onTap: () {
+                    _principal.text = formatGroupedAmount('$v');
+                    setState(() {});
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+          LoanLabel(app.tr('home.rate'), marginTop: 14),
+          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true || _rateNotPositive(_rate), onChanged: (_) => setState(() {})),
+          if (_rateNotPositive(_rate))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                app.tr('home.ratePositive'),
+                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.spend),
+              ),
+            ),
+          LoanLabel(app.tr('home.term'), marginTop: 14),
+          _termField(app, _years, _months, maxYears: _termMaxYears(), error: _errors['term'] == true),
         ],
       ),
     );

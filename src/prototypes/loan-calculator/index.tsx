@@ -72,7 +72,7 @@ import type {
 } from './lib/types';
 import './style.css';
 
-const pageTitle = (key: Parameters<TranslateFn>[0]) => translate('zh-CN', key);
+const pageTitle = (key: Parameters<TranslateFn>[0]) => translate('en', key);
 
 const ROUTE = defineHashPageRoute(
   [
@@ -110,33 +110,33 @@ const LOAN_TYPE_META: Record<
   Exclude<LoanCategory, 'other'>,
   { Icon: LucideIcon }
 > = {
-  mortgage: { Icon: Home },
   auto: { Icon: Car },
+  mortgage: { Icon: Home },
   personal: { Icon: ShoppingBag },
   dual: { Icon: Layers2 },
 };
 
 const CATEGORY_PRESETS: Record<
   Exclude<LoanCategory, 'other'>,
-  { principal: string; rate: string; years: string; months: string; vehicle?: string; downPct?: string }
+  { principal: string; rate: string; years: string; months: string }
 > = {
-  mortgage: { principal: '1000000', rate: '3.6', years: '30', months: '0' },
-  auto: { principal: '126000', rate: '4.5', years: '3', months: '0', vehicle: '180000', downPct: '30' },
-  personal: { principal: '50000', rate: '8.5', years: '3', months: '0' },
+  mortgage: { principal: '100000', rate: '3.5', years: '30', months: '0' },
+  auto: { principal: '100000', rate: '4.5', years: '0', months: '12' },
+  personal: { principal: '8000', rate: '8.5', years: '3', months: '0' },
   dual: { principal: '0', rate: '0', years: '0', months: '0' },
 };
 
 const DEFAULT_DUAL_A = {
-  principal: '600000',
-  rate: '3.1',
-  years: '30',
+  principal: '12000',
+  rate: '6.5',
+  years: '5',
   months: '0',
   mode: 'equal-payment' as RepaymentMode,
 };
 const DEFAULT_DUAL_B = {
-  principal: '400000',
-  rate: '4.2',
-  years: '25',
+  principal: '5000',
+  rate: '8.5',
+  years: '3',
   months: '0',
   mode: 'equal-payment' as RepaymentMode,
 };
@@ -625,16 +625,12 @@ function CalcHome({
   const app = useApp();
   const { t } = app;
   const { setPage } = useHashPage(ROUTE);
-  const [category, setCategory] = useState<Exclude<LoanCategory, 'other'>>('mortgage');
+  const [category, setCategory] = useState<Exclude<LoanCategory, 'other'>>('auto');
   const [mode, setMode] = useState<RepaymentMode>('equal-payment');
-  const [principal, setPrincipal] = useState('1000000');
-  const [rate, setRate] = useState('3.6');
-  const [years, setYears] = useState('30');
-  const [months, setMonths] = useState('0');
-  const [vehiclePrice, setVehiclePrice] = useState('180000');
-  const [downPct, setDownPct] = useState('30');
-  const [downPayment, setDownPayment] = useState('54000');
-  const [loanManual, setLoanManual] = useState(false);
+  const [principal, setPrincipal] = useState('100000');
+  const [rate, setRate] = useState('4.5');
+  const [years, setYears] = useState('0');
+  const [months, setMonths] = useState('12');
   const [aPrincipal, setAPrincipal] = useState(DEFAULT_DUAL_A.principal);
   const [aRate, setARate] = useState(DEFAULT_DUAL_A.rate);
   const [aYears, setAYears] = useState(DEFAULT_DUAL_A.years);
@@ -668,36 +664,7 @@ function CalcHome({
     setRate(p.rate);
     setYears(p.years);
     setMonths(p.months);
-    if (next === 'auto') {
-      setVehiclePrice(p.vehicle || '180000');
-      setDownPct(p.downPct || '30');
-      const vp = Number(p.vehicle || 180000);
-      const pct = Number(p.downPct || 30);
-      const dp = Math.round((vp * pct) / 100);
-      setDownPayment(String(dp));
-      setPrincipal(String(Math.round(vp - dp)));
-      setLoanManual(false);
-    }
   };
-
-  const syncAutoLoan = (vpStr: string, dpStr: string) => {
-    if (loanManual) return;
-    const vp = Number(vpStr);
-    const dp = Number(dpStr);
-    if (!(vp > 0) || Number.isNaN(dp) || dp < 0 || dp > vp) return;
-    setPrincipal(String(Math.round(vp - dp)));
-  };
-
-  const overLimit = ((): 'down' | 'loan' | null => {
-    if (category !== 'auto') return null;
-    const vp = Number(vehiclePrice);
-    if (!(vp > 0)) return null;
-    const dp = Number(downPayment);
-    if (dp > vp) return 'down';
-    const loan = Number(principal);
-    if (loan > vp) return 'loan';
-    return null;
-  })();
 
   const rateNotPositive = (raw: string) => {
     const text = raw.trim();
@@ -766,7 +733,7 @@ function CalcHome({
       const P = Number(principal);
       const r = Number(rate);
       const termMonths = Number(years) * 12 + Number(months);
-      if (!P || P <= 0 || Number.isNaN(r) || !(r > 0) || !termMonths || overLimit) return null;
+      if (!P || P <= 0 || Number.isNaN(r) || !(r > 0) || !termMonths) return null;
       const input: CalcInput = {
         principal: P,
         annualRatePercent: r,
@@ -774,10 +741,6 @@ function CalcHome({
         mode,
         category,
       };
-      if (category === 'auto') {
-        input.vehiclePrice = Number(vehiclePrice) || undefined;
-        input.downPayment = Number(downPayment) || undefined;
-      }
       return summarizeLoan(input);
     } catch {
       return null;
@@ -789,8 +752,6 @@ function CalcHome({
     months,
     mode,
     category,
-    vehiclePrice,
-    downPayment,
     aPrincipal,
     aRate,
     aYears,
@@ -802,18 +763,9 @@ function CalcHome({
     bMonths,
     bMode,
     t,
-    overLimit,
   ]);
 
   const buildResult = (): CalcResult | null => {
-    if (overLimit === 'down') {
-      setErrors({ down: true });
-      return null;
-    }
-    if (overLimit === 'loan') {
-      setErrors({ principal: true });
-      return null;
-    }
     if (lowRate) {
       setErrors(
         category === 'dual'
@@ -851,12 +803,6 @@ function CalcHome({
     const r = Number(rate);
     const termMonths = Number(years) * 12 + Number(months);
     const err: Record<string, boolean> = {};
-    if (category === 'auto') {
-      const vp = Number(vehiclePrice);
-      const dp = Number(downPayment);
-      if (!vp || vp <= 0) err.vehicle = true;
-      if (Number.isNaN(dp) || dp < 0 || dp >= vp) err.down = true;
-    }
     if (!P || P <= 0) err.principal = true;
     if (Number.isNaN(r) || !(r > 0)) err.rate = true;
     if (!termMonths || termMonths <= 0) err.term = true;
@@ -871,9 +817,6 @@ function CalcHome({
         mode,
         category,
         label: categoryLabel(category, t),
-        ...(category === 'auto'
-          ? { vehiclePrice: Number(vehiclePrice), downPayment: Number(downPayment) }
-          : {}),
       });
     } catch {
       setErrors({ principal: true, term: true });
@@ -882,9 +825,7 @@ function CalcHome({
   };
 
   const failToast = () => {
-    if (overLimit === 'down') app.showToast(t('home.downOverPrice'));
-    else if (overLimit === 'loan') app.showToast(t('home.loanOverPrice'));
-    else if (lowRate) app.showToast(t('home.ratePositive'));
+    if (lowRate) app.showToast(t('home.ratePositive'));
     else app.showToast(t('home.fillFirst'));
   };
 
@@ -920,17 +861,7 @@ function CalcHome({
       ? preview.firstMonthPayment
       : preview.monthlyPayment);
 
-  const downRatio =
-    Number(vehiclePrice) > 0 && Number(downPayment) >= 0
-      ? (Number(downPayment) / Number(vehiclePrice)) * 100
-      : 0;
-
   const amountUnit = currencyAmountUnit(app.settings);
-  const wanQuick = (wan: number) =>
-    t('home.wanWithUnit', {
-      n: String(wan),
-      symbol: getCurrency(app.settings.currencyCode).symbol,
-    });
   const principalNum = parseAmountString(principal) ?? 0;
 
   const previewBlock = (
@@ -940,7 +871,6 @@ function CalcHome({
         {t('home.preview', {
           mode: category === 'dual' ? categoryLabel('dual', t) : modeLabel(mode, t),
         })}
-        {category === 'auto' ? t('home.previewDown', { pct: downRatio.toFixed(0) }) : ''}
       </div>
       <div className="loan-preview-amount">
         {preview && previewPayment != null ? money(previewPayment) : '—'}
@@ -1129,12 +1059,13 @@ function CalcHome({
               {t('home.term')}
             </div>
             <TermYearSelect
-              value={part.years}
+              years={part.years}
+              months={part.months}
               maxYears={30}
               error={!!errors.dual}
-              onChange={(y) => {
+              onChange={(y, m) => {
                 part.setYears(y);
-                part.setMonths('0');
+                part.setMonths(m);
               }}
             />
           </div>
@@ -1149,112 +1080,28 @@ function CalcHome({
 
         {category === 'auto' ? (
           <>
-            <div className="loan-label">{t('home.vehiclePrice')}</div>
+            <div className="loan-label">{t('home.principal')}</div>
             <div className="loan-input-wrap">
               <AmountInput
-                className={`loan-input ${errors.vehicle ? 'loan-input-error' : ''}`}
-                value={vehiclePrice}
-                onChange={(v) => {
-                  setVehiclePrice(v);
-                  const vp = Number(v);
-                  const pct = Number(downPct) || 0;
-                  if (vp > 0) {
-                    const dp = Math.round((vp * pct) / 100);
-                    setDownPayment(String(dp));
-                    syncAutoLoan(v, String(dp));
-                  }
-                }}
+                className={`loan-input ${errors.principal ? 'loan-input-error' : ''}`}
+                value={principal}
+                onChange={setPrincipal}
               />
               <span className="loan-input-suffix">{amountUnit}</span>
             </div>
             <div className="loan-chip-row">
-              {[150_000, 180_000, 250_000, 350_000].map((v) => (
+              {[50_000, 100_000, 250_000, 500_000].map((v) => (
                 <button
                   key={v}
                   type="button"
                   className="loan-quick-chip"
-                  onClick={() => {
-                    setVehiclePrice(String(v));
-                    const dp = Math.round((v * (Number(downPct) || 30)) / 100);
-                    setDownPayment(String(dp));
-                    syncAutoLoan(String(v), String(dp));
-                  }}
+                  data-active={Math.abs(principalNum - v) < 1}
+                  onClick={() => setPrincipal(String(v))}
                 >
-                  {t('home.wan', { n: v / 10_000 })}
+                  {`${amountUnit}${formatGroupedAmount(String(v))}`}
                 </button>
               ))}
             </div>
-
-            <div className="loan-label" style={{ marginTop: 14 }}>
-              {t('home.downPct')}
-            </div>
-            <div className="loan-chip-row">
-              {['20', '30', '40', '50'].map((pct) => (
-                <button
-                  key={pct}
-                  type="button"
-                  className="loan-quick-chip"
-                  data-active={downPct === pct}
-                  onClick={() => {
-                    setDownPct(pct);
-                    const vp = Number(vehiclePrice) || 0;
-                    const dp = Math.round((vp * Number(pct)) / 100);
-                    setDownPayment(String(dp));
-                    setLoanManual(false);
-                    syncAutoLoan(vehiclePrice, String(dp));
-                  }}
-                >
-                  {pct}%
-                </button>
-              ))}
-            </div>
-            <div className="loan-label" style={{ marginTop: 10 }}>
-              {t('home.downAmount')}
-            </div>
-            <div className="loan-input-wrap">
-              <AmountInput
-                className={`loan-input ${errors.down || overLimit === 'down' ? 'loan-input-error' : ''}`}
-                value={downPayment}
-                onChange={(v) => {
-                  setDownPayment(v);
-                  const vp = Number(vehiclePrice) || 0;
-                  const dp = Number(v) || 0;
-                  if (vp > 0) setDownPct(String(Math.round((dp / vp) * 100)));
-                  setLoanManual(false);
-                  syncAutoLoan(vehiclePrice, v);
-                }}
-              />
-              <span className="loan-input-suffix">{amountUnit}</span>
-            </div>
-            {overLimit === 'down' ? (
-              <p className="loan-danger" style={{ fontSize: 12, margin: '8px 0 0' }}>
-                {t('home.downOverPrice')}
-              </p>
-            ) : null}
-
-            <div className="loan-label" style={{ marginTop: 14 }}>
-              {t('home.loanAmount')}
-            </div>
-            <div className="loan-input-wrap">
-              <AmountInput
-                className={`loan-input ${errors.principal || overLimit === 'loan' ? 'loan-input-error' : ''}`}
-                value={principal}
-                onChange={(v) => {
-                  setPrincipal(v);
-                  setLoanManual(true);
-                }}
-              />
-              <span className="loan-input-suffix">{amountUnit}</span>
-            </div>
-            {overLimit === 'loan' ? (
-              <p className="loan-danger" style={{ fontSize: 12, margin: '8px 0 0' }}>
-                {t('home.loanOverPrice')}
-              </p>
-            ) : (
-              <p className="loan-muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
-                {t('home.loanHint')}
-              </p>
-            )}
           </>
         ) : (
           <>
@@ -1267,22 +1114,21 @@ function CalcHome({
               />
               <span className="loan-input-suffix">{amountUnit}</span>
             </div>
-            <div className="loan-chip-row" style={{ marginTop: 12 }}>
-              {(category === 'mortgage'
-                ? [500_000, 1_000_000, 1_500_000, 2_000_000]
-                : [20_000, 50_000, 100_000, 200_000]
-              ).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  className="loan-quick-chip"
-                  data-active={Math.abs(principalNum - v) < 1}
-                  onClick={() => setPrincipal(String(v))}
-                >
-                  {category === 'mortgage' ? wanQuick(v / 10_000) : money(v)}
-                </button>
-              ))}
-            </div>
+            {category === 'personal' ? (
+              <div className="loan-chip-row" style={{ marginTop: 12 }}>
+                {[2_000, 5_000, 8_000, 15_000].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className="loan-quick-chip"
+                    data-active={Math.abs(principalNum - v) < 1}
+                    onClick={() => setPrincipal(String(v))}
+                  >
+                    {`${getCurrency(app.settings.currencyCode).symbol}${formatGroupedAmount(String(v))}`}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </>
         )}
 
@@ -1303,9 +1149,9 @@ function CalcHome({
             {t('home.ratePositive')}
           </p>
         ) : null}
-        <div className="loan-chip-row">
-          {(category === 'personal' ? ['6.5', '8.5', '12', '15'] : ['3.1', '3.6', '4.2', '4.9']).map(
-            (v) => (
+        {category === 'auto' ? (
+          <div className="loan-chip-row">
+            {['3.5', '4.5', '5.5', '6.5'].map((v) => (
               <button
                 key={v}
                 type="button"
@@ -1315,19 +1161,20 @@ function CalcHome({
               >
                 {v}%
               </button>
-            ),
-          )}
-        </div>
+            ))}
+          </div>
+        ) : null}
         <div className="loan-label" style={{ marginTop: 14 }}>
           {t('home.term')}
         </div>
         <TermYearSelect
-          value={years}
+          years={years}
+          months={months}
           maxYears={category === 'mortgage' ? 30 : 5}
           error={!!errors.term}
-          onChange={(y) => {
+          onChange={(y, m) => {
             setYears(y);
-            setMonths('0');
+            setMonths(m);
           }}
         />
       </div>
@@ -2016,8 +1863,8 @@ function SavingsNew({
   onDone: () => void;
 }) {
   const { t } = useApp();
-  const [name, setName] = useState(() => t('savings.defaultName'));
-  const [target, setTarget] = useState(prefillTarget || '15000');
+  const [name, setName] = useState('');
+  const [target, setTarget] = useState(prefillTarget || '');
 
   return (
     <>
@@ -2029,11 +1876,21 @@ function SavingsNew({
       </header>
       <div className="loan-card">
         <div className="loan-label">{t('savings.name')}</div>
-        <input className="loan-input" value={name} onChange={(e) => setName(e.target.value)} />
+        <input
+          className="loan-input"
+          value={name}
+          placeholder={t('savings.namePh')}
+          onChange={(e) => setName(e.target.value)}
+        />
         <div className="loan-label" style={{ marginTop: 12 }}>
           {t('savings.target')}
         </div>
-        <AmountInput className="loan-input" value={target} onChange={setTarget} />
+        <AmountInput
+          className="loan-input"
+          value={target}
+          placeholder={t('savings.amountPh')}
+          onChange={setTarget}
+        />
       </div>
       <button
         type="button"

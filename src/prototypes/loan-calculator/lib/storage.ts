@@ -71,7 +71,7 @@ export function getSettings(): AppSettings {
     currencyCode: 'USD',
     decimals: 2,
     theme: 'light',
-    locale: 'zh-CN',
+    locale: 'en',
   });
   const currencyCode = resolveCurrencyCode(raw);
   const decimals =
@@ -80,7 +80,7 @@ export function getSettings(): AppSettings {
     currencyCode,
     decimals,
     theme: raw.theme === 'dark' || raw.theme === 'system' ? raw.theme : 'light',
-    locale: isAppLocale(raw.locale) ? raw.locale : 'zh-CN',
+    locale: isAppLocale(raw.locale) ? raw.locale : 'en',
   };
 }
 

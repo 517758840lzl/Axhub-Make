@@ -68,5 +68,5 @@ export function collectAllTags(
   for (const list of [...calcTags, ...manualTags]) {
     for (const t of list) set.add(t);
   }
-  return [...set].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+  return [...set].sort((a, b) => a.localeCompare(b, 'en'));
 }

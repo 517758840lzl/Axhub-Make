@@ -440,7 +440,7 @@ class AppSettings {
     required this.currencyCode,
     required this.decimals,
     required this.theme,
-    this.locale = AppLocale.zhCN,
+    this.locale = AppLocale.en,
   });
 
   final String currencyCode;

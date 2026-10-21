@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 
+import '../../state/app_state.dart';
 import '../../theme/revolut_theme.dart';
 
 class LoanCard extends StatelessWidget {
@@ -179,6 +182,7 @@ class LoanInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelFont = Theme.of(context).textTheme.bodyLarge;
     final field = Material(
       color: Colors.transparent,
       child: SizedBox(
@@ -203,6 +207,15 @@ class LoanInput extends StatelessWidget {
                 ),
           decoration: InputDecoration(
             hintText: placeholder,
+            hintStyle: TextStyle(
+              fontFamily: labelFont?.fontFamily,
+              fontFamilyFallback: labelFont?.fontFamilyFallback,
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              height: 1.2,
+              leadingDistribution: TextLeadingDistribution.even,
+              color: RevolutColors.textMuted,
+            ),
             filled: true,
             fillColor: RevolutColors.surface2,
             isDense: true,
@@ -397,10 +410,12 @@ class LoanQuickChip extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.selected = false,
+    this.stretch = false,
   });
   final String label;
   final VoidCallback onTap;
   final bool selected;
+  final bool stretch;
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +425,8 @@ class LoanQuickChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          width: stretch ? double.infinity : null,
+          padding: EdgeInsets.symmetric(horizontal: stretch ? 6 : 12, vertical: 7),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             gradient: selected ? RevolutColors.gradient : null,
@@ -423,6 +439,7 @@ class LoanQuickChip extends StatelessWidget {
           ),
           child: Text(
             label,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -438,23 +455,34 @@ class LoanQuickChip extends StatelessWidget {
 class LoanTermSelect extends StatelessWidget {
   const LoanTermSelect({
     super.key,
-    required this.value,
+    required this.years,
+    required this.months,
     required this.maxYears,
-    required this.labelBuilder,
     required this.onChanged,
     this.error = false,
     this.title,
   });
 
-  final String value;
+  final int years;
+  final int months;
   final int maxYears;
-  final String Function(String year) labelBuilder;
-  final ValueChanged<String> onChanged;
+  final void Function(int years, int months) onChanged;
   final bool error;
   final String? title;
 
-  Future<void> _open(BuildContext context) async {
-    final picked = await showModalBottomSheet<String>(
+  bool get _byMonth => months > 0 && years == 0;
+
+  List<int> get _yearPresets {
+    const longTerm = [1, 5, 10, 15, 20, 25, 30];
+    const shortTerm = [1, 2, 3, 5];
+    final source = maxYears <= 5 ? shortTerm : longTerm;
+    return source.where((year) => year <= maxYears).toList();
+  }
+
+  Future<void> _open(BuildContext context, AppState app, bool byMonth) async {
+    final count = byMonth ? (maxYears * 12).clamp(1, 12) : maxYears;
+    final current = byMonth ? months : years;
+    final picked = await showModalBottomSheet<int>(
       context: context,
       backgroundColor: RevolutColors.surface1,
       shape: const RoundedRectangleBorder(
@@ -483,26 +511,27 @@ class LoanTermSelect extends StatelessWidget {
                 ),
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: maxYears,
+                  itemCount: count,
                   itemBuilder: (_, index) {
-                    final year = '${maxYears - index}';
-                    final selected = year == value;
+                    final value = count - index;
+                    final selected = value == current;
+                    final label = byMonth
+                        ? app.tr('home.monthsN', {'n': '$value'})
+                        : app.tr('home.yearsN', {'n': '$value'});
                     return ListTile(
                       title: Text(
-                        labelBuilder(year),
+                        label,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: selected
-                              ? RevolutColors.brandSolid
-                              : RevolutColors.text,
+                          color: selected ? RevolutColors.brandSolid : RevolutColors.text,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                       trailing: selected
                           ? const Icon(Icons.check, color: RevolutColors.brandSolid)
                           : null,
-                      onTap: () => Navigator.of(ctx).pop(year),
+                      onTap: () => Navigator.of(ctx).pop(value),
                     );
                   },
                 ),
@@ -512,46 +541,112 @@ class LoanTermSelect extends StatelessWidget {
         );
       },
     );
-    if (picked != null) onChanged(picked);
+    if (picked == null) return;
+    if (byMonth) {
+      onChanged(0, picked);
+    } else {
+      onChanged(picked, 0);
+    }
+  }
+
+  void _setUnit(bool byMonth) {
+    if (byMonth == _byMonth) return;
+    if (byMonth) {
+      final nextMonths = years == 1 && months == 0 ? 12 : 6;
+      onChanged(0, nextMonths);
+      return;
+    }
+    final nextYears = months > 0 && months % 12 == 0 ? months ~/ 12 : 1;
+    onChanged(nextYears.clamp(1, maxYears), 0);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _open(context),
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          height: 52,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: RevolutColors.surface2,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: error ? RevolutColors.spend : RevolutColors.divider,
-            ),
-          ),
+    final app = context.watch<AppState>();
+    final byMonth = _byMonth;
+    final presets = byMonth ? const [3, 6, 9, 12] : _yearPresets;
+    final custom = !byMonth && maxYears > 5;
+    final valueLabel = byMonth
+        ? app.tr('home.monthsN', {'n': '$months'})
+        : app.tr('home.yearsN', {'n': '${years <= 0 ? 1 : years}'});
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LoanSegment(
+          options: [
+            ('month', app.tr('home.termByMonth')),
+            ('year', app.tr('home.termByYear')),
+          ],
+          selected: byMonth ? 'month' : 'year',
+          onSelect: (value) => _setUnit(value == 'month'),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
           child: Row(
             children: [
               Expanded(
                 child: Text(
-                  labelBuilder(value.isEmpty ? '1' : value),
-                  style: const TextStyle(
-                    fontSize: 16,
+                  valueLabel,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
                     height: 1.2,
-                    fontFeatures: [FontFeature.tabularFigures()],
+                    color: error ? RevolutColors.spend : RevolutColors.text,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: RevolutColors.textMuted,
+              IconButton(
+                onPressed: () => _open(context, app, byMonth),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                icon: const Icon(LucideIcons.calendar, size: 22, color: RevolutColors.brandSolid),
               ),
             ],
           ),
         ),
-      ),
+        const SizedBox(height: 4),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const columns = 4;
+            const gap = 8.0;
+            final cell = (constraints.maxWidth - gap * (columns - 1)) / columns;
+            final labels = [
+              for (final preset in presets)
+                (
+                  byMonth
+                      ? app.tr('home.monthsN', {'n': '$preset'})
+                      : app.tr('home.yearsN', {'n': '$preset'}),
+                  byMonth ? months == preset : years == preset && months == 0,
+                  () => byMonth ? onChanged(0, preset) : onChanged(preset, 0),
+                ),
+              if (custom)
+                (
+                  app.tr('home.termCustom'),
+                  !presets.contains(years) || months != 0,
+                  () => _open(context, app, false),
+                ),
+            ];
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final item in labels)
+                  SizedBox(
+                    width: cell,
+                    child: LoanQuickChip(
+                      label: item.$1,
+                      selected: item.$2,
+                      stretch: true,
+                      onTap: item.$3,
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
