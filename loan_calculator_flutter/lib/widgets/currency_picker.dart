@@ -39,7 +39,7 @@ class CurrencyPicker extends StatelessWidget {
           _CurrencyGrid(
             columns: compact ? 6 : 4,
             spacing: compact ? 6 : 8,
-            options: currencyOptions.where((c) => c.code != 'CNY').toList(),
+            options: pickerCurrencies,
             selectedCode: currencyCode,
             compact: compact,
             onChange: onChange,

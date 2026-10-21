@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/format.dart';
+import '../../data/input_utils.dart';
 import '../../data/models.dart';
 import '../../data/savings_insights.dart';
 import '../../state/app_state.dart';
@@ -39,7 +40,7 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
     }
 
     void addTx(String type) {
-      final v = double.tryParse(_amount.text);
+      final v = parseAmountString(_amount.text);
       if (v == null || v <= 0) return;
       FocusManager.instance.primaryFocus?.unfocus();
       SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
@@ -104,6 +105,8 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                 controller: _amount,
                 placeholder: app.tr('savings.amount'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: groupedDecimalInputFormatters,
+                amountStyle: true,
                 onChanged: (_) {},
               ),
               const SizedBox(height: 12),

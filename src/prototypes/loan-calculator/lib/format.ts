@@ -13,10 +13,61 @@ export function formatMoney(
       currency: cur.code,
       minimumFractionDigits: settings.decimals,
       maximumFractionDigits: settings.decimals,
+      useGrouping: true,
     }).format(n);
   } catch {
     return `${cur.symbol}${n.toFixed(settings.decimals)}`;
   }
+}
+
+export function parseAmountString(raw: string): number | null {
+  const s = raw.trim().replace(/,/g, '').replace(/，/g, '');
+  if (!s || s.includes('-')) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function sanitizeDecimalInput(raw: string): string {
+  let out = '';
+  let dot = false;
+  for (const ch of raw) {
+    if (ch >= '0' && ch <= '9') out += ch;
+    else if (ch === '.' && !dot) {
+      dot = true;
+      out += ch;
+    }
+  }
+  return out;
+}
+
+/** 金额输入的展示形式，如 1000000 → 1,000,000。小数点和末尾的点保留。 */
+export function formatGroupedAmount(raw: string): string {
+  if (!raw) return '';
+  const dot = raw.indexOf('.');
+  const intRaw = dot === -1 ? raw : raw.slice(0, dot);
+  const frac = dot === -1 ? '' : raw.slice(dot);
+  const digits = intRaw.replace(/\D/g, '');
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return `${grouped}${frac}`;
+}
+
+/** 把带逗号的输入还原成纯数字，并算出格式化后光标应停的位置。 */
+export function editGroupedAmount(display: string, caret: number): { raw: string; caret: number } {
+  const raw = sanitizeDecimalInput(display);
+  const formatted = formatGroupedAmount(raw);
+  const kept = sanitizeDecimalInput(display.slice(0, Math.max(0, caret))).length;
+  if (kept === 0) return { raw, caret: 0 };
+  let seen = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    if (formatted[i] === ',') continue;
+    seen += 1;
+    if (seen === kept) return { raw, caret: i + 1 };
+  }
+  return { raw, caret: formatted.length };
+}
+
+export function currencyAmountUnit(settings: Pick<AppSettings, 'currencyCode'>): string {
+  return getCurrency(settings.currencyCode).symbol;
 }
 
 export function formatPercent(value: number, decimals = 2): string {

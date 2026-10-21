@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../data/input_utils.dart';
 import '../../data/models.dart';
 import '../../state/app_state.dart';
 import '../../widgets/loan_widgets.dart';
@@ -21,8 +22,9 @@ class _SavingsNewScreenState extends State<SavingsNewScreen> {
     super.initState();
     final app = context.read<AppState>();
     _name = TextEditingController(text: app.tr('savings.defaultName'));
+    final prefill = app.savingsPrefill;
     _target = TextEditingController(
-      text: app.savingsPrefill?.isNotEmpty == true ? app.savingsPrefill : '15000',
+      text: formatGroupedAmount(prefill != null && prefill.isNotEmpty ? prefill : '15000'),
     );
   }
 
@@ -50,6 +52,8 @@ class _SavingsNewScreenState extends State<SavingsNewScreen> {
               LoanInput(
                 controller: _target,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: groupedDecimalInputFormatters,
+                amountStyle: true,
                 onChanged: (_) {},
               ),
             ],
@@ -58,7 +62,7 @@ class _SavingsNewScreenState extends State<SavingsNewScreen> {
         LoanPrimaryButton(
           label: app.tr('savings.createCta'),
           onPressed: () async {
-            final target = double.tryParse(_target.text);
+            final target = parseAmountString(_target.text);
             if (_name.text.trim().isEmpty || target == null || target <= 0) return;
             final goal = SavingsGoal(
               id: uid('goal'),

@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/calc.dart';
+import '../../data/input_utils.dart';
 import '../../data/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/revolut_theme.dart';
@@ -15,7 +16,7 @@ String _interestShare(CalcResult result) {
   return (result.totalInterest / result.totalPayment * 100).toStringAsFixed(0);
 }
 
-String _whole(double n) => n.toStringAsFixed(0);
+String _whole(double n) => formatGroupedAmount(n.toStringAsFixed(0));
 
 String _yearsText(int months) {
   final years = months / 12;

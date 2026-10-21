@@ -20,10 +20,17 @@ String formatMoney(double value, AppSettings settings) {
       symbol: cur.symbol,
       decimalDigits: settings.decimals,
     );
+    fmt.minimumFractionDigits = settings.decimals;
+    fmt.maximumFractionDigits = settings.decimals;
     _moneyFmt = fmt;
     _moneyFmtKey = key;
   }
   return fmt.format(value);
+}
+
+/// 金额输入后缀用货币符号（$ / € / …），随设置变化。
+String currencyAmountUnit(AppSettings settings) {
+  return getCurrency(settings.currencyCode).symbol;
 }
 
 String formatShortDate(DateTime dt) => DateFormat('yyyy-MM-dd').format(dt);

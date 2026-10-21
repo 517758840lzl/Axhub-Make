@@ -1,3 +1,4 @@
+import 'currencies.dart';
 import 'i18n.dart';
 
 enum RepaymentMode { equalPayment, equalPrincipal }
@@ -455,7 +456,7 @@ class AppSettings {
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
-        currencyCode: j['currencyCode'] as String? ?? 'CNY',
+        currencyCode: resolveCurrencyCode(j['currencyCode'] as String?),
         decimals: j['decimals'] as int? ?? 2,
         theme: j['theme'] as String? ?? 'light',
         locale: AppLocaleX.fromId(j['locale'] as String?),

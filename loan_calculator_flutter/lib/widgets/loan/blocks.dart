@@ -89,24 +89,27 @@ class LoanSectionHead extends StatelessWidget {
       color: icon == null ? RevolutColors.textSecondary : RevolutColors.text,
     );
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(0, 4 + marginTop, 0, icon == null ? 8 : 10),
-      child: icon == null
-          ? Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(title, style: titleStyle),
-                ?trailing,
-              ],
-            )
-          : Row(
-              children: [
-                Icon(icon, size: 16, color: RevolutColors.brandSolid),
-                const SizedBox(width: 8),
-                Expanded(child: Text(title, style: titleStyle)),
-                ?trailing,
-              ],
-            ),
+    return Transform.translate(
+      offset: const Offset(0, -4),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(0, marginTop, 0, (icon == null ? 8 : 10) - 4),
+        child: icon == null
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: titleStyle),
+                  ?trailing,
+                ],
+              )
+            : Row(
+                children: [
+                  Icon(icon, size: 16, color: RevolutColors.brandSolid),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(title, style: titleStyle)),
+                  ?trailing,
+                ],
+              ),
+      ),
     );
   }
 }

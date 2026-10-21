@@ -68,7 +68,7 @@ export function saveProfile(profile: UserProfile) {
 
 export function getSettings(): AppSettings {
   const raw = readJson<AppSettings & { currency?: string }>(KEYS.settings, {
-    currencyCode: 'CNY',
+    currencyCode: 'USD',
     decimals: 2,
     theme: 'light',
     locale: 'zh-CN',

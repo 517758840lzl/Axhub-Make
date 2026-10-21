@@ -24,14 +24,19 @@ export const CURRENCY_OPTIONS: CurrencyOption[] = [
 
 const byCode = new Map(CURRENCY_OPTIONS.map((c) => [c.code, c]));
 
+/** 列表不展示 CNY，新用户与旧的人民币偏好都落在美元。 */
+export const DEFAULT_CURRENCY_CODE = 'USD';
+
+export const PICKER_CURRENCIES = CURRENCY_OPTIONS.filter((c) => c.code !== 'CNY');
+
 export function getCurrency(code: string): CurrencyOption {
-  return byCode.get(code) ?? CURRENCY_OPTIONS[0];
+  return byCode.get(code) ?? byCode.get(DEFAULT_CURRENCY_CODE)!;
 }
 
 export function resolveCurrencyCode(legacy: { currencyCode?: string; currency?: string }): string {
-  if (legacy.currencyCode && byCode.has(legacy.currencyCode)) {
+  if (legacy.currencyCode && PICKER_CURRENCIES.some((c) => c.code === legacy.currencyCode)) {
     return legacy.currencyCode;
   }
-  const fromSymbol = CURRENCY_OPTIONS.find((c) => c.symbol === legacy.currency);
-  return fromSymbol?.code ?? 'CNY';
+  const fromSymbol = PICKER_CURRENCIES.find((c) => c.symbol === legacy.currency);
+  return fromSymbol?.code ?? DEFAULT_CURRENCY_CODE;
 }

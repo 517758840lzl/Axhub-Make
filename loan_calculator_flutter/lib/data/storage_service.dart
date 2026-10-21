@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'calc.dart';
+import 'currencies.dart';
 import 'models.dart';
 import 'tags.dart';
 
@@ -38,7 +39,7 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_settings);
     if (raw == null) {
-      return AppSettings(currencyCode: 'CNY', decimals: 2, theme: 'light');
+      return AppSettings(currencyCode: defaultCurrencyCode, decimals: 2, theme: 'light');
     }
     return AppSettings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }

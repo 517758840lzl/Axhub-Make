@@ -27,14 +27,24 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { defineHashPageRoute, useHashPage } from '../../common/useHashPage';
+import { AmountInput } from './components/AmountInput';
 import { CurrencyPicker } from './components/CurrencyPicker';
 import { CompareCharts, COMPARE_PLAN_COLORS } from './components/CompareCharts';
 import { Donut } from './components/Donut';
+import { TermYearSelect } from './components/TermYearSelect';
 import { AppProvider, useApp } from './context';
 import { computeLoan, summarizeLoan } from './lib/calc';
 import { savingsBufferLine, savingsEtaLine, goalReached } from './lib/savings_insights';
 import { getCurrency } from './lib/currencies';
-import { formatMoney, parseHashParams, setHashPage, uid } from './lib/format';
+import {
+  currencyAmountUnit,
+  formatGroupedAmount,
+  formatMoney,
+  parseAmountString,
+  parseHashParams,
+  setHashPage,
+  uid,
+} from './lib/format';
 import {
   APP_LOCALES,
   categoryMessageKey,
@@ -189,12 +199,12 @@ function insightLines(result: CalcResult, t: TranslateFn): string[] {
   if (input.category === 'dual' && result.partsResults?.length === 2) {
     return [
       t('dual.insight', {
-        monthly: monthlyPayment.toFixed(0),
-        interest: totalInterest.toFixed(0),
-        total: totalPayment.toFixed(0),
+        monthly: formatGroupedAmount(monthlyPayment.toFixed(0)),
+        interest: formatGroupedAmount(totalInterest.toFixed(0)),
+        total: formatGroupedAmount(totalPayment.toFixed(0)),
       }),
       t('result.insight.3', {
-        principal: input.principal.toFixed(0),
+        principal: formatGroupedAmount(input.principal.toFixed(0)),
         rate: `${input.parts?.[0]?.annualRatePercent ?? '-'} / ${input.parts?.[1]?.annualRatePercent ?? '-'}`,
       }),
     ];
@@ -208,24 +218,24 @@ function insightLines(result: CalcResult, t: TranslateFn): string[] {
       share: interestShare.toFixed(0),
     }),
     t('result.insight.2', {
-      monthly: monthlyPayment.toFixed(0),
-      interest: totalInterest.toFixed(0),
+      monthly: formatGroupedAmount(monthlyPayment.toFixed(0)),
+      interest: formatGroupedAmount(totalInterest.toFixed(0)),
     }),
   ];
   if (input.category === 'auto' && input.vehiclePrice != null && input.downPayment != null) {
     const pct = input.vehiclePrice > 0 ? (input.downPayment / input.vehiclePrice) * 100 : 0;
     lines.unshift(
       t('result.insight.auto', {
-        vehicle: input.vehiclePrice.toFixed(0),
+        vehicle: formatGroupedAmount(input.vehiclePrice.toFixed(0)),
         pct: pct.toFixed(0),
-        down: input.downPayment.toFixed(0),
-        principal: input.principal.toFixed(0),
+        down: formatGroupedAmount(input.downPayment.toFixed(0)),
+        principal: formatGroupedAmount(input.principal.toFixed(0)),
       }),
     );
   } else {
     lines.push(
       t('result.insight.3', {
-        principal: input.principal.toFixed(0),
+        principal: formatGroupedAmount(input.principal.toFixed(0)),
         rate: input.annualRatePercent,
       }),
     );
@@ -915,6 +925,39 @@ function CalcHome({
       ? (Number(downPayment) / Number(vehiclePrice)) * 100
       : 0;
 
+  const amountUnit = currencyAmountUnit(app.settings);
+  const wanQuick = (wan: number) =>
+    t('home.wanWithUnit', {
+      n: String(wan),
+      symbol: getCurrency(app.settings.currencyCode).symbol,
+    });
+  const principalNum = parseAmountString(principal) ?? 0;
+
+  const previewBlock = (
+    <div className="loan-preview-card">
+      <div className="loan-preview-label">
+        <Sparkles size={14} style={{ verticalAlign: -2, marginRight: 4 }} />
+        {t('home.preview', {
+          mode: category === 'dual' ? categoryLabel('dual', t) : modeLabel(mode, t),
+        })}
+        {category === 'auto' ? t('home.previewDown', { pct: downRatio.toFixed(0) }) : ''}
+      </div>
+      <div className="loan-preview-amount">
+        {preview && previewPayment != null ? money(previewPayment) : '—'}
+      </div>
+      <div className="loan-preview-meta">
+        <div>
+          {t('home.totalInterest')}
+          <strong>{preview ? money(preview.totalInterest) : '—'}</strong>
+        </div>
+        <div>
+          {t('home.totalPayment')}
+          <strong>{preview ? money(preview.totalPayment) : '—'}</strong>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="loan-hero-banner loan-hero-compact">
@@ -958,28 +1001,24 @@ function CalcHome({
         </div>
       </div>
 
-      <div className="loan-preview-card loan-preview-sticky">
-        <div className="loan-preview-label">
-          <Sparkles size={14} style={{ verticalAlign: -2, marginRight: 4 }} />
-          {t('home.preview', {
-            mode: category === 'dual' ? categoryLabel('dual', t) : modeLabel(mode, t),
-          })}
-          {category === 'auto' ? t('home.previewDown', { pct: downRatio.toFixed(0) }) : ''}
-        </div>
-        <div className="loan-preview-amount">
-          {preview && previewPayment != null ? money(previewPayment) : '—'}
-        </div>
-        <div className="loan-preview-meta">
-          <div>
-            {t('home.totalInterest')}
-            <strong>{preview ? money(preview.totalInterest) : '—'}</strong>
-          </div>
-          <div>
-            {t('home.totalPayment')}
-            <strong>{preview ? money(preview.totalPayment) : '—'}</strong>
-          </div>
-        </div>
+      <div className="loan-feature-row">
+        <button type="button" className="loan-feature-item" onClick={() => goFeature('result')}>
+          <PieChart aria-hidden />
+          <div>{t('home.feature.ratio')}</div>
+        </button>
+        <button type="button" className="loan-feature-item" onClick={() => goFeature('amortization')}>
+          <TableProperties aria-hidden />
+          <div>{t('home.feature.amort')}</div>
+        </button>
+        <button type="button" className="loan-feature-item" onClick={() => goFeature('compare')}>
+          <Columns2 aria-hidden />
+          <div>{t('home.feature.compare')}</div>
+        </button>
       </div>
+
+      <button type="button" className="loan-btn-primary" onClick={submit}>
+        {t('home.cta')}
+      </button>
 
       {category !== 'dual' ? (
       <div className="loan-card">
@@ -1062,13 +1101,12 @@ function CalcHome({
             </div>
             <div className="loan-label">{t('home.principal')}</div>
             <div className="loan-input-wrap">
-              <input
+              <AmountInput
                 className={`loan-input ${errors.dual ? 'loan-input-error' : ''}`}
-                inputMode="decimal"
                 value={part.principal}
-                onChange={(e) => part.setPrincipal(e.target.value.replace(/[^\d.]/g, ''))}
+                onChange={part.setPrincipal}
               />
-              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+              <span className="loan-input-suffix">{amountUnit}</span>
             </div>
             <div className="loan-label" style={{ marginTop: 10 }}>
               {t('home.rate')}
@@ -1090,26 +1128,15 @@ function CalcHome({
             <div className="loan-label" style={{ marginTop: 10 }}>
               {t('home.term')}
             </div>
-            <div className="loan-term-grid">
-              <div className="loan-input-wrap">
-                <input
-                  className={`loan-input ${errors.dual ? 'loan-input-error' : ''}`}
-                  inputMode="numeric"
-                  value={part.years}
-                  onChange={(e) => part.setYears(e.target.value.replace(/\D/g, ''))}
-                />
-                <span className="loan-input-suffix">{t('home.year')}</span>
-              </div>
-              <div className="loan-input-wrap">
-                <input
-                  className={`loan-input ${errors.dual ? 'loan-input-error' : ''}`}
-                  inputMode="numeric"
-                  value={part.months}
-                  onChange={(e) => part.setMonths(e.target.value.replace(/\D/g, ''))}
-                />
-                <span className="loan-input-suffix">{t('home.month')}</span>
-              </div>
-            </div>
+            <TermYearSelect
+              value={part.years}
+              maxYears={30}
+              error={!!errors.dual}
+              onChange={(y) => {
+                part.setYears(y);
+                part.setMonths('0');
+              }}
+            />
           </div>
         ))}
       </div>
@@ -1124,12 +1151,10 @@ function CalcHome({
           <>
             <div className="loan-label">{t('home.vehiclePrice')}</div>
             <div className="loan-input-wrap">
-              <input
+              <AmountInput
                 className={`loan-input ${errors.vehicle ? 'loan-input-error' : ''}`}
-                inputMode="decimal"
                 value={vehiclePrice}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^\d.]/g, '');
+                onChange={(v) => {
                   setVehiclePrice(v);
                   const vp = Number(v);
                   const pct = Number(downPct) || 0;
@@ -1140,7 +1165,7 @@ function CalcHome({
                   }
                 }}
               />
-              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+              <span className="loan-input-suffix">{amountUnit}</span>
             </div>
             <div className="loan-chip-row">
               {[150_000, 180_000, 250_000, 350_000].map((v) => (
@@ -1187,12 +1212,10 @@ function CalcHome({
               {t('home.downAmount')}
             </div>
             <div className="loan-input-wrap">
-              <input
+              <AmountInput
                 className={`loan-input ${errors.down || overLimit === 'down' ? 'loan-input-error' : ''}`}
-                inputMode="decimal"
                 value={downPayment}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^\d.]/g, '');
+                onChange={(v) => {
                   setDownPayment(v);
                   const vp = Number(vehiclePrice) || 0;
                   const dp = Number(v) || 0;
@@ -1201,7 +1224,7 @@ function CalcHome({
                   syncAutoLoan(vehiclePrice, v);
                 }}
               />
-              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+              <span className="loan-input-suffix">{amountUnit}</span>
             </div>
             {overLimit === 'down' ? (
               <p className="loan-danger" style={{ fontSize: 12, margin: '8px 0 0' }}>
@@ -1213,16 +1236,15 @@ function CalcHome({
               {t('home.loanAmount')}
             </div>
             <div className="loan-input-wrap">
-              <input
+              <AmountInput
                 className={`loan-input ${errors.principal || overLimit === 'loan' ? 'loan-input-error' : ''}`}
-                inputMode="decimal"
                 value={principal}
-                onChange={(e) => {
-                  setPrincipal(e.target.value.replace(/[^\d.]/g, ''));
+                onChange={(v) => {
+                  setPrincipal(v);
                   setLoanManual(true);
                 }}
               />
-              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+              <span className="loan-input-suffix">{amountUnit}</span>
             </div>
             {overLimit === 'loan' ? (
               <p className="loan-danger" style={{ fontSize: 12, margin: '8px 0 0' }}>
@@ -1238,15 +1260,14 @@ function CalcHome({
           <>
             <div className="loan-label">{t('home.principal')}</div>
             <div className="loan-input-wrap">
-              <input
+              <AmountInput
                 className={`loan-input ${errors.principal ? 'loan-input-error' : ''}`}
-                inputMode="decimal"
                 value={principal}
-                onChange={(e) => setPrincipal(e.target.value.replace(/[^\d.]/g, ''))}
+                onChange={setPrincipal}
               />
-              <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
+              <span className="loan-input-suffix">{amountUnit}</span>
             </div>
-            <div className="loan-chip-row">
+            <div className="loan-chip-row" style={{ marginTop: 12 }}>
               {(category === 'mortgage'
                 ? [500_000, 1_000_000, 1_500_000, 2_000_000]
                 : [20_000, 50_000, 100_000, 200_000]
@@ -1255,9 +1276,10 @@ function CalcHome({
                   key={v}
                   type="button"
                   className="loan-quick-chip"
+                  data-active={Math.abs(principalNum - v) < 1}
                   onClick={() => setPrincipal(String(v))}
                 >
-                  {t('home.wan', { n: v / 10_000 })}
+                  {category === 'mortgage' ? wanQuick(v / 10_000) : money(v)}
                 </button>
               ))}
             </div>
@@ -1288,6 +1310,7 @@ function CalcHome({
                 key={v}
                 type="button"
                 className="loan-quick-chip"
+                data-active={rate === v}
                 onClick={() => setRate(v)}
               >
                 {v}%
@@ -1298,89 +1321,19 @@ function CalcHome({
         <div className="loan-label" style={{ marginTop: 14 }}>
           {t('home.term')}
         </div>
-        <div className="loan-term-grid">
-          <div className="loan-input-wrap">
-            <input
-              className={`loan-input ${errors.term ? 'loan-input-error' : ''}`}
-              inputMode="numeric"
-              value={years}
-              placeholder="0"
-              onChange={(e) => setYears(e.target.value.replace(/\D/g, ''))}
-            />
-            <span className="loan-input-suffix">{t('home.year')}</span>
-          </div>
-          <div className="loan-input-wrap">
-            <input
-              className={`loan-input ${errors.term ? 'loan-input-error' : ''}`}
-              inputMode="numeric"
-              value={months}
-              placeholder="0"
-              onChange={(e) => setMonths(e.target.value.replace(/\D/g, ''))}
-            />
-            <span className="loan-input-suffix">{t('home.month')}</span>
-          </div>
-        </div>
-        <div className="loan-chip-row">
-          {(category === 'mortgage'
-            ? [
-                ['30', '0'],
-                ['20', '0'],
-                ['10', '0'],
-                ['5', '0'],
-              ]
-            : [
-                ['5', '0'],
-                ['3', '0'],
-                ['2', '0'],
-                ['1', '0'],
-              ]
-          ).map(([y, m]) => (
-            <button
-              key={`${y}-${m}`}
-              type="button"
-              className="loan-quick-chip"
-              onClick={() => {
-                setYears(y);
-                setMonths(m);
-              }}
-            >
-              {t('home.yearsN', { n: y })}
-            </button>
-          ))}
-        </div>
+        <TermYearSelect
+          value={years}
+          maxYears={category === 'mortgage' ? 30 : 5}
+          error={!!errors.term}
+          onChange={(y) => {
+            setYears(y);
+            setMonths('0');
+          }}
+        />
       </div>
       )}
 
-      <div className="loan-feature-row">
-        <button
-          type="button"
-          className="loan-feature-item"
-          onClick={() => goFeature('result')}
-        >
-          <PieChart aria-hidden />
-          <div>{t('home.feature.ratio')}</div>
-        </button>
-        <button
-          type="button"
-          className="loan-feature-item"
-          onClick={() => goFeature('amortization')}
-        >
-          <TableProperties aria-hidden />
-          <div>{t('home.feature.amort')}</div>
-        </button>
-        <button
-          type="button"
-          className="loan-feature-item"
-          onClick={() => goFeature('compare')}
-        >
-          <Columns2 aria-hidden />
-          <div>{t('home.feature.compare')}</div>
-        </button>
-      </div>
-
-      <button type="button" className="loan-btn-primary" onClick={submit}>
-        {t('home.cta')}
-      </button>
+      {previewBlock}
       <p className="loan-muted" style={{ fontSize: 12, marginTop: 8, marginBottom: 0, textAlign: 'center' }}>
         {t('home.disclaimer')}
       </p>
@@ -2080,12 +2033,7 @@ function SavingsNew({
         <div className="loan-label" style={{ marginTop: 12 }}>
           {t('savings.target')}
         </div>
-        <input
-          className="loan-input"
-          inputMode="decimal"
-          value={target}
-          onChange={(e) => setTarget(e.target.value.replace(/[^\d.]/g, ''))}
-        />
+        <AmountInput className="loan-input" value={target} onChange={setTarget} />
       </div>
       <button
         type="button"
@@ -2175,13 +2123,12 @@ function SavingsDetail({
       </div>
       <div className="loan-card">
         <div className="loan-label">{t('savings.depositWithdraw')}</div>
-        <input
+        <AmountInput
           ref={amountRef}
           className="loan-input"
-          inputMode="decimal"
           placeholder={t('savings.amount')}
           value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
+          onChange={setAmount}
         />
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button type="button" className="loan-btn-primary" style={{ flex: 1 }} onClick={() => addTx('deposit')}>

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../theme/revolut_theme.dart';
 
@@ -163,6 +164,7 @@ class LoanInput extends StatelessWidget {
     this.onChanged,
     this.marginBottom,
     this.amountStyle = false,
+    this.inputFormatters,
   });
 
   final TextEditingController controller;
@@ -173,6 +175,7 @@ class LoanInput extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final double? marginBottom;
   final bool amountStyle;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -183,15 +186,21 @@ class LoanInput extends StatelessWidget {
         child: TextField(
           controller: controller,
           keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           onChanged: onChanged,
           scrollPadding: const EdgeInsets.fromLTRB(20, 72, 20, 28),
           textAlignVertical: TextAlignVertical.center,
-          style: TextStyle(
-            fontSize: amountStyle ? 18 : 16,
-            height: 1.2,
-            leadingDistribution: TextLeadingDistribution.even,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+          style: amountStyle
+              ? monoStyle(context, size: 18, w: FontWeight.w400).copyWith(
+                  height: 1.2,
+                  leadingDistribution: TextLeadingDistribution.even,
+                )
+              : const TextStyle(
+                  fontSize: 16,
+                  height: 1.2,
+                  leadingDistribution: TextLeadingDistribution.even,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
           decoration: InputDecoration(
             hintText: placeholder,
             filled: true,
@@ -230,10 +239,14 @@ class LoanInput extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 14),
                 child: Text(
                   suffix!,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: RevolutColors.textMuted,
-                  ),
+                  style: amountStyle
+                      ? monoStyle(context, size: 13, w: FontWeight.w400).copyWith(
+                          color: RevolutColors.textMuted,
+                        )
+                      : const TextStyle(
+                          fontSize: 13,
+                          color: RevolutColors.textMuted,
+                        ),
                 ),
               ),
             ],
@@ -295,33 +308,35 @@ class LoanSegment extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
-        children: options.map((o) {
-          final active = o.$1 == selected;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onSelect(o.$1),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 8,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  gradient: active ? RevolutColors.gradient : null,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  o.$2,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: active ? Colors.white : RevolutColors.textSecondary,
+        children: [
+          for (var i = 0; i < options.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onSelect(options[i].$1),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: options[i].$1 == selected ? RevolutColors.gradient : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    options[i].$2,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: options[i].$1 == selected ? Colors.white : RevolutColors.textSecondary,
+                    ),
                   ),
                 ),
               ),
             ),
-          );
-        }).toList(),
+          ],
+        ],
       ),
     );
   }
@@ -377,24 +392,166 @@ class LoanChip extends StatelessWidget {
 }
 
 class LoanQuickChip extends StatelessWidget {
-  const LoanQuickChip({super.key, required this.label, required this.onTap});
+  const LoanQuickChip({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+  });
   final String label;
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        side: const BorderSide(color: RevolutColors.divider),
-        foregroundColor: RevolutColors.textSecondary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            gradient: selected ? RevolutColors.gradient : null,
+            color: selected ? null : RevolutColors.surface1,
+            border: Border.all(
+              color: selected ? Colors.transparent : RevolutColors.divider,
+              width: selected ? 0 : 1,
+            ),
+            boxShadow: selected ? [RevolutColors.softShadow] : null,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : RevolutColors.textSecondary,
+            ),
+          ),
+        ),
       ),
-      child: Text(label),
+    );
+  }
+}
+
+class LoanTermSelect extends StatelessWidget {
+  const LoanTermSelect({
+    super.key,
+    required this.value,
+    required this.maxYears,
+    required this.labelBuilder,
+    required this.onChanged,
+    this.error = false,
+    this.title,
+  });
+
+  final String value;
+  final int maxYears;
+  final String Function(String year) labelBuilder;
+  final ValueChanged<String> onChanged;
+  final bool error;
+  final String? title;
+
+  Future<void> _open(BuildContext context) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: RevolutColors.surface1,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (title != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    title!,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: RevolutColors.text,
+                    ),
+                  ),
+                ),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(ctx).height * 0.45,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: maxYears,
+                  itemBuilder: (_, index) {
+                    final year = '${maxYears - index}';
+                    final selected = year == value;
+                    return ListTile(
+                      title: Text(
+                        labelBuilder(year),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: selected
+                              ? RevolutColors.brandSolid
+                              : RevolutColors.text,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      trailing: selected
+                          ? const Icon(Icons.check, color: RevolutColors.brandSolid)
+                          : null,
+                      onTap: () => Navigator.of(ctx).pop(year),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null) onChanged(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _open(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: RevolutColors.surface2,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: error ? RevolutColors.spend : RevolutColors.divider,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  labelBuilder(value.isEmpty ? '1' : value),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    height: 1.2,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: RevolutColors.textMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

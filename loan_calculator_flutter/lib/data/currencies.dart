@@ -29,5 +29,18 @@ const currencyOptions = <CurrencyOption>[
   CurrencyOption(code: 'THB', symbol: '฿', name: '泰铢', locale: 'th_TH', defaultDecimals: 2),
 ];
 
-CurrencyOption getCurrency(String code) =>
-    currencyOptions.firstWhere((c) => c.code == code, orElse: () => currencyOptions.first);
+const defaultCurrencyCode = 'USD';
+
+List<CurrencyOption> get pickerCurrencies =>
+    currencyOptions.where((c) => c.code != 'CNY').toList();
+
+/// 列表不展示 CNY。缺失、人民币或未知代码都落在美元。
+String resolveCurrencyCode(String? code) {
+  if (code != null && pickerCurrencies.any((c) => c.code == code)) return code;
+  return defaultCurrencyCode;
+}
+
+CurrencyOption getCurrency(String code) => currencyOptions.firstWhere(
+      (c) => c.code == code,
+      orElse: () => currencyOptions.firstWhere((c) => c.code == defaultCurrencyCode),
+    );

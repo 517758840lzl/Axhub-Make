@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../data/calc.dart';
+import '../data/currencies.dart';
 import '../data/format.dart';
 import '../data/i18n.dart';
 import '../data/models.dart';
@@ -62,7 +63,7 @@ class AppState extends ChangeNotifier {
     avatar: '🧑‍💼',
     createdAt: DateTime.now().toIso8601String(),
   );
-  AppSettings _settings = AppSettings(currencyCode: 'CNY', decimals: 2, theme: 'light');
+  AppSettings _settings = AppSettings(currencyCode: defaultCurrencyCode, decimals: 2, theme: 'light');
   List<SavedCalculation> _calculations = [];
   List<ManualLedgerEntry> _ledgerEntries = [];
   List<SavingsGoal> _savingsGoals = [];
@@ -90,7 +91,13 @@ class AppState extends ChangeNotifier {
   int get activeTabIndex => tabIndexForRoute(route);
 
   String money(double n) => formatMoney(n, _settings);
+  String get amountUnit => currencyAmountUnit(_settings);
   String tr(String key, [Map<String, String>? params]) => t(locale, key, params);
+
+  String wanQuickLabel(int wan) => tr('home.wanWithUnit', {
+        'n': '$wan',
+        'symbol': getCurrency(_settings.currencyCode).symbol,
+      });
 
   String displayNickname() => _profile.displayNickname(locale);
 

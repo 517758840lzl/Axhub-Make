@@ -1,5 +1,5 @@
 import React from 'react';
-import { CURRENCY_OPTIONS } from '../lib/currencies';
+import { PICKER_CURRENCIES } from '../lib/currencies';
 import { type TranslateFn } from '../lib/i18n';
 
 type CurrencyPickerProps = {
@@ -31,7 +31,7 @@ export function CurrencyPicker({
         </div>
       ) : null}
       <div className="loan-currency-grid" role="listbox" aria-label={t('currency.pick')}>
-        {CURRENCY_OPTIONS.filter((c) => c.code !== 'CNY').map((c) => (
+        {PICKER_CURRENCIES.map((c) => (
           <button
             key={c.code}
             type="button"
