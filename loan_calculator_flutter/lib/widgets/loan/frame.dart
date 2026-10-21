@@ -47,15 +47,19 @@ class LoanShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fabClearance = fab != null ? 52.0 + loanFabTabGap + 8 : 0.0;
-    // 页面没有 Scaffold，键盘不会自动把内容顶上去。按键盘高度把整页抬到键盘上方。
+    // 键盘盖住屏幕底部。只把内容抬到键盘上方，标签栏留在原处，由键盘盖住。
+    // 底部安全区只加在标签栏内部，背景铺到屏幕底边。有手势条和没有的手机都按系统间距留白。
     final keyboardLift = MediaQuery.viewInsetsOf(context).bottom;
+    final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
+    final tabReserve = showTabBar ? loanTabBarHeight + safeBottom : safeBottom;
+    final contentBottom = keyboardLift > tabReserve ? keyboardLift : tabReserve;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: revolutSystemUi,
       child: Material(
         color: RevolutColors.canvas,
         child: SafeArea(
           top: true,
-          bottom: true,
+          bottom: false,
           left: false,
           right: false,
           child: Center(
@@ -63,60 +67,59 @@ class LoanShell extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: loanShellMaxWidth),
               child: ColoredBox(
                 color: RevolutColors.canvas,
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: keyboardLift),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Column(
-                        children: [
-                          Expanded(
-                            child: expandBody
-                                ? body
-                                : SingleChildScrollView(
-                                    key: scrollResetKey,
-                                    keyboardDismissBehavior:
-                                        ScrollViewKeyboardDismissBehavior
-                                            .onDrag,
-                                    padding: EdgeInsets.fromLTRB(
-                                      12,
-                                      12,
-                                      12,
-                                      showTabBar ? 16 + fabClearance : 12,
-                                    ),
-                                    child: body,
-                                  ),
-                          ),
-                          if (showTabBar)
-                            _LoanTabBar(
-                              activeTab: activeTab,
-                              onTab: onTab,
-                              labels: tabLabels,
-                            ),
-                        ],
-                      ),
-                      if (fab != null && showTabBar)
-                        Positioned(
-                          right: 12,
-                          bottom: loanTabBarHeight + loanFabTabGap,
-                          child: fab!,
-                        ),
-                      if (toast != null)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Align(
-                              alignment: const Alignment(0, 0.62),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 32,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: contentBottom),
+                        child: expandBody
+                            ? body
+                            : SingleChildScrollView(
+                                key: scrollResetKey,
+                                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                padding: EdgeInsets.fromLTRB(
+                                  12,
+                                  12,
+                                  12,
+                                  16 + fabClearance,
                                 ),
-                                child: LoanToast(message: toast!),
+                                child: body,
                               ),
+                      ),
+                    ),
+                    if (showTabBar)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: _LoanTabBar(
+                          activeTab: activeTab,
+                          onTab: onTab,
+                          labels: tabLabels,
+                        ),
+                      ),
+                    if (fab != null && showTabBar)
+                      Positioned(
+                        right: 12,
+                        bottom: contentBottom + loanFabTabGap,
+                        child: fab!,
+                      ),
+                    if (toast != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Align(
+                            alignment: const Alignment(0, 0.62),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                              ),
+                              child: LoanToast(message: toast!),
                             ),
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -155,7 +158,7 @@ class _LoanTabBar extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.94),
             border: Border(top: BorderSide(color: RevolutColors.divider)),
           ),
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + MediaQuery.viewPaddingOf(context).bottom),
           child: Row(
             children: List.generate(count, (i) {
               final active = activeTab == i;

@@ -26,8 +26,6 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
 
   static const _rowH = 34.0;
   static const _pageSize = 12;
-  static const _flexPeriod = 40;
-  static const _flexMoney = 100;
 
   @override
   void didChangeDependencies() {
@@ -270,40 +268,35 @@ class _AmortizationScreenState extends State<AmortizationScreen> {
                                 ],
                               ),
                             ],
-                            if (span?.blocked != true) ...[
-                              const SizedBox(height: 8),
-                              _AmortHeaderRow(
-                                periodLabel: _view == 'year' ? app.tr('amort.col.year') : app.tr('amort.col.period'),
-                                payment: app.tr('amort.col.payment'),
-                                principal: app.tr('amort.col.principal'),
-                                interest: app.tr('amort.col.interest'),
-                                balance: app.tr('amort.col.balance'),
-                                style: headStyle,
-                              ),
-                              const Divider(height: 1, color: RevolutColors.divider),
-                            ],
                           ],
                         ),
                       ),
                     ),
-                    SliverFixedExtentList.builder(
-                      key: ValueKey('${locale.name}|$currencyCode|$decimals|$page'),
-                      itemExtent: _rowH,
-                      itemCount: span?.blocked == true ? 0 : pageRows.length,
-                      addAutomaticKeepAlives: false,
-                      itemBuilder: (context, i) {
-                        final r = pageRows[i];
-                        return _AmortDataRow(
-                          line: _AmortLine(
-                            '${r.period}',
-                            app.money(r.payment),
-                            app.money(r.principal),
-                            app.money(r.interest),
-                            app.money(r.balance),
+                    if (span?.blocked != true)
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        sliver: SliverToBoxAdapter(
+                          child: _AmortGrid(
+                            key: ValueKey('${locale.name}|$currencyCode|$decimals|$page'),
+                            periodLabel: _view == 'year' ? app.tr('amort.col.year') : app.tr('amort.col.period'),
+                            payment: app.tr('amort.col.payment'),
+                            principal: app.tr('amort.col.principal'),
+                            interest: app.tr('amort.col.interest'),
+                            balance: app.tr('amort.col.balance'),
+                            headStyle: headStyle,
+                            lines: [
+                              for (final r in pageRows)
+                                _AmortLine(
+                                  '${r.period}',
+                                  app.money(r.payment),
+                                  app.money(r.principal),
+                                  app.money(r.interest),
+                                  app.money(r.balance),
+                                ),
+                            ],
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      ),
                     const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   ],
                 ),
@@ -348,16 +341,20 @@ class _AmortLine {
   final String principal;
   final String interest;
   final String balance;
+
+  List<String> get values => [period, payment, principal, interest, balance];
 }
 
-class _AmortHeaderRow extends StatelessWidget {
-  const _AmortHeaderRow({
+class _AmortGrid extends StatelessWidget {
+  const _AmortGrid({
+    super.key,
     required this.periodLabel,
     required this.payment,
     required this.principal,
     required this.interest,
     required this.balance,
-    required this.style,
+    required this.headStyle,
+    required this.lines,
   });
 
   final String periodLabel;
@@ -365,69 +362,100 @@ class _AmortHeaderRow extends StatelessWidget {
   final String principal;
   final String interest;
   final String balance;
-  final TextStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 32,
-      child: Row(
-        children: [
-          _cell(periodLabel, _AmortizationScreenState._flexPeriod, style),
-          _cell(payment, _AmortizationScreenState._flexMoney, style),
-          _cell(principal, _AmortizationScreenState._flexMoney, style),
-          _cell(interest, _AmortizationScreenState._flexMoney, style),
-          _cell(balance, _AmortizationScreenState._flexMoney, style),
-        ],
-      ),
-    );
-  }
-}
-
-class _AmortDataRow extends StatelessWidget {
-  const _AmortDataRow({required this.line});
-
-  final _AmortLine line;
+  final TextStyle headStyle;
+  final List<_AmortLine> lines;
 
   /// 不继承 Noto Sans SC，数字走系统字体，避免滑动时逐行做中文字形排版。
-  static const _style = TextStyle(
+  static const _numStyle = TextStyle(
     inherit: false,
     fontSize: 12,
     height: 1.2,
     fontWeight: FontWeight.w500,
     color: RevolutColors.text,
   );
-  static const _deco = BoxDecoration(
+  static const _rowDeco = BoxDecoration(
     border: Border(bottom: BorderSide(color: RevolutColors.divider)),
   );
+  static const _cellPad = 8.0;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: DecoratedBox(
-        decoration: _deco,
-        child: SizedBox(
-          height: _AmortizationScreenState._rowH,
-          child: Row(
-            children: [
-              _num(line.period, _AmortizationScreenState._flexPeriod),
-              _num(line.payment, _AmortizationScreenState._flexMoney),
-              _num(line.principal, _AmortizationScreenState._flexMoney),
-              _num(line.interest, _AmortizationScreenState._flexMoney),
-              _num(line.balance, _AmortizationScreenState._flexMoney),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        final headerStyle = DefaultTextStyle.of(context).style.merge(headStyle);
+        final headers = [periodLabel, payment, principal, interest, balance];
+        final widths = List<double>.generate(headers.length, (i) {
+          var width = _textWidth(headers[i], headerStyle, scaler);
+          for (final line in lines) {
+            final cellWidth = _textWidth(line.values[i], _numStyle, scaler);
+            if (cellWidth > width) width = cellWidth;
+          }
+          return width + _cellPad * 2 + 2;
+        });
+        final contentWidth = widths.fold<double>(0, (sum, w) => sum + w);
+        final maxWidth = constraints.maxWidth;
+        if (maxWidth.isFinite && maxWidth > contentWidth) {
+          final extra = (maxWidth - contentWidth) / 4;
+          for (var i = 1; i < widths.length; i++) {
+            widths[i] += extra;
+          }
+        }
+        final tableWidth = widths.fold<double>(0, (sum, w) => sum + w);
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: tableWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _line(headers, widths, headerStyle, height: 32),
+                const Divider(height: 1, color: RevolutColors.divider),
+                for (final line in lines)
+                  DecoratedBox(
+                    decoration: _rowDeco,
+                    child: _line(line.values, widths, _numStyle, height: _AmortizationScreenState._rowH),
+                  ),
+              ],
+            ),
           ),
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _line(List<String> texts, List<double> widths, TextStyle style, {required double height}) {
+    return SizedBox(
+      height: height,
+      child: Row(
+        children: [
+          for (var i = 0; i < texts.length; i++)
+            SizedBox(
+              width: widths[i],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: _cellPad),
+                child: Text(
+                  texts[i],
+                  style: style,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  softWrap: false,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  static Widget _num(String text, int flex) {
-    return Expanded(
-      flex: flex,
-      child: Text(text, style: _style, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
-    );
+  static double _textWidth(String text, TextStyle style, TextScaler scaler) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    return painter.width;
   }
 }
 
@@ -496,15 +524,5 @@ PeriodSpan resolvePeriodSpan({
     incomplete: incomplete,
     fromBad: inverted || fromOutside,
     toBad: inverted || toOutside,
-  );
-}
-
-Widget _cell(String text, int flex, TextStyle style) {
-  return Expanded(
-    flex: flex,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text(text, style: style, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
-    ),
   );
 }

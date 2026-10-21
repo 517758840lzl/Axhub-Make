@@ -459,7 +459,14 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
             onChanged: (_) => setState(() {}),
           ),
           LoanLabel(app.tr('home.rate'), marginTop: 12),
-          LoanInput(controller: rate, suffix: '%', error: _errors['${errKey}Rate'] == true || _rateNotPositive(rate), onChanged: (_) => setState(() {})),
+          LoanInput(
+            controller: rate,
+            suffix: '%',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: positiveDecimalInputFormatters,
+            error: _errors['${errKey}Rate'] == true || _rateNotPositive(rate),
+            onChanged: (_) => setState(() {}),
+          ),
           if (_rateNotPositive(rate))
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -507,7 +514,14 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
             }).toList(),
           ),
           LoanLabel(app.tr('home.rate'), marginTop: 14),
-          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true || _rateNotPositive(_rate), onChanged: (_) => setState(() {})),
+          LoanInput(
+            controller: _rate,
+            suffix: '%',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: positiveDecimalInputFormatters,
+            error: _errors['rate'] == true || _rateNotPositive(_rate),
+            onChanged: (_) => setState(() {}),
+          ),
           if (_rateNotPositive(_rate))
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -573,7 +587,14 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
             ),
           ],
           LoanLabel(app.tr('home.rate'), marginTop: 14),
-          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true || _rateNotPositive(_rate), onChanged: (_) => setState(() {})),
+          LoanInput(
+            controller: _rate,
+            suffix: '%',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: positiveDecimalInputFormatters,
+            error: _errors['rate'] == true || _rateNotPositive(_rate),
+            onChanged: (_) => setState(() {}),
+          ),
           if (_rateNotPositive(_rate))
             Padding(
               padding: const EdgeInsets.only(top: 8),

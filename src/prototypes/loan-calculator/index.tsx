@@ -271,6 +271,7 @@ function LoanCalculatorApp() {
   const params = parseHashParams();
   const entityId = params.get('id') ?? '';
   const keepingField = useRef(false);
+  const userDragging = useRef(false);
   const placedInset = useRef(0);
 
   const money = (n: number) => formatMoney(n, app.settings);
@@ -557,17 +558,34 @@ function LoanCalculatorApp() {
         {app.toast ? <div className="loan-toast">{app.toast}</div> : null}
         <main
           className="loan-main"
+          onPointerDown={(event) => {
+            const target = event.target;
+            if (target instanceof Element && target.closest('input, textarea')) return;
+            const el = document.activeElement;
+            if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.blur();
+          }}
+          onTouchStart={(event) => {
+            const target = event.target;
+            const onField = target instanceof Element && !!target.closest('input, textarea');
+            userDragging.current = !onField;
+          }}
+          onTouchEnd={() => {
+            window.setTimeout(() => {
+              userDragging.current = false;
+            }, 600);
+          }}
+          onTouchCancel={() => {
+            userDragging.current = false;
+          }}
           onFocus={(event) => {
             const el = event.target;
             if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
             window.setTimeout(() => keepFieldAboveKeyboard(el, keepingField), 60);
           }}
           onScroll={() => {
-            if (keepingField.current) return;
+            if (!userDragging.current || keepingField.current) return;
             const el = document.activeElement;
-            if (el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-              el.blur();
-            }
+            if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.blur();
           }}
         >
           {content}

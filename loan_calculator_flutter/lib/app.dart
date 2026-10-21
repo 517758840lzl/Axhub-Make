@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +9,41 @@ import 'screens/splash_screen.dart';
 import 'state/app_state.dart';
 import 'theme/revolut_theme.dart';
 import 'widgets/loan_widgets.dart';
+
+void _dismissKeyboardOnBlankTap(Offset position) {
+  final focus = FocusManager.instance.primaryFocus;
+  final focusContext = focus?.context;
+  if (focusContext == null) return;
+  final editor = focusContext.findAncestorStateOfType<EditableTextState>();
+  final fieldContext = editor?.context;
+  if (fieldContext == null) return;
+  if (_tapLandsOnField(position, fieldContext)) return;
+  focus!.unfocus();
+}
+
+bool _tapLandsOnField(Offset position, BuildContext fieldContext) {
+  RenderObject? node = fieldContext.findRenderObject();
+  while (node != null) {
+    if (node is RenderBox && node.hasSize && node.attached) {
+      final height = node.size.height;
+      if (height >= 40 && height <= 80) {
+        final rect = node.localToGlobal(Offset.zero) & node.size;
+        if (rect.inflate(8).contains(position)) return true;
+        break;
+      }
+      if (height > 80) break;
+    }
+    node = node.parent;
+  }
+  final result = HitTestResult();
+  final view = WidgetsBinding.instance.platformDispatcher.implicitView;
+  if (view == null) return true;
+  WidgetsBinding.instance.hitTestInView(result, position, view.viewId);
+  for (final entry in result.path) {
+    if (entry.target is RenderEditable) return true;
+  }
+  return false;
+}
 
 class LoanCalculatorApp extends StatelessWidget {
   const LoanCalculatorApp({super.key});
@@ -25,11 +61,10 @@ class LoanCalculatorApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: buildRevolutTheme(),
           builder: (context, child) {
-            // 点空白处收起键盘（全页生效）
-            return GestureDetector(
+            return Listener(
               behavior: HitTestBehavior.translucent,
-              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-              child: child,
+              onPointerDown: (event) => _dismissKeyboardOnBlankTap(event.position),
+              child: child ?? const SizedBox.shrink(),
             );
           },
           home: const _AppHost(),
