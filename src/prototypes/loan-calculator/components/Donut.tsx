@@ -6,6 +6,8 @@ type DonutSegment = {
   label: string;
   /** 环外明细金额文案，如 ¥1,000.00；不进圆心 */
   amountText?: string;
+  /** 只出现在环下明细，不计入圆环 */
+  legendOnly?: boolean;
 };
 
 type DonutProps = {
@@ -31,7 +33,8 @@ export function Donut({
   animate = true,
 }: DonutProps) {
   const [progress, setProgress] = useState(animate ? 0 : 1);
-  const total = segments.reduce((s, x) => s + Math.max(0, x.value), 0) || 1;
+  const ringSegments = segments.filter((x) => !x.legendOnly);
+  const total = ringSegments.reduce((s, x) => s + Math.max(0, x.value), 0) || 1;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   let offset = 0;
@@ -54,7 +57,7 @@ export function Donut({
             stroke="var(--rev-donut-track, #e2e5f0)"
             strokeWidth={stroke}
           />
-          {segments.map((seg) => {
+          {ringSegments.map((seg) => {
             const len = (Math.max(0, seg.value) / total) * c * progress;
             const dash = `${len} ${c - len}`;
             const el = (

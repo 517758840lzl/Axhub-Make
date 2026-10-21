@@ -52,11 +52,58 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
     super.dispose();
   }
 
+  String? _overTotalKey() {
+    if (_category != LoanCategory.auto) return null;
+    final price = double.tryParse(_vehicle.text);
+    if (price == null || price <= 0) return null;
+    final down = double.tryParse(_down.text);
+    if (down != null && down > price) return 'home.downOverPrice';
+    final loan = double.tryParse(_principal.text);
+    if (loan != null && loan > price) return 'home.loanOverPrice';
+    return null;
+  }
+
+  bool _rejectIfOver(AppState app) {
+    final key = _overTotalKey();
+    if (key == null) return false;
+    _errors.clear();
+    _errors[key == 'home.downOverPrice' ? 'down' : 'principal'] = true;
+    setState(() {});
+    app.showToast(app.tr(key));
+    return true;
+  }
+
+  bool _rateNotPositive(TextEditingController controller) {
+    final text = controller.text.trim();
+    if (text.isEmpty || text == '.') return false;
+    final n = double.tryParse(text);
+    return n != null && n <= 0;
+  }
+
+  bool _rejectIfRate(AppState app) {
+    if (_category == LoanCategory.dual) {
+      final lowA = _rateNotPositive(_aRate);
+      final lowB = _rateNotPositive(_bRate);
+      if (!lowA && !lowB) return false;
+      _errors.clear();
+      if (lowA) _errors['aRate'] = true;
+      if (lowB) _errors['bRate'] = true;
+    } else {
+      if (!_rateNotPositive(_rate)) return false;
+      _errors.clear();
+      _errors['rate'] = true;
+    }
+    setState(() {});
+    app.showToast(app.tr('home.ratePositive'));
+    return true;
+  }
+
   void _syncAutoLoan() {
     if (_loanManual) return;
-    final price = double.tryParse(_vehicle.text) ?? 0;
-    final down = double.tryParse(_down.text) ?? 0;
-    final loan = (price - down).clamp(0, double.infinity);
+    final price = double.tryParse(_vehicle.text);
+    final down = double.tryParse(_down.text);
+    if (price == null || price <= 0 || down == null || down < 0 || down > price) return;
+    final loan = price - down;
     _principal.text = loan == loan.roundToDouble() ? '${loan.round()}' : loan.toStringAsFixed(2);
   }
 
@@ -79,8 +126,8 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
       final bp = double.tryParse(_bPrincipal.text);
       final br = double.tryParse(_bRate.text);
       final bt = _term(_bYears, _bMonths);
-      if (ap == null || ap <= 0 || ar == null || ar < 0 || at <= 0) return null;
-      if (bp == null || bp <= 0 || br == null || br < 0 || bt <= 0) return null;
+      if (ap == null || ap <= 0 || ar == null || ar <= 0 || at <= 0) return null;
+      if (bp == null || bp <= 0 || br == null || br <= 0 || bt <= 0) return null;
       return summarizeLoan(CalcInput(
         principal: ap + bp,
         annualRatePercent: ar,
@@ -95,10 +142,11 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
     }
 
     if (_category == LoanCategory.auto) _syncAutoLoan();
+    if (_overTotalKey() != null) return null;
     final p = double.tryParse(_principal.text);
     final r = double.tryParse(_rate.text);
     final termMonths = _term(_years, _months);
-    if (p == null || p <= 0 || r == null || r < 0 || termMonths <= 0) return null;
+    if (p == null || p <= 0 || r == null || r <= 0 || termMonths <= 0) return null;
 
     double? vehicle;
     double? down;
@@ -119,6 +167,7 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
   }
 
   CalcResult? _buildResult() {
+    if (_overTotalKey() != null) return null;
     if (_category == LoanCategory.dual) {
       final ap = double.tryParse(_aPrincipal.text);
       final ar = double.tryParse(_aRate.text);
@@ -126,8 +175,8 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
       final bp = double.tryParse(_bPrincipal.text);
       final br = double.tryParse(_bRate.text);
       final bt = _term(_bYears, _bMonths);
-      if (ap == null || ap <= 0 || ar == null || ar < 0 || at <= 0) return null;
-      if (bp == null || bp <= 0 || br == null || br < 0 || bt <= 0) return null;
+      if (ap == null || ap <= 0 || ar == null || ar <= 0 || at <= 0) return null;
+      if (bp == null || bp <= 0 || br == null || br <= 0 || bt <= 0) return null;
       return computeLoan(CalcInput(
         principal: ap + bp,
         annualRatePercent: ar,
@@ -145,7 +194,7 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
     final p = double.tryParse(_principal.text);
     final r = double.tryParse(_rate.text);
     final termMonths = _term(_years, _months);
-    if (p == null || p <= 0 || r == null || r < 0 || termMonths <= 0) return null;
+    if (p == null || p <= 0 || r == null || r <= 0 || termMonths <= 0) return null;
 
     double? vehicle;
     double? down;
@@ -166,6 +215,8 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
   }
 
   void _submit(AppState app) {
+    if (_rejectIfOver(app)) return;
+    if (_rejectIfRate(app)) return;
     _errors.clear();
     final result = _buildResult();
     if (result == null) {
@@ -187,7 +238,9 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
   }
 
   void _ensureResultThen(AppState app, AppRoute route) {
-    final result = app.pendingResult ?? _buildResult();
+    if (_rejectIfOver(app)) return;
+    if (_rejectIfRate(app)) return;
+    final result = _buildResult();
     if (result == null) {
       app.showToast(app.tr('home.fillFirst'));
       return;
@@ -229,19 +282,17 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
               ),
           ],
         ),
-        if (preview != null && previewPayment != null)
-          LoanPreviewCard(
-            previewTitle: app.tr('home.preview', {'mode': modeLabel(
-                  preview.input.category == LoanCategory.dual ? preview.input.mode : _mode,
-                  app.locale,
-                )}) +
-                (downPct != null ? app.tr('home.previewDown', {'pct': downPct}) : ''),
-            payment: app.money(previewPayment),
-            totalInterest: app.money(preview.totalInterest),
-            totalPayment: app.money(preview.totalPayment),
-            interestLabel: app.tr('home.totalInterest'),
-            totalLabel: app.tr('home.totalPayment'),
-          ),
+        LoanPreviewCard(
+          previewTitle: app.tr('home.preview', {
+                'mode': modeLabel(_category == LoanCategory.dual ? _aMode : _mode, app.locale),
+              }) +
+              (downPct != null ? app.tr('home.previewDown', {'pct': downPct}) : ''),
+          payment: preview != null && previewPayment != null ? app.money(previewPayment) : '—',
+          totalInterest: preview != null ? app.money(preview.totalInterest) : '—',
+          totalPayment: preview != null ? app.money(preview.totalPayment) : '—',
+          interestLabel: app.tr('home.totalInterest'),
+          totalLabel: app.tr('home.totalPayment'),
+        ),
         if (_category != LoanCategory.dual)
           LoanCard(
             child: Column(
@@ -380,7 +431,15 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
             onChanged: (_) => setState(() {}),
           ),
           LoanLabel(app.tr('home.rate'), marginTop: 12),
-          LoanInput(controller: rate, suffix: '%', error: _errors[errKey] == true, onChanged: (_) => setState(() {})),
+          LoanInput(controller: rate, suffix: '%', error: _errors['${errKey}Rate'] == true || _rateNotPositive(rate), onChanged: (_) => setState(() {})),
+          if (_rateNotPositive(rate))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                app.tr('home.ratePositive'),
+                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.spend),
+              ),
+            ),
           LoanLabel(app.tr('home.term'), marginTop: 12),
           Row(
             children: [
@@ -430,25 +489,51 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
           LoanInput(
             controller: _down,
             suffix: app.tr('home.unit.yuan'),
+            error: _overTotalKey() == 'home.downOverPrice',
             onChanged: (_) {
               _loanManual = false;
               _syncAutoLoan();
               setState(() {});
             },
           ),
+          if (_overTotalKey() == 'home.downOverPrice')
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                app.tr('home.downOverPrice'),
+                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.spend),
+              ),
+            ),
           LoanLabel(app.tr('home.loanAmount'), marginTop: 12),
           LoanInput(
             controller: _principal,
             suffix: app.tr('home.unit.yuan'),
-            error: _errors['principal'] == true,
+            error: _errors['principal'] == true || _overTotalKey() == 'home.loanOverPrice',
             onChanged: (_) {
               _loanManual = true;
               setState(() {});
             },
           ),
-          LoanMuted(app.tr('home.loanHint'), fontSize: 12),
+          if (_overTotalKey() == 'home.loanOverPrice')
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                app.tr('home.loanOverPrice'),
+                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.spend),
+              ),
+            )
+          else
+            LoanMuted(app.tr('home.loanHint'), fontSize: 12),
           LoanLabel(app.tr('home.rate'), marginTop: 12),
-          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true, onChanged: (_) => setState(() {})),
+          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true || _rateNotPositive(_rate), onChanged: (_) => setState(() {})),
+          if (_rateNotPositive(_rate))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                app.tr('home.ratePositive'),
+                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.spend),
+              ),
+            ),
           LoanLabel(app.tr('home.term'), marginTop: 12),
           Row(
             children: [
@@ -509,9 +594,7 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [500000, 1000000, 1500000, 2000000].map((v) {
-              final label = v >= 1000000
-                  ? app.tr('home.million', {'n': '${v ~/ 1000000}'})
-                  : app.tr('home.wan', {'n': '${v ~/ 10000}'});
+              final label = app.tr('home.wan', {'n': '${v ~/ 10000}'});
               return LoanQuickChip(
                 label: label,
                 onTap: () {
@@ -522,7 +605,15 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
             }).toList(),
           ),
           LoanLabel(app.tr('home.rate'), marginTop: 14),
-          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true, onChanged: (_) => setState(() {})),
+          LoanInput(controller: _rate, suffix: '%', error: _errors['rate'] == true || _rateNotPositive(_rate), onChanged: (_) => setState(() {})),
+          if (_rateNotPositive(_rate))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                app.tr('home.ratePositive'),
+                style: const TextStyle(fontSize: 12, height: 1.5, color: RevolutColors.spend),
+              ),
+            ),
           Wrap(
             spacing: 8,
             runSpacing: 8,

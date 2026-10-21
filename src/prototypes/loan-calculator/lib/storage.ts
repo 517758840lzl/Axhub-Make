@@ -133,21 +133,6 @@ export function clearBusinessData() {
   writeJson(KEYS.compare, []);
 }
 
-export function exportAllData(): string {
-  return JSON.stringify(
-    {
-      exportedAt: new Date().toISOString(),
-      profile: getProfile(),
-      settings: getSettings(),
-      calculations: getCalculations(),
-      ledgerEntries: getLedgerEntries(),
-      savingsGoals: getSavingsGoals(),
-    },
-    null,
-    2,
-  );
-}
-
 function relabelExampleSavings() {
   const goals = getSavingsGoals();
   let changed = false;

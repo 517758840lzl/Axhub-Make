@@ -18,6 +18,7 @@ class LoanCard extends StatelessWidget {
   final EdgeInsets? padding;
   final EdgeInsets? margin;
   final VoidCallback? onTap;
+
   /// 储蓄「智能提示」等（对应 Web `.loan-savings-insight`）
   final Gradient? backgroundGradient;
 
@@ -25,15 +26,11 @@ class LoanCard extends StatelessWidget {
   static const Color savingsInsightTop = Color(0xFFF5F6FF);
 
   static LinearGradient get savingsInsightGradient => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        stops: [0, 0.45, 1],
-        colors: [
-          savingsInsightTop,
-          RevolutColors.surface1,
-          RevolutColors.surface1,
-        ],
-      );
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    stops: [0, 0.45, 1],
+    colors: [savingsInsightTop, RevolutColors.surface1, RevolutColors.surface1],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +40,9 @@ class LoanCard extends StatelessWidget {
       shadowColor: Colors.transparent,
       child: Container(
         width: double.infinity,
-        padding: padding ?? EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 4 : 16),
+        padding:
+            padding ??
+            EdgeInsets.symmetric(horizontal: 16, vertical: dense ? 4 : 16),
         decoration: BoxDecoration(
           color: backgroundGradient == null ? RevolutColors.surface1 : null,
           gradient: backgroundGradient,
@@ -64,7 +63,12 @@ class LoanCard extends StatelessWidget {
 }
 
 class LoanPrimaryButton extends StatelessWidget {
-  const LoanPrimaryButton({super.key, required this.label, required this.onPressed, this.flex});
+  const LoanPrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.flex,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -87,7 +91,14 @@ class LoanPrimaryButton extends StatelessWidget {
           height: 52,
           decoration: const BoxDecoration(gradient: RevolutColors.gradient),
           child: Center(
-            child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ),
       ),
@@ -98,7 +109,13 @@ class LoanPrimaryButton extends StatelessWidget {
 }
 
 class LoanSecondaryButton extends StatelessWidget {
-  const LoanSecondaryButton({super.key, required this.label, required this.onPressed, this.flex, this.marginTop});
+  const LoanSecondaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.flex,
+    this.marginTop,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -116,13 +133,20 @@ class LoanSecondaryButton extends StatelessWidget {
           foregroundColor: RevolutColors.text,
           backgroundColor: RevolutColors.surface1,
           side: const BorderSide(color: RevolutColors.divider),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
         child: Text(label),
       ),
     );
-    final wrapped = marginTop != null ? Padding(padding: EdgeInsets.only(top: marginTop!), child: btn) : btn;
+    final wrapped = marginTop != null
+        ? Padding(
+            padding: EdgeInsets.only(top: marginTop!),
+            child: btn,
+          )
+        : btn;
     if (flex == true) return Expanded(child: wrapped);
     return wrapped;
   }
@@ -139,7 +163,6 @@ class LoanInput extends StatelessWidget {
     this.onChanged,
     this.marginBottom,
     this.amountStyle = false,
-    this.emoji = false,
   });
 
   final TextEditingController controller;
@@ -150,7 +173,6 @@ class LoanInput extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final double? marginBottom;
   final bool amountStyle;
-  final bool emoji;
 
   @override
   Widget build(BuildContext context) {
@@ -162,12 +184,13 @@ class LoanInput extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           onChanged: onChanged,
+          scrollPadding: const EdgeInsets.fromLTRB(20, 72, 20, 28),
           textAlignVertical: TextAlignVertical.center,
           style: TextStyle(
-            fontSize: emoji ? 26 : (amountStyle ? 18 : 16),
-            height: emoji ? 1 : 1.2,
+            fontSize: amountStyle ? 18 : 16,
+            height: 1.2,
             leadingDistribution: TextLeadingDistribution.even,
-            fontFeatures: emoji ? null : const [FontFeature.tabularFigures()],
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
           decoration: InputDecoration(
             hintText: placeholder,
@@ -175,15 +198,23 @@ class LoanInput extends StatelessWidget {
             fillColor: RevolutColors.surface2,
             isDense: true,
             // 上下对称，避免数字视觉上偏上
-            contentPadding: EdgeInsets.fromLTRB(14, emoji ? 8 : 14, suffix != null ? 36 : 14, emoji ? 8 : 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: RevolutColors.divider)),
+            contentPadding: EdgeInsets.fromLTRB(14, 14, suffix != null ? 36 : 14, 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: RevolutColors.divider),
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: error ? RevolutColors.spend : RevolutColors.divider),
+              borderSide: BorderSide(
+                color: error ? RevolutColors.spend : RevolutColors.divider,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: RevolutColors.brandSolid, width: 1),
+              borderSide: const BorderSide(
+                color: RevolutColors.brandSolid,
+                width: 1,
+              ),
             ),
           ),
         ),
@@ -197,7 +228,13 @@ class LoanInput extends StatelessWidget {
               field,
               Padding(
                 padding: const EdgeInsets.only(right: 14),
-                child: Text(suffix!, style: const TextStyle(fontSize: 13, color: RevolutColors.textMuted)),
+                child: Text(
+                  suffix!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: RevolutColors.textMuted,
+                  ),
+                ),
               ),
             ],
           );
@@ -209,7 +246,12 @@ class LoanInput extends StatelessWidget {
 }
 
 class LoanLabel extends StatelessWidget {
-  const LoanLabel(this.text, {super.key, this.marginTop, this.marginBottom = 8});
+  const LoanLabel(
+    this.text, {
+    super.key,
+    this.marginTop,
+    this.marginBottom = 8,
+  });
   final String text;
   final double? marginTop;
   final double marginBottom;
@@ -233,7 +275,12 @@ class LoanLabel extends StatelessWidget {
 }
 
 class LoanSegment extends StatelessWidget {
-  const LoanSegment({super.key, required this.options, required this.selected, required this.onSelect});
+  const LoanSegment({
+    super.key,
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+  });
 
   final List<(String, String)> options;
   final String selected;
@@ -243,7 +290,10 @@ class LoanSegment extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: RevolutColors.surface2, borderRadius: BorderRadius.circular(18)),
+      decoration: BoxDecoration(
+        color: RevolutColors.surface2,
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Row(
         children: options.map((o) {
           final active = o.$1 == selected;
@@ -251,7 +301,10 @@ class LoanSegment extends StatelessWidget {
             child: GestureDetector(
               onTap: () => onSelect(o.$1),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 8,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   gradient: active ? RevolutColors.gradient : null,
@@ -275,7 +328,12 @@ class LoanSegment extends StatelessWidget {
 }
 
 class LoanMuted extends StatelessWidget {
-  const LoanMuted(this.text, {super.key, this.center = false, this.fontSize = 12});
+  const LoanMuted(
+    this.text, {
+    super.key,
+    this.center = false,
+    this.fontSize = 12,
+  });
   final String text;
   final bool center;
   final double fontSize;
@@ -285,7 +343,11 @@ class LoanMuted extends StatelessWidget {
     return Text(
       text,
       textAlign: center ? TextAlign.center : TextAlign.start,
-      style: TextStyle(fontSize: fontSize, color: RevolutColors.textSecondary, height: 1.5),
+      style: TextStyle(
+        fontSize: fontSize,
+        color: RevolutColors.textSecondary,
+        height: 1.5,
+      ),
     );
   }
 }
@@ -302,7 +364,14 @@ class LoanChip extends StatelessWidget {
         color: RevolutColors.brandStart.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: RevolutColors.brandSolid)),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: RevolutColors.brandSolid,
+        ),
+      ),
     );
   }
 }

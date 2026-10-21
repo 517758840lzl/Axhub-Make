@@ -393,8 +393,7 @@ bool isDefaultAvatar(String avatar) {
       legacyDefaultAvatars.contains(value);
 }
 
-String resolvedAvatar(String avatar, String gender) =>
-    isDefaultAvatar(avatar) ? defaultAvatarFor(gender) : avatar.trim();
+String resolvedAvatar(String _, String gender) => defaultAvatarFor(gender);
 
 class UserProfile {
   UserProfile({

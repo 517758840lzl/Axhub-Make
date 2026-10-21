@@ -36,7 +36,6 @@ flutter run -d <deviceId>
 ## 数据
 
 - 本地 `shared_preferences`，键前缀 `loan-calc:`（与浏览器原型 schema 一致，便于对照）
-- 导出 JSON 通过系统分享面板
 
 ## 结构
 
@@ -55,4 +54,4 @@ flutter run -d <deviceId>
 
 ## 说明
 
-产品规则以 `src/resources/prd/prd-01-loan-calculator.md` 为准，Web 原型与本应用遵守同一套信息架构和业务规则。字体渲染、导出通道（系统分享 / 浏览器下载）和启动页可以按平台不同。
+产品规则以 `src/resources/prd/prd-01-loan-calculator.md` 为准，Web 原型与本应用遵守同一套信息架构和业务规则。字体渲染和启动页可以按平台不同。

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../data/calc.dart';
 import '../data/format.dart';
@@ -283,14 +282,6 @@ class AppState extends ChangeNotifier {
     _savingsGoals = [];
     _compareIds.clear();
     notifyListeners();
-  }
-
-  Future<void> exportData() async {
-    final json = await _storage.exportAll();
-    await Share.share(
-      json,
-      subject: 'loan-calc-backup-${DateTime.now().millisecondsSinceEpoch}.json',
-    );
   }
 
   @override

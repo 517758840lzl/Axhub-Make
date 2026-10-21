@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../data/format.dart';
 import '../../data/models.dart';
+import '../../data/savings_insights.dart';
 import '../../state/app_state.dart';
 import '../../theme/revolut_theme.dart';
 import '../../widgets/loan_widgets.dart';
@@ -47,7 +48,7 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
         return;
       }
       final delta = type == 'deposit' ? v : -v;
-      final next = (goal2.current + delta).clamp(0, double.infinity);
+      final next = goal2.current + delta;
       final tx = SavingsTransaction(
         id: uid('tx'),
         amount: v,
@@ -80,7 +81,7 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    LoanLabel(app.tr('savings.progress')),
+                    LoanLabel(goalReached(goal2) ? app.tr('savings.eta.done') : app.tr('savings.progress')),
                     Text(
                       '${app.money(goal2.current)} / ${app.money(goal2.target)}',
                       style: const TextStyle(fontWeight: FontWeight.w700),

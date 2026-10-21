@@ -22,7 +22,6 @@ import type {
 } from './lib/types';
 import {
   clearBusinessData,
-  exportAllData,
   getCalculations,
   getCompareIds,
   getLedgerEntries,
@@ -59,7 +58,6 @@ type AppContextValue = {
   persistCompareIds: (ids: string[]) => void;
   addToCompare: (id: string) => boolean;
   clearBusiness: () => void;
-  exportData: () => void;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -150,16 +148,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCompareIds([]);
   }, []);
 
-  const exportData = useCallback(() => {
-    const blob = new Blob([exportAllData()], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `loan-calc-backup-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, []);
-
   const value = useMemo(
     () => ({
       profile,
@@ -182,7 +170,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       persistCompareIds,
       addToCompare,
       clearBusiness,
-      exportData,
     }),
     [
       profile,
@@ -204,7 +191,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       persistCompareIds,
       addToCompare,
       clearBusiness,
-      exportData,
     ],
   );
 

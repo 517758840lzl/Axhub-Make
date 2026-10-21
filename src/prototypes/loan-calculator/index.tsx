@@ -8,6 +8,7 @@ import {
   Bookmark,
   Calculator,
   Car,
+  ChevronLeft,
   ChevronRight,
   Clock3,
   Columns2,
@@ -31,7 +32,7 @@ import { CompareCharts, COMPARE_PLAN_COLORS } from './components/CompareCharts';
 import { Donut } from './components/Donut';
 import { AppProvider, useApp } from './context';
 import { computeLoan, summarizeLoan } from './lib/calc';
-import { savingsBufferLine, savingsEtaLine } from './lib/savings_insights';
+import { savingsBufferLine, savingsEtaLine, goalReached } from './lib/savings_insights';
 import { getCurrency } from './lib/currencies';
 import { formatMoney, parseHashParams, setHashPage, uid } from './lib/format';
 import {
@@ -46,7 +47,7 @@ import {
   translate,
   type TranslateFn,
 } from './lib/i18n';
-import { defaultAvatar, isDefaultAvatar, resolvedAvatar } from './lib/avatar';
+import { defaultAvatar, resolvedAvatar } from './lib/avatar';
 import { privacyPolicyUrl } from './lib/privacy';
 import { defaultTagsForCategory } from './lib/tags';
 import type {
@@ -232,14 +233,58 @@ function insightLines(result: CalcResult, t: TranslateFn): string[] {
   return lines.slice(0, 3);
 }
 
+function keepFieldAboveKeyboard(el: HTMLElement, guard: { current: boolean }) {
+  const viewport = window.visualViewport;
+  const top = (viewport?.offsetTop ?? 0) + 16;
+  const bottom = (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - 16;
+  const rect = el.getBoundingClientRect();
+  let delta = 0;
+  if (rect.bottom > bottom) delta = rect.bottom - bottom + 28;
+  else if (rect.top < top) delta = rect.top - top - 28;
+  if (delta === 0) return;
+  const scroller = el.closest('.loan-main');
+  guard.current = true;
+  if (scroller instanceof HTMLElement && scroller.scrollHeight > scroller.clientHeight + 1) {
+    scroller.scrollTop += delta;
+  } else {
+    window.scrollBy(0, delta);
+  }
+  window.setTimeout(() => {
+    guard.current = false;
+  }, 400);
+}
+
 function LoanCalculatorApp() {
   const { page, setPage } = useHashPage(ROUTE);
   const app = useApp();
   const { t } = app;
   const params = parseHashParams();
   const entityId = params.get('id') ?? '';
+  const keepingField = useRef(false);
+  const placedInset = useRef(0);
 
   const money = (n: number) => formatMoney(n, app.settings);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const apply = () => {
+      const inset = Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop));
+      document.documentElement.style.setProperty('--keyboard-inset', `${inset}px`);
+      if (inset === placedInset.current) return;
+      placedInset.current = inset;
+      const el = document.activeElement;
+      if (inset > 0 && (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
+        keepFieldAboveKeyboard(el, keepingField);
+      }
+    };
+    apply();
+    viewport.addEventListener('resize', apply);
+    return () => {
+      viewport.removeEventListener('resize', apply);
+      document.documentElement.style.removeProperty('--keyboard-inset');
+    };
+  }, []);
 
   useEffect(() => {
     if (
@@ -472,7 +517,6 @@ function LoanCalculatorApp() {
     content = (
       <ProfileData
         onBack={() => setPage('profile')}
-        onExport={app.exportData}
         onClear={() => {
           if (window.confirm(t('data.confirm'))) {
             app.clearBusiness();
@@ -503,7 +547,13 @@ function LoanCalculatorApp() {
         {app.toast ? <div className="loan-toast">{app.toast}</div> : null}
         <main
           className="loan-main"
+          onFocus={(event) => {
+            const el = event.target;
+            if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
+            window.setTimeout(() => keepFieldAboveKeyboard(el, keepingField), 60);
+          }}
           onScroll={() => {
+            if (keepingField.current) return;
             const el = document.activeElement;
             if (el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
               el.blur();
@@ -615,7 +665,7 @@ function CalcHome({
       const pct = Number(p.downPct || 30);
       const dp = Math.round((vp * pct) / 100);
       setDownPayment(String(dp));
-      setPrincipal(String(Math.max(0, vp - dp)));
+      setPrincipal(String(Math.round(vp - dp)));
       setLoanManual(false);
     }
   };
@@ -624,10 +674,30 @@ function CalcHome({
     if (loanManual) return;
     const vp = Number(vpStr);
     const dp = Number(dpStr);
-    if (vp > 0 && dp >= 0 && dp < vp) {
-      setPrincipal(String(Math.round(vp - dp)));
-    }
+    if (!(vp > 0) || Number.isNaN(dp) || dp < 0 || dp > vp) return;
+    setPrincipal(String(Math.round(vp - dp)));
   };
+
+  const overLimit = ((): 'down' | 'loan' | null => {
+    if (category !== 'auto') return null;
+    const vp = Number(vehiclePrice);
+    if (!(vp > 0)) return null;
+    const dp = Number(downPayment);
+    if (dp > vp) return 'down';
+    const loan = Number(principal);
+    if (loan > vp) return 'loan';
+    return null;
+  })();
+
+  const rateNotPositive = (raw: string) => {
+    const text = raw.trim();
+    if (!text || text === '.') return false;
+    const n = Number(text);
+    return !Number.isNaN(n) && !(n > 0);
+  };
+  const lowRateA = category === 'dual' && rateNotPositive(aRate);
+  const lowRateB = category === 'dual' && rateNotPositive(bRate);
+  const lowRate = category === 'dual' ? lowRateA || lowRateB : rateNotPositive(rate);
 
   const buildDualParts = (): DualLoanPart[] | null => {
     const aTerm = Number(aYears) * 12 + Number(aMonths);
@@ -642,9 +712,9 @@ function CalcHome({
       !bP ||
       bP <= 0 ||
       Number.isNaN(aR) ||
-      aR < 0 ||
+      !(aR > 0) ||
       Number.isNaN(bR) ||
-      bR < 0 ||
+      !(bR > 0) ||
       !aTerm ||
       !bTerm
     ) {
@@ -686,7 +756,7 @@ function CalcHome({
       const P = Number(principal);
       const r = Number(rate);
       const termMonths = Number(years) * 12 + Number(months);
-      if (!P || P <= 0 || Number.isNaN(r) || r < 0 || !termMonths) return null;
+      if (!P || P <= 0 || Number.isNaN(r) || !(r > 0) || !termMonths || overLimit) return null;
       const input: CalcInput = {
         principal: P,
         annualRatePercent: r,
@@ -722,9 +792,26 @@ function CalcHome({
     bMonths,
     bMode,
     t,
+    overLimit,
   ]);
 
   const buildResult = (): CalcResult | null => {
+    if (overLimit === 'down') {
+      setErrors({ down: true });
+      return null;
+    }
+    if (overLimit === 'loan') {
+      setErrors({ principal: true });
+      return null;
+    }
+    if (lowRate) {
+      setErrors(
+        category === 'dual'
+          ? { ...(lowRateA ? { aRate: true } : {}), ...(lowRateB ? { bRate: true } : {}) }
+          : { rate: true },
+      );
+      return null;
+    }
     if (category === 'dual') {
       const parts = buildDualParts();
       const err: Record<string, boolean> = {};
@@ -761,7 +848,7 @@ function CalcHome({
       if (Number.isNaN(dp) || dp < 0 || dp >= vp) err.down = true;
     }
     if (!P || P <= 0) err.principal = true;
-    if (Number.isNaN(r) || r < 0) err.rate = true;
+    if (Number.isNaN(r) || !(r > 0)) err.rate = true;
     if (!termMonths || termMonths <= 0) err.term = true;
     setErrors(err);
     if (Object.keys(err).length) return null;
@@ -784,9 +871,17 @@ function CalcHome({
     }
   };
 
+  const failToast = () => {
+    if (overLimit === 'down') app.showToast(t('home.downOverPrice'));
+    else if (overLimit === 'loan') app.showToast(t('home.loanOverPrice'));
+    else if (lowRate) app.showToast(t('home.ratePositive'));
+    else app.showToast(t('home.fillFirst'));
+  };
+
   const submit = () => {
     const result = buildResult();
     if (result) onResult(result);
+    else failToast();
   };
 
   const goFeature = (target: 'result' | 'amortization' | 'compare') => {
@@ -796,7 +891,7 @@ function CalcHome({
     }
     const result = buildResult();
     if (!result) {
-      app.showToast(t('home.fillFirst'));
+      failToast();
       return;
     }
     app.setPendingResult(result);
@@ -863,31 +958,28 @@ function CalcHome({
         </div>
       </div>
 
-      {preview && previewPayment != null ? (
-        <div className="loan-preview-card loan-preview-sticky">
-          <div className="loan-preview-label">
-            <Sparkles size={14} style={{ verticalAlign: -2, marginRight: 4 }} />
-            {t('home.preview', {
-              mode:
-                category === 'dual' ? categoryLabel('dual', t) : modeLabel(mode, t),
-            })}
-            {category === 'auto'
-              ? t('home.previewDown', { pct: downRatio.toFixed(0) })
-              : ''}
+      <div className="loan-preview-card loan-preview-sticky">
+        <div className="loan-preview-label">
+          <Sparkles size={14} style={{ verticalAlign: -2, marginRight: 4 }} />
+          {t('home.preview', {
+            mode: category === 'dual' ? categoryLabel('dual', t) : modeLabel(mode, t),
+          })}
+          {category === 'auto' ? t('home.previewDown', { pct: downRatio.toFixed(0) }) : ''}
+        </div>
+        <div className="loan-preview-amount">
+          {preview && previewPayment != null ? money(previewPayment) : '—'}
+        </div>
+        <div className="loan-preview-meta">
+          <div>
+            {t('home.totalInterest')}
+            <strong>{preview ? money(preview.totalInterest) : '—'}</strong>
           </div>
-          <div className="loan-preview-amount">{money(previewPayment)}</div>
-          <div className="loan-preview-meta">
-            <div>
-              {t('home.totalInterest')}
-              <strong>{money(preview.totalInterest)}</strong>
-            </div>
-            <div>
-              {t('home.totalPayment')}
-              <strong>{money(preview.totalPayment)}</strong>
-            </div>
+          <div>
+            {t('home.totalPayment')}
+            <strong>{preview ? money(preview.totalPayment) : '—'}</strong>
           </div>
         </div>
-      ) : null}
+      </div>
 
       {category !== 'dual' ? (
       <div className="loan-card">
@@ -983,13 +1075,18 @@ function CalcHome({
             </div>
             <div className="loan-input-wrap">
               <input
-                className={`loan-input ${errors.dual ? 'loan-input-error' : ''}`}
+                className={`loan-input ${errors.dual || (part.key === 'a' ? lowRateA : lowRateB) ? 'loan-input-error' : ''}`}
                 inputMode="decimal"
                 value={part.rate}
                 onChange={(e) => part.setRate(e.target.value.replace(/[^\d.]/g, ''))}
               />
               <span className="loan-input-suffix">%</span>
             </div>
+            {(part.key === 'a' ? lowRateA : lowRateB) ? (
+              <p className="loan-danger" style={{ fontSize: 12, margin: '8px 0 0' }}>
+                {t('home.ratePositive')}
+              </p>
+            ) : null}
             <div className="loan-label" style={{ marginTop: 10 }}>
               {t('home.term')}
             </div>
@@ -1091,7 +1188,7 @@ function CalcHome({
             </div>
             <div className="loan-input-wrap">
               <input
-                className={`loan-input ${errors.down ? 'loan-input-error' : ''}`}
+                className={`loan-input ${errors.down || overLimit === 'down' ? 'loan-input-error' : ''}`}
                 inputMode="decimal"
                 value={downPayment}
                 onChange={(e) => {
@@ -1106,13 +1203,18 @@ function CalcHome({
               />
               <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
             </div>
+            {overLimit === 'down' ? (
+              <p className="loan-danger" style={{ fontSize: 12, margin: '8px 0 0' }}>
+                {t('home.downOverPrice')}
+              </p>
+            ) : null}
 
             <div className="loan-label" style={{ marginTop: 14 }}>
               {t('home.loanAmount')}
             </div>
             <div className="loan-input-wrap">
               <input
-                className={`loan-input ${errors.principal ? 'loan-input-error' : ''}`}
+                className={`loan-input ${errors.principal || overLimit === 'loan' ? 'loan-input-error' : ''}`}
                 inputMode="decimal"
                 value={principal}
                 onChange={(e) => {
@@ -1122,9 +1224,15 @@ function CalcHome({
               />
               <span className="loan-input-suffix">{t('home.unit.yuan')}</span>
             </div>
-            <p className="loan-muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
-              {t('home.loanHint')}
-            </p>
+            {overLimit === 'loan' ? (
+              <p className="loan-danger" style={{ fontSize: 12, margin: '8px 0 0' }}>
+                {t('home.loanOverPrice')}
+              </p>
+            ) : (
+              <p className="loan-muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
+                {t('home.loanHint')}
+              </p>
+            )}
           </>
         ) : (
           <>
@@ -1149,9 +1257,7 @@ function CalcHome({
                   className="loan-quick-chip"
                   onClick={() => setPrincipal(String(v))}
                 >
-                  {v >= 1_000_000
-                    ? t('home.million', { n: v / 1_000_000 })
-                    : t('home.wan', { n: v / 10_000 })}
+                  {t('home.wan', { n: v / 10_000 })}
                 </button>
               ))}
             </div>
@@ -1163,13 +1269,18 @@ function CalcHome({
         </div>
         <div className="loan-input-wrap">
           <input
-            className={`loan-input ${errors.rate ? 'loan-input-error' : ''}`}
+            className={`loan-input ${errors.rate || lowRate ? 'loan-input-error' : ''}`}
             inputMode="decimal"
             value={rate}
             onChange={(e) => setRate(e.target.value.replace(/[^\d.]/g, ''))}
           />
           <span className="loan-input-suffix">%</span>
         </div>
+        {lowRate ? (
+          <p className="loan-danger" style={{ fontSize: 12, margin: '8px 0 0' }}>
+            {t('home.ratePositive')}
+          </p>
+        ) : null}
         <div className="loan-chip-row">
           {(category === 'personal' ? ['6.5', '8.5', '12', '15'] : ['3.1', '3.6', '4.2', '4.9']).map(
             (v) => (
@@ -1486,17 +1597,46 @@ function AmortizationView({
     isDual && result.partsResults ? result.partsResults[partIndex] ?? result : result;
   const maxPeriod = activeResult.schedule.length;
   const [viewMode, setViewMode] = useState<'month' | 'year' | 'custom'>('month');
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageMenuOpen, setPageMenuOpen] = useState(false);
+  const pageMenuRef = useRef<HTMLDivElement>(null);
   const [fromPeriod, setFromPeriod] = useState('1');
   const [toPeriod, setToPeriod] = useState(String(Math.min(12, maxPeriod)));
 
-  const clampedRange = useMemo(() => {
-    let from = Number(fromPeriod) || 1;
-    let to = Number(toPeriod) || maxPeriod;
-    from = Math.min(maxPeriod, Math.max(1, Math.floor(from)));
-    to = Math.min(maxPeriod, Math.max(1, Math.floor(to)));
-    if (from > to) [from, to] = [to, from];
-    return { from, to };
-  }, [fromPeriod, toPeriod, maxPeriod]);
+  useEffect(() => {
+    if (!pageMenuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!pageMenuRef.current?.contains(event.target as Node)) setPageMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [pageMenuOpen]);
+
+  useEffect(() => {
+    setPageMenuOpen(false);
+  }, [viewMode, partIndex]);
+
+  const fromRaw = fromPeriod.trim() === '' ? null : Math.floor(Number(fromPeriod));
+  const toRaw = toPeriod.trim() === '' ? null : Math.floor(Number(toPeriod));
+  const fromMissing = fromRaw == null || !Number.isFinite(fromRaw);
+  const toMissing = toRaw == null || !Number.isFinite(toRaw);
+  const incomplete = fromMissing || toMissing;
+  const from = fromMissing || fromRaw == null ? 1 : fromRaw;
+  const to = toMissing || toRaw == null ? maxPeriod : toRaw;
+  const inverted = !incomplete && from > to;
+  const fromOutside = !fromMissing && (from < 1 || from > maxPeriod);
+  const toOutside = !toMissing && (to < 1 || to > maxPeriod);
+  const outOfRange = !inverted && (fromOutside || toOutside);
+  const periodSpan = {
+    from,
+    to,
+    inverted,
+    outOfRange,
+    incomplete,
+    blocked: inverted || outOfRange || incomplete,
+    fromBad: inverted || fromOutside,
+    toBad: inverted || toOutside,
+  };
 
   const rows = useMemo(() => {
     const schedule = activeResult.schedule;
@@ -1522,22 +1662,41 @@ function AmortizationView({
     }
 
     if (viewMode === 'custom') {
+      if (periodSpan.blocked) return [];
       return schedule.filter(
-        (row) => row.period >= clampedRange.from && row.period <= clampedRange.to,
+        (row) => row.period >= periodSpan.from && row.period <= periodSpan.to,
       );
     }
 
     return schedule;
-  }, [viewMode, activeResult.schedule, clampedRange]);
+  }, [viewMode, activeResult.schedule, periodSpan]);
 
   const rangeTotals = useMemo(() => {
-    if (viewMode !== 'custom' || !rows.length) return null;
+    if (viewMode !== 'custom' || periodSpan.blocked || !rows.length) return null;
     return {
       payment: rows.reduce((s, r) => s + r.payment, 0),
       principal: rows.reduce((s, r) => s + r.principal, 0),
       interest: rows.reduce((s, r) => s + r.interest, 0),
     };
-  }, [viewMode, rows]);
+  }, [viewMode, rows, periodSpan.blocked]);
+
+  const pageSize = 12;
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(pageIndex, pageCount - 1);
+  const pageRows = rows.slice(safePage * pageSize, safePage * pageSize + pageSize);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [viewMode, partIndex, maxPeriod, periodSpan.from, periodSpan.to]);
+
+  const pageOptionLabel = (index: number) => {
+    const slice = rows.slice(index * pageSize, index * pageSize + pageSize);
+    const from = slice[0]?.period ?? 0;
+    const to = slice[slice.length - 1]?.period ?? from;
+    if (viewMode === 'month') return t('amort.pageYear', { n: index + 1, from, to });
+    if (viewMode === 'year') return t('amort.pageYears', { from, to });
+    return t('amort.pagePeriods', { from, to });
+  };
 
   return (
     <>
@@ -1614,11 +1773,10 @@ function AmortizationView({
                 <div className="loan-label">{t('amort.fromPeriod')}</div>
                 <div className="loan-input-wrap">
                   <input
-                    className="loan-input"
+                    className={`loan-input ${periodSpan.fromBad ? 'loan-input-error' : ''}`}
                     inputMode="numeric"
                     value={fromPeriod}
                     onChange={(e) => setFromPeriod(e.target.value.replace(/\D/g, ''))}
-                    onBlur={() => setFromPeriod(String(clampedRange.from))}
                   />
                 </div>
               </div>
@@ -1626,18 +1784,27 @@ function AmortizationView({
                 <div className="loan-label">{t('amort.toPeriod')}</div>
                 <div className="loan-input-wrap">
                   <input
-                    className="loan-input"
+                    className={`loan-input ${periodSpan.toBad ? 'loan-input-error' : ''}`}
                     inputMode="numeric"
                     value={toPeriod}
                     onChange={(e) => setToPeriod(e.target.value.replace(/\D/g, ''))}
-                    onBlur={() => setToPeriod(String(clampedRange.to))}
                   />
                 </div>
               </div>
             </div>
-            <p className="loan-muted" style={{ fontSize: 12, margin: '10px 0 0' }}>
-              {t('amort.showing', { n: rows.length })}
-            </p>
+            {periodSpan.inverted ? (
+              <p className="loan-danger" style={{ fontSize: 12, margin: '10px 0 0' }}>
+                {t('amort.rangeOrder')}
+              </p>
+            ) : periodSpan.outOfRange ? (
+              <p className="loan-danger" style={{ fontSize: 12, margin: '10px 0 0' }}>
+                {t('amort.rangeBounds', { max: maxPeriod })}
+              </p>
+            ) : periodSpan.incomplete ? null : (
+              <p className="loan-muted" style={{ fontSize: 12, margin: '10px 0 0' }}>
+                {t('amort.showing', { n: rows.length })}
+              </p>
+            )}
           </div>
         ) : null}
 
@@ -1659,6 +1826,59 @@ function AmortizationView({
           </div>
         ) : null}
 
+        {viewMode === 'custom' && periodSpan.blocked ? null : (
+        <>
+        {pageCount > 1 ? (
+          <div className="loan-amort-pager">
+            <button
+              type="button"
+              aria-label={t('amort.prevPage')}
+              disabled={safePage <= 0}
+              onClick={() => setPageIndex(safePage - 1)}
+            >
+              <ChevronLeft size={18} aria-hidden />
+            </button>
+            <div className="loan-amort-page-menu" ref={pageMenuRef}>
+              <button
+                type="button"
+                className="loan-amort-page-select"
+                aria-haspopup="listbox"
+                aria-expanded={pageMenuOpen}
+                aria-label={pageOptionLabel(safePage)}
+                onClick={() => setPageMenuOpen((open) => !open)}
+              >
+                {pageOptionLabel(safePage)}
+              </button>
+              {pageMenuOpen ? (
+                <div className="loan-amort-page-list" role="listbox">
+                  {Array.from({ length: pageCount }, (_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      role="option"
+                      className="loan-amort-page-option"
+                      aria-selected={index === safePage}
+                      onClick={() => {
+                        setPageIndex(index);
+                        setPageMenuOpen(false);
+                      }}
+                    >
+                      {pageOptionLabel(index)}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              aria-label={t('amort.nextPage')}
+              disabled={safePage >= pageCount - 1}
+              onClick={() => setPageIndex(safePage + 1)}
+            >
+              <ChevronRight size={18} aria-hidden />
+            </button>
+          </div>
+        ) : null}
         <div className="loan-amort-scroll">
           <table className="loan-amort-table">
             <thead>
@@ -1673,7 +1893,7 @@ function AmortizationView({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {pageRows.map((row) => (
                 <tr key={row.period}>
                   <td>{row.period}</td>
                   <td>{money(row.payment)}</td>
@@ -1685,6 +1905,8 @@ function AmortizationView({
             </tbody>
           </table>
         </div>
+        </>
+        )}
       </div>
     </>
   );
@@ -1706,6 +1928,14 @@ function SavingsList({
   onNew: () => void;
 }) {
   const { t } = useApp();
+  const doneCount = goals.filter((g) => goalReached(g)).length;
+  const activeCount = goals.length - doneCount;
+  const statusLine = [
+    activeCount ? t('savings.inProgress', { n: activeCount }) : '',
+    doneCount ? t('savings.completed', { n: doneCount }) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const totalSaved = goals.reduce((s, g) => s + g.current, 0);
   const totalTarget = goals.reduce((s, g) => s + g.target, 0);
 
@@ -1734,7 +1964,7 @@ function SavingsList({
       <header className="loan-topbar">
         <div>
           <h1 className="loan-title">{t('savings.title')}</h1>
-          <p className="loan-subtitle">{t('savings.inProgress', { n: goals.length })}</p>
+          <p className="loan-subtitle">{statusLine}</p>
         </div>
       </header>
       <div className="loan-stat-row">
@@ -1753,7 +1983,11 @@ function SavingsList({
         </p>
       ) : null}
       {goals.map((g) => {
+        const reached = goalReached(g);
         const pct = g.target > 0 ? Math.min(100, (g.current / g.target) * 100) : 0;
+        const withdrawn = g.transactions
+          .filter((tx) => tx.type === 'withdraw')
+          .reduce((sum, tx) => sum + tx.amount, 0);
         const name = displaySavingsName(g.name, t);
         return (
           <div
@@ -1784,9 +2018,16 @@ function SavingsList({
                   label: t('savings.todo'),
                   amountText: money(Math.max(0, g.target - g.current)),
                 },
+                {
+                  value: withdrawn,
+                  color: 'var(--rev-spend)',
+                  label: t('savings.withdrawn'),
+                  amountText: money(withdrawn),
+                  legendOnly: true,
+                },
               ]}
               centerValue={`${pct.toFixed(0)}%`}
-              centerCaption={t('savings.progress')}
+              centerCaption={reached ? t('savings.eta.done') : t('savings.progress')}
               animate={false}
             />
             <div className="loan-savings-insight loan-savings-insight--inline">
@@ -1887,6 +2128,8 @@ function SavingsDetail({
   const [amount, setAmount] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
+  const reached = goalReached(goal);
+  const pct = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
 
   const addTx = (type: 'deposit' | 'withdraw') => {
     const v = Number(amount);
@@ -1897,7 +2140,7 @@ function SavingsDetail({
       return;
     }
     const delta = type === 'deposit' ? v : -v;
-    const next = Math.max(0, goal.current + delta);
+    const next = goal.current + delta;
     const tx = {
       id: uid('tx'),
       amount: v,
@@ -1923,14 +2166,12 @@ function SavingsDetail({
       </header>
       <div className="loan-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div className="loan-label">{t('savings.progress')}</div>
+          <div className="loan-label">{reached ? t('savings.eta.done') : t('savings.progress')}</div>
           <strong>
             {money(goal.current)} / {money(goal.target)}
           </strong>
         </div>
-        <span className="loan-chip">
-          {goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100).toFixed(0) : '0'}%
-        </span>
+        <span className="loan-chip">{pct.toFixed(0)}%</span>
       </div>
       <div className="loan-card">
         <div className="loan-label">{t('savings.depositWithdraw')}</div>
@@ -2555,7 +2796,7 @@ function ProfileEdit({
     isDefaultNickname(profile.nickname) ? t('settings.defaultNick') : profile.nickname,
   );
   const [gender, setGender] = useState<'male' | 'female' | 'private'>(profile.gender ?? 'private');
-  const [avatar, setAvatar] = useState(() => resolvedAvatar(profile.avatar, profile.gender ?? 'private'));
+  const avatar = defaultAvatar(gender);
 
   return (
     <>
@@ -2571,7 +2812,9 @@ function ProfileEdit({
         <div className="loan-label" style={{ marginTop: 12 }}>
           {t('settings.avatar')}
         </div>
-        <input className="loan-input" value={avatar} onChange={(e) => setAvatar(e.target.value)} />
+        <div className="loan-profile-avatar" aria-hidden>
+          {avatar}
+        </div>
         <div className="loan-label" style={{ marginTop: 12 }}>
           {t('profile.gender')}
         </div>
@@ -2587,10 +2830,7 @@ function ProfileEdit({
               key={id}
               type="button"
               data-active={gender === id}
-              onClick={() => {
-                setGender(id);
-                setAvatar((current) => (isDefaultAvatar(current) ? defaultAvatar(id) : current));
-              }}
+              onClick={() => setGender(id)}
             >
               {t(key)}
             </button>
@@ -2604,7 +2844,7 @@ function ProfileEdit({
           onSave({
             ...profile,
             nickname: nickname.trim() || t('settings.defaultNick'),
-            avatar: resolvedAvatar(avatar, gender),
+            avatar,
             gender,
           });
           onBack();
@@ -2706,11 +2946,9 @@ function ProfileSettings({
 
 function ProfileData({
   onBack,
-  onExport,
   onClear,
 }: {
   onBack: () => void;
-  onExport: () => void;
   onClear: () => void;
 }) {
   const { t } = useApp();
@@ -2723,9 +2961,6 @@ function ProfileData({
         <h1 className="loan-title">{t('data.title')}</h1>
       </header>
       <div className="loan-card" style={{ padding: 0 }}>
-        <button type="button" className="loan-menu-item" style={{ padding: '16px' }} onClick={onExport}>
-          {t('data.export')} <span>↓</span>
-        </button>
         <button
           type="button"
           className="loan-menu-item loan-danger"

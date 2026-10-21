@@ -17,6 +17,6 @@ export function isDefaultAvatar(avatar: string): boolean {
   return value === '' || Object.values(DEFAULT_AVATAR).includes(value) || LEGACY_DEFAULT_AVATARS.includes(value);
 }
 
-export function resolvedAvatar(avatar: string, gender: ProfileGender = 'private'): string {
-  return isDefaultAvatar(avatar) ? defaultAvatar(gender) : avatar.trim();
+export function resolvedAvatar(_avatar: string, gender: ProfileGender = 'private'): string {
+  return defaultAvatar(gender);
 }

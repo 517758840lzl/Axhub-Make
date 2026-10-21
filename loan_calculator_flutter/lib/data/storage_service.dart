@@ -115,17 +115,6 @@ class StorageService {
     await prefs.remove(_ledger);
   }
 
-  Future<String> exportAll() async {
-    return jsonEncode({
-      'exportedAt': DateTime.now().toIso8601String(),
-      'profile': (await getProfile()).toJson(),
-      'settings': (await getSettings()).toJson(),
-      'calculations': (await getCalculations()).map((e) => e.toJson()).toList(),
-      'ledgerEntries': (await getLedgerEntries()).map((e) => e.toJson()).toList(),
-      'savingsGoals': (await getSavingsGoals()).map((e) => e.toJson()).toList(),
-    });
-  }
-
   Future<void> relabelExampleSavings() async {
     const storedName = '示例月供缓冲金';
     const legacyNames = {'月供缓冲金', 'Payment buffer', 'Colchón de cuota'};

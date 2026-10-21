@@ -10,12 +10,15 @@ class DonutSegment {
     required this.color,
     required this.label,
     this.amountText,
+    this.legendOnly = false,
   });
   final double value;
   final Color color;
   final String label;
   /// 环外明细金额文案；不进圆心
   final String? amountText;
+  /// 只出现在环下明细，不计入圆环
+  final bool legendOnly;
 }
 
 class DonutChart extends StatefulWidget {
@@ -79,7 +82,8 @@ class _DonutChartState extends State<DonutChart> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final total = widget.segments.fold<double>(0, (s, x) => s + math.max(0, x.value));
+    final ringSegments = widget.segments.where((x) => !x.legendOnly).toList();
+    final total = ringSegments.fold<double>(0, (s, x) => s + math.max(0, x.value));
     final safeTotal = total <= 0 ? 1.0 : total;
     final r = (widget.size - widget.stroke) / 2;
     final c = 2 * math.pi * r;
@@ -101,7 +105,7 @@ class _DonutChartState extends State<DonutChart> with SingleTickerProviderStateM
                     CustomPaint(
                       size: Size(widget.size, widget.size),
                       painter: _DonutPainter(
-                        segments: widget.segments,
+                        segments: ringSegments,
                         total: safeTotal,
                         stroke: widget.stroke,
                         progress: _progress.value,

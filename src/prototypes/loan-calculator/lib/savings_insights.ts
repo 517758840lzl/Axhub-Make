@@ -1,13 +1,17 @@
 import type { TranslateFn } from './i18n';
 import type { SavedCalculation, SavingsGoal } from './types';
 
+export function goalReached(goal: { current: number; target: number }) {
+  return goal.target > 0 && goal.current + 0.01 >= goal.target;
+}
+
 export function savingsEtaLine(
   goal: SavingsGoal,
   money: (n: number) => string,
   t: TranslateFn,
 ): string {
   const remaining = goal.target - goal.current;
-  if (remaining <= 0.01) {
+  if (goalReached(goal)) {
     return t('savings.eta.done');
   }
 

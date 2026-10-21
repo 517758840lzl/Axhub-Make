@@ -1,12 +1,14 @@
 import 'models.dart';
 
+bool goalReached(SavingsGoal goal) => goal.target > 0 && goal.current + 0.01 >= goal.target;
+
 String savingsEtaLine(
   SavingsGoal goal,
   String Function(double) money,
   String Function(String key, [Map<String, String>? vars]) t,
 ) {
   final remaining = goal.target - goal.current;
-  if (remaining <= 0.01) {
+  if (goalReached(goal)) {
     return t('savings.eta.done');
   }
 

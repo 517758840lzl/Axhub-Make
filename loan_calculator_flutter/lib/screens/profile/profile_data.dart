@@ -14,8 +14,6 @@ class ProfileDataScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         LoanTopBar(onBack: () => app.pop(), title: app.tr('data.title')),
-        LoanPrimaryButton(label: app.tr('data.export'), onPressed: app.exportData),
-        const SizedBox(height: 8),
         LoanSecondaryButton(
           label: app.tr('data.clear'),
           onPressed: () async {

@@ -72,6 +72,12 @@ class SavingsListScreen extends StatelessWidget {
       );
     }
 
+    final doneCount = goals.where(goalReached).length;
+    final activeCount = goals.length - doneCount;
+    final statusLine = [
+      if (activeCount > 0) app.tr('savings.inProgress', {'n': '$activeCount'}),
+      if (doneCount > 0) app.tr('savings.completed', {'n': '$doneCount'}),
+    ].join(' · ');
     final totalSaved = goals.fold<double>(0, (s, g) => s + g.current);
     final totalTarget = goals.fold<double>(0, (s, g) => s + g.target);
 
@@ -80,7 +86,7 @@ class SavingsListScreen extends StatelessWidget {
       children: [
         LoanTopBar(
           title: app.tr('savings.title'),
-          subtitle: app.tr('savings.inProgress', {'n': '${goals.length}'}),
+          subtitle: statusLine,
         ),
         LoanStatRow(
           children: [
@@ -97,8 +103,12 @@ class SavingsListScreen extends StatelessWidget {
             ),
           ),
         ...goals.map((g) {
+          final reached = goalReached(g);
           final pct = g.target > 0 ? (g.current / g.target * 100).clamp(0, 100) : 0.0;
           final left = (g.target - g.current).clamp(0, double.infinity);
+          final withdrawn = g.transactions
+              .where((tx) => tx.type == 'withdraw')
+              .fold<double>(0, (sum, tx) => sum + tx.amount);
           final name = savingsName(g.name, app);
           return LoanCard(
             onTap: () => app.push(AppRoute.savingsDetail, id: g.id),
@@ -132,9 +142,16 @@ class SavingsListScreen extends StatelessWidget {
                         label: app.tr('savings.todo'),
                         amountText: app.money(left.toDouble()),
                       ),
+                      DonutSegment(
+                        value: withdrawn,
+                        color: RevolutColors.spend,
+                        label: app.tr('savings.withdrawn'),
+                        amountText: app.money(withdrawn),
+                        legendOnly: true,
+                      ),
                     ],
                     centerLabel: '${pct.toStringAsFixed(0)}%',
-                    centerSub: app.tr('savings.progress'),
+                    centerSub: reached ? app.tr('savings.eta.done') : app.tr('savings.progress'),
                   ),
                 ),
                 // 提示挂在对应目标卡片内，多目标时不会混淆

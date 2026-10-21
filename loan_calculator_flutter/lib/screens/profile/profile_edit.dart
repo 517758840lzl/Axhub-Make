@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../data/models.dart';
 import '../../state/app_state.dart';
+import '../../theme/revolut_theme.dart';
 import '../../widgets/loan_widgets.dart';
 
 class ProfileEditScreen extends StatefulWidget {
@@ -14,7 +15,6 @@ class ProfileEditScreen extends StatefulWidget {
 
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late TextEditingController _nick;
-  late TextEditingController _avatar;
   late String _gender;
 
   @override
@@ -23,13 +23,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final app = context.read<AppState>();
     _nick = TextEditingController(text: app.profile.nickname);
     _gender = app.profile.gender;
-    _avatar = TextEditingController(text: resolvedAvatar(app.profile.avatar, _gender));
   }
 
   @override
   void dispose() {
     _nick.dispose();
-    _avatar.dispose();
     super.dispose();
   }
 
@@ -47,7 +45,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               LoanLabel(app.tr('settings.nickname')),
               LoanInput(controller: _nick, onChanged: (_) {}),
               LoanLabel(app.tr('settings.avatar'), marginTop: 12),
-              LoanInput(controller: _avatar, emoji: true, onChanged: (_) {}),
+              Container(
+                width: 64,
+                height: 64,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: RevolutColors.surface2,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(defaultAvatarFor(_gender), style: const TextStyle(fontSize: 32)),
+              ),
               LoanLabel(app.tr('profile.gender'), marginTop: 12),
               LoanSegment(
                 options: [
@@ -56,12 +63,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   ('private', app.tr('profile.gender.private')),
                 ],
                 selected: _gender,
-                onSelect: (v) {
-                  setState(() {
-                    if (isDefaultAvatar(_avatar.text)) _avatar.text = defaultAvatarFor(v);
-                    _gender = v;
-                  });
-                },
+                onSelect: (v) => setState(() => _gender = v),
               ),
             ],
           ),
@@ -71,7 +73,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           onPressed: () async {
             await app.updateProfile(UserProfile(
               nickname: _nick.text.trim(),
-              avatar: resolvedAvatar(_avatar.text, _gender),
+              avatar: defaultAvatarFor(_gender),
               createdAt: app.profile.createdAt,
               gender: _gender,
             ));
