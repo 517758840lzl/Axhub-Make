@@ -57,12 +57,8 @@ class _AppHostState extends State<_AppHost> {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         final app = context.read<AppState>();
-        if (app.canPopRoute) {
-          app.pop();
-          return;
-        }
-        // 根页面退到后台，不结束 Activity，再次打开不用重走启动页
-        SystemNavigator.pop();
+        // 子页面回到上一页。已经在计算、储蓄、我的这三个标签页时，停在当前页。
+        if (app.canPopRoute) app.pop();
       },
       child: ColoredBox(
         color: RevolutColors.canvas,

@@ -4,7 +4,6 @@ import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity() {
     override fun popSystemNavigator(): Boolean {
-        moveTaskToBack(true)
         return true
     }
 }
