@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../../data/privacy_url.dart';
 import '../../state/app_state.dart';
 import '../../theme/revolut_theme.dart';
 import '../../widgets/loan_widgets.dart';
@@ -15,6 +15,8 @@ class ProfilePrivacyScreen extends StatefulWidget {
 }
 
 class _ProfilePrivacyScreenState extends State<ProfilePrivacyScreen> {
+  static const _policyAsset = 'assets/privacy/privacy-policy.html';
+
   late final WebViewController _controller;
   var _loading = true;
 
@@ -37,14 +39,24 @@ class _ProfilePrivacyScreenState extends State<ProfilePrivacyScreen> {
           },
           onNavigationRequest: (request) {
             final scheme = Uri.tryParse(request.url)?.scheme.toLowerCase() ?? '';
-            if (scheme == 'http' || scheme == 'https' || scheme == 'about') {
+            if (scheme == 'http' ||
+                scheme == 'https' ||
+                scheme == 'about' ||
+                scheme == 'data' ||
+                scheme == 'file') {
               return NavigationDecision.navigate;
             }
             return NavigationDecision.prevent;
           },
         ),
-      )
-      ..loadRequest(Uri.parse(privacyPolicyUrl));
+      );
+    _openPolicy();
+  }
+
+  Future<void> _openPolicy() async {
+    final html = await rootBundle.loadString(_policyAsset);
+    if (!mounted) return;
+    await _controller.loadHtmlString(html);
   }
 
   @override
