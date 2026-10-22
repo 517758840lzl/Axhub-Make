@@ -35,5 +35,3 @@ String currencyAmountUnit(AppSettings settings) {
 
 /// User-facing date. Stored timestamps stay ISO-8601.
 String formatShortDate(DateTime dt) => DateFormat('dd/MM/yyyy').format(dt);
-
-String formatShortDateTime(DateTime dt) => DateFormat('dd/MM/yyyy HH:mm').format(dt);
