@@ -23,10 +23,10 @@ class LoanCard extends StatelessWidget {
   final EdgeInsets? margin;
   final VoidCallback? onTap;
 
-  /// 储蓄「智能提示」等（对应 Web `.loan-savings-insight`）
+  /// Savings insight card. Matches the web `.loan-savings-insight`.
   final Gradient? backgroundGradient;
 
-  /// 与 Web `.loan-savings-insight`：`180deg`，#f5f6ff → 45% 起为 `#fff`（6% brand on white）
+  /// Matches the web insight: 180deg, #f5f6ff, then #fff from 45%.
   static const Color savingsInsightTop = Color(0xFFF5F6FF);
 
   static LinearGradient get savingsInsightGradient => const LinearGradient(
@@ -219,7 +219,7 @@ class LoanInput extends StatelessWidget {
             filled: true,
             fillColor: RevolutColors.surface2,
             isDense: true,
-            // 上下对称，避免数字视觉上偏上
+            // Symmetric vertical padding so the digits do not sit high.
             contentPadding: EdgeInsets.fromLTRB(14, 14, suffix != null ? 36 : 14, 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

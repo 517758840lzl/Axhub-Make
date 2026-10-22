@@ -8,7 +8,7 @@ import '../state/app_state.dart';
 import '../theme/revolut_theme.dart';
 import '../widgets/brand_logo.dart';
 
-/// 全屏启动动画；[onComplete] 在动画结束且 [AppState.ready] 后调用
+/// Full-screen opening animation. [onComplete] runs after the animation and [AppState.ready].
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key, required this.onComplete});
 
@@ -41,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _scale = CurvedAnimation(parent: _master, curve: const Interval(0.15, 0.55, curve: Curves.elasticOut));
     _fadeIn = CurvedAnimation(parent: _master, curve: const Interval(0.1, 0.4, curve: Curves.easeOut));
     _textFade = CurvedAnimation(parent: _master, curve: const Interval(0.45, 0.85, curve: Curves.easeOut));
-    // 不再淡出到透明（会露出黑底）；切首页由外层 AnimatedSwitcher 做交叉淡入
+    // Do not fade to transparent. The outer switch cross-fades into the home page.
 
     unawaited(_master.forward());
     Timer(const Duration(milliseconds: 1600), () {

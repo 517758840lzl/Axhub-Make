@@ -8,7 +8,7 @@ class LoanStatRow extends StatelessWidget {
   const LoanStatRow({super.key, required this.children, this.triple = false});
 
   final List<Widget> children;
-  /// 与 Web `.loan-stat-row--triple` 一致（三列等分）；两列时忽略
+  /// Matches the web triple stat row. Ignored when there are two columns.
   final bool triple;
 
   static const _gap = 10.0;

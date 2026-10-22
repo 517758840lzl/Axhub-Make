@@ -2,17 +2,17 @@ import type { MessageKey, TranslateFn } from './i18n';
 import type { LoanCategory } from './types';
 
 const TAG_MESSAGE_KEY: Record<string, MessageKey> = {
-  房贷: 'tag.mortgage',
-  车贷: 'tag.auto',
-  消费贷: 'tag.consumer',
-  月供: 'tag.payment',
-  保险: 'tag.insurance',
-  装修: 'tag.reno',
-  教育: 'tag.edu',
-  医疗: 'tag.medical',
-  日常: 'tag.daily',
-  其他: 'tag.other',
-  组合贷: 'cat.dual',
+  mortgage: 'tag.mortgage',
+  auto: 'tag.auto',
+  consumer: 'tag.consumer',
+  payment: 'tag.payment',
+  insurance: 'tag.insurance',
+  reno: 'tag.reno',
+  edu: 'tag.edu',
+  medical: 'tag.medical',
+  daily: 'tag.daily',
+  other: 'tag.other',
+  dual: 'cat.dual',
 };
 
 export function tagLabel(tag: string, t: TranslateFn): string {
@@ -20,26 +20,26 @@ export function tagLabel(tag: string, t: TranslateFn): string {
   return key ? t(key) : tag;
 }
 
-/** 常用标签，供选择；用户可自定义追加 */
+/** Suggested tags. Users can add their own. */
 export const SUGGESTED_TAGS = [
-  '房贷',
-  '车贷',
-  '消费贷',
-  '月供',
-  '保险',
-  '装修',
-  '教育',
-  '医疗',
-  '日常',
-  '其他',
+  'mortgage',
+  'auto',
+  'consumer',
+  'payment',
+  'insurance',
+  'reno',
+  'edu',
+  'medical',
+  'daily',
+  'other',
 ] as const;
 
 const CATEGORY_TAG: Record<LoanCategory, string> = {
-  mortgage: '房贷',
-  auto: '车贷',
-  personal: '消费贷',
-  dual: '组合贷',
-  other: '其他',
+  mortgage: 'mortgage',
+  auto: 'auto',
+  personal: 'consumer',
+  dual: 'dual',
+  other: 'other',
 };
 
 export function defaultTagsForCategory(category: LoanCategory): string[] {

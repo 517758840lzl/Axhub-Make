@@ -40,6 +40,7 @@ import {
   currencyAmountUnit,
   formatGroupedAmount,
   formatMoney,
+  formatShortDate,
   parseAmountString,
   parseHashParams,
   setHashPage,
@@ -2023,7 +2024,7 @@ function SavingsDetail({
             <div key={tx.id} className="loan-row">
               <span>
                 {tx.type === 'deposit' ? t('savings.deposit') : t('savings.withdraw')} ·{' '}
-                {new Date(tx.at).toLocaleDateString()}
+                {formatShortDate(tx.at)}
               </span>
               <span className={tx.type === 'deposit' ? 'loan-text-income' : ''}>
                 {tx.type === 'deposit' ? '+' : '-'}

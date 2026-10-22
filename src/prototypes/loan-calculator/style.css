@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 .loan-app {
-  /* Revolut 浅色：明亮画布 + 保留紫蓝渐变强调 */
+  /* Revolut light: bright canvas, purple-blue gradient kept for emphasis */
   --rev-canvas: #f4f4f8;
   --rev-surface-1: #ffffff;
   --rev-surface-2: #eef0f6;
@@ -654,7 +654,7 @@ button.loan-profile-entry .loan-profile-avatar {
 .loan-fab {
   position: fixed;
   right: max(16px, calc(50% - 430px / 2 + 16px));
-  /* Tab 栏约 72 + 与 Tab 间距 16 + 安全区 */
+  /* Tab bar about 72, plus 16 gap, plus the safe area */
   bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   width: 52px;
   height: 52px;
@@ -1415,7 +1415,7 @@ button.loan-profile-entry .loan-profile-avatar {
   padding: 0 2px;
 }
 
-/* 智能提示：顶缘 6% 品牌紫叠白 ≈ #f5f6ff，约 45% 高度内收成纯白（非整卡半透明紫） */
+/* Insight: 6% brand on white at the top, about #f5f6ff, fading to white by 45%. */
 .loan-savings-insight {
   background: linear-gradient(
     180deg,
@@ -1439,7 +1439,7 @@ button.loan-profile-entry .loan-profile-avatar {
   color: var(--rev-text);
 }
 
-/* 第二段故意用次要色：补充说明，弱于首段 ETA */
+/* The second line uses the secondary color so it stays quieter than the first. */
 .loan-savings-insight .loan-savings-insight-line.loan-muted {
   color: var(--rev-text-secondary);
 }

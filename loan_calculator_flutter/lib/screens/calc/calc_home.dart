@@ -45,7 +45,7 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
     LoanCategory.dual,
   ];
 
-  /// 各类型自己的本金、利率和期限。车贷默认按月 12 个月，房贷仍是按年 30 年。
+  /// Per-type principal, rate, and term. Auto defaults to 12 months; home stays at 30 years.
   final _formMemory = <LoanCategory, List<String>>{
     LoanCategory.auto: ['100000', '4.5', '0', '12'],
     LoanCategory.mortgage: ['100000', '3.5', '30', '0'],
@@ -346,7 +346,7 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               LoanSectionHead(icon: LucideIcons.wallet, title: app.tr('home.loanType')),
-              // 一行四等分：类型是轻量切换，不抢主参数区权重
+              // Four equal tiles. Type switching stays lighter than the main fields.
               Row(
                 children: [
                   for (final (i, k) in _loanTypeOrder.indexed) ...[
@@ -610,11 +610,11 @@ class _CalcHomeScreenState extends State<CalcHomeScreen> {
     );
   }
 
-  (IconData, String) _loanTypeMeta(LoanCategory k, AppState app) => switch (k) {
-        LoanCategory.mortgage => (LucideIcons.home, app.tr('cat.mortgage')),
-        LoanCategory.auto => (LucideIcons.car, app.tr('cat.auto')),
-        LoanCategory.personal => (LucideIcons.shoppingBag, app.tr('cat.personal')),
-        LoanCategory.dual => (LucideIcons.layers, app.tr('cat.dual')),
-        LoanCategory.other => (LucideIcons.moreHorizontal, app.tr('cat.other')),
-      };
+  (IconData, String) _loanTypeMeta(LoanCategory k, AppState app) {
+    if (k == LoanCategory.auto) return (LucideIcons.car, app.tr('cat.auto'));
+    if (k == LoanCategory.personal) return (LucideIcons.shoppingBag, app.tr('cat.personal'));
+    if (k == LoanCategory.dual) return (LucideIcons.layers, app.tr('cat.dual'));
+    if (k == LoanCategory.other) return (LucideIcons.moreHorizontal, app.tr('cat.other'));
+    return (LucideIcons.home, app.tr('cat.mortgage'));
+  }
 }

@@ -51,7 +51,7 @@ const defaultCurrencyCode = 'USD';
 List<CurrencyOption> get pickerCurrencies =>
     currencyOptions.where((c) => c.code != 'CNY').toList();
 
-/// 列表不展示 CNY。缺失、CNY 或未知代码都落在美元。
+/// The picker hides CNY. A missing, CNY, or unknown code resolves to USD.
 String resolveCurrencyCode(String? code) {
   if (code != null && pickerCurrencies.any((c) => c.code == code)) return code;
   return defaultCurrencyCode;

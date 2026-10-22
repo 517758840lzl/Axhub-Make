@@ -5,10 +5,10 @@ import 'currencies.dart';
 
 bool _intlReady = false;
 
-/// 加载 intl 本地化（日期与货币格式化依赖此项）
+/// Load intl data used by dates and currency formatting.
 Future<void> initializeAppIntl() async {
   if (_intlReady) return;
-  final locales = <String>{'zh_CN', 'en_US'};
+  final locales = <String>{'en_US'};
   for (final c in currencyOptions) {
     locales.add(c.locale);
   }
@@ -18,11 +18,11 @@ Future<void> initializeAppIntl() async {
   _intlReady = true;
 }
 
-/// 中文短日期（记账 / 储蓄流水）
+/// User-facing date: day/month/year. Stored timestamps stay ISO-8601.
 String formatShortDate(DateTime date) {
-  return DateFormat.yMd('zh_CN').format(date);
+  return DateFormat('dd/MM/yyyy').format(date);
 }
 
 String formatShortDateTime(DateTime date) {
-  return DateFormat.yMd('zh_CN').add_Hm().format(date);
+  return DateFormat('dd/MM/yyyy HH:mm').format(date);
 }

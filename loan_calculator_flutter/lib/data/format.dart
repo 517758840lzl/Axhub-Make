@@ -28,11 +28,12 @@ String formatMoney(double value, AppSettings settings) {
   return fmt.format(value);
 }
 
-/// 金额输入后缀用货币符号（$ / € / …），随设置变化。
+/// Amount suffix is the currency symbol and follows the current setting.
 String currencyAmountUnit(AppSettings settings) {
   return getCurrency(settings.currencyCode).symbol;
 }
 
-String formatShortDate(DateTime dt) => DateFormat('yyyy-MM-dd').format(dt);
+/// User-facing date. Stored timestamps stay ISO-8601.
+String formatShortDate(DateTime dt) => DateFormat('dd/MM/yyyy').format(dt);
 
-String formatShortDateTime(DateTime dt) => DateFormat('yyyy-MM-dd HH:mm').format(dt);
+String formatShortDateTime(DateTime dt) => DateFormat('dd/MM/yyyy HH:mm').format(dt);

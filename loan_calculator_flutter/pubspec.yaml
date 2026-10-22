@@ -1,5 +1,5 @@
 name: loan_calculator_flutter
-description: 贷款计算器 · iOS/Android（与 Make 原型 1:1）
+description: Loan calculator for iOS and Android, aligned with the Make prototype.
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -33,14 +33,30 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-  provider: ^6.1.2
-  shared_preferences: ^2.3.3
-  google_fonts: ^6.2.1
-  intl: ^0.20.2
-  uuid: ^4.5.1
-  lucide_icons_flutter: ^3.1.20
-  webview_flutter: ^4.13.0
+  cupertino_icons:
+    hosted: https://pub.dev
+    version: ">=1.0.9 <=1.0.9"
+  provider:
+    hosted: https://pub.dev
+    version: ">=6.1.5+1 <=6.1.5+1"
+  shared_preferences:
+    hosted: https://pub.dev
+    version: ">=2.5.5 <=2.5.5"
+  google_fonts:
+    hosted: https://pub.dev
+    version: ">=6.3.3 <=6.3.3"
+  intl:
+    hosted: https://pub.dev
+    version: ">=0.20.3 <=0.20.3"
+  uuid:
+    hosted: https://pub.dev
+    version: ">=4.6.0 <=4.6.0"
+  lucide_icons_flutter:
+    hosted: https://pub.dev
+    version: ">=3.1.20 <=3.1.20"
+  webview_flutter:
+    hosted: https://pub.dev
+    version: ">=4.14.1 <=4.14.1"
 
 dev_dependencies:
   flutter_test:
@@ -51,8 +67,12 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^6.0.0
-  flutter_launcher_icons: ^0.14.3
+  flutter_lints:
+    hosted: https://pub.dev
+    version: ">=6.0.0 <=6.0.0"
+  flutter_launcher_icons:
+    hosted: https://pub.dev
+    version: ">=0.14.4 <=0.14.4"
 
 flutter_launcher_icons:
   android: true

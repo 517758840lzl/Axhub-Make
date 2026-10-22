@@ -3,7 +3,7 @@ import 'models.dart';
 
 double _round2(double n) => (n * 100).roundToDouble() / 100;
 
-/// 首页实时摘要。舍入与 [computeLoan] 相同，但不生成逐期明细。
+/// Live home summary. Same rounding as [computeLoan], without the period schedule.
 class LoanSummary {
   const LoanSummary({
     required this.input,
@@ -118,13 +118,13 @@ double _pow1p(double r, int n) {
 String modeLabel(RepaymentMode mode, AppLocale locale) =>
     t(locale, mode == RepaymentMode.equalPayment ? 'mode.equalPayment' : 'mode.equalPrincipal');
 
-String categoryLabel(LoanCategory c, AppLocale locale) => switch (c) {
-      LoanCategory.mortgage => t(locale, 'cat.mortgage'),
-      LoanCategory.auto => t(locale, 'cat.auto'),
-      LoanCategory.personal => t(locale, 'cat.personal'),
-      LoanCategory.dual => t(locale, 'cat.dual'),
-      LoanCategory.other => t(locale, 'cat.other'),
-    };
+String categoryLabel(LoanCategory c, AppLocale locale) {
+  if (c == LoanCategory.auto) return t(locale, 'cat.auto');
+  if (c == LoanCategory.personal) return t(locale, 'cat.personal');
+  if (c == LoanCategory.dual) return t(locale, 'cat.dual');
+  if (c == LoanCategory.other) return t(locale, 'cat.other');
+  return t(locale, 'cat.mortgage');
+}
 
 /// Fingerprint for duplicate-save detection (matches Web intent).
 LoanSummary summarizeLoan(CalcInput input) {

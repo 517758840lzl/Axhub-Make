@@ -7,12 +7,14 @@ import 'data/intl_init.dart';
 import 'theme/revolut_theme.dart';
 
 Future<void> main() async {
-  debugPrint('amake-demo push check');
+  if (!kDebugMode) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
-    throw UnsupportedError('loan_calculator_flutter 仅支持 iOS 与 Android，请用 iOS 模拟器或 Android 模拟器运行');
+    throw UnsupportedError('loan_calculator_flutter runs on iOS and Android. Use an iOS or Android device.');
   }
-  // 状态栏 / 导航栏与页面画布同色，避免灰条断层
+  // Status and navigation bars use the page canvas color.
   SystemChrome.setSystemUIOverlayStyle(revolutSystemUi);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   await initializeAppIntl();

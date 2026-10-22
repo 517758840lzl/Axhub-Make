@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/revolut_theme.dart';
 
-/// 与桌面 App Icon 同源：`assets/branding/app_icon.png`
+/// Same artwork as the home-screen icon: `assets/branding/app_icon.png`.
 class BrandLogo extends StatelessWidget {
   const BrandLogo({
     super.key,
@@ -14,7 +14,7 @@ class BrandLogo extends StatelessWidget {
   static const assetPath = 'assets/branding/app_icon.png';
 
   final double size;
-  /// 0～1 显现进度（兼容启动页原参数名）
+  /// Reveal progress from 0 to 1. Keeps the opening-screen parameter name.
   final double ringProgress;
   final double glow;
 

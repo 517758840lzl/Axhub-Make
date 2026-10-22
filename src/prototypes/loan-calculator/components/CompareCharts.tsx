@@ -17,7 +17,7 @@ type CompareChartsProps = {
   barLabels: { monthly: string; interest: string; total: string };
 };
 
-/** 柱状：月供 / 总利息 / 还款总额横比 */
+/** Bars comparing monthly payment, total interest, and total cost. */
 export function CompareCharts({ plans, money, barTitle, barLabels }: CompareChartsProps) {
   const barGroups = useMemo(
     () => [

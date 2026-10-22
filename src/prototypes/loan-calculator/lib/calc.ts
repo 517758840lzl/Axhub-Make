@@ -10,7 +10,7 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** 首页实时摘要。舍入与 computeLoan 相同，但不生成逐期明细。 */
+/** Live home summary. Same rounding as computeLoan, without the period schedule. */
 export interface LoanSummary {
   input: CalcInput;
   monthlyPayment: number;
@@ -226,7 +226,7 @@ function computeEqualPrincipal(P: number, r: number, n: number, input: CalcInput
   };
 }
 
-/** @deprecated 界面请用 i18n modeMessageKey；保留给非 UI 调用 */
+/** @deprecated UI should use i18n modeMessageKey. Kept for non-UI callers. */
 export function modeLabel(mode: RepaymentMode): string {
   return mode === 'equal-payment' ? 'equal-payment' : 'equal-principal';
 }

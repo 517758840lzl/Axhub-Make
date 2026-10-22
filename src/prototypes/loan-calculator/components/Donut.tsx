@@ -4,9 +4,9 @@ type DonutSegment = {
   value: number;
   color: string;
   label: string;
-  /** 环外明细金额文案，如 ¥1,000.00；不进圆心 */
+  /** Amount caption outside the ring. It does not enter the center. */
   amountText?: string;
-  /** 只出现在环下明细，不计入圆环 */
+  /** Shown only in the lines under the ring. Not part of the ring. */
   legendOnly?: boolean;
 };
 
@@ -14,15 +14,15 @@ type DonutProps = {
   segments: DonutSegment[];
   size?: number;
   stroke?: number;
-  /** 圆心主文案：宜短，如 39% / 35% */
+  /** Center label. Keep it short, such as 39%. */
   centerValue: string;
-  /** 圆心副文案：如 利息占比 / 已完成 */
+  /** Secondary center label, such as interest share. */
   centerCaption?: string;
   animate?: boolean;
 };
 
 /**
- * 环内只放短指标；完整金额放在环下明细行（避免长金额撑破圆环）。
+ * Keep the center short. Put full amounts on the lines under the ring.
  */
 export function Donut({
   segments,

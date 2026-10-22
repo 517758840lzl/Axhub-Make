@@ -117,8 +117,8 @@ class StorageService {
   }
 
   Future<void> relabelExampleSavings() async {
-    const storedName = '示例月供缓冲金';
-    const legacyNames = {'月供缓冲金', 'Payment buffer', 'Colchón de cuota'};
+    const storedName = 'Sample payment buffer';
+    const legacyNames = {'Payment buffer', 'Colchón de cuota'};
     final goals = await getSavingsGoals();
     var changed = false;
     final next = goals.map((g) {
@@ -140,22 +140,22 @@ class StorageService {
       termMonths: 360,
       mode: RepaymentMode.equalPayment,
       category: LoanCategory.mortgage,
-      label: '示例房贷',
+      label: 'Sample mortgage',
     ));
     await saveCalculations([
       SavedCalculation(
         id: 'seed-calc-1',
         createdAt: DateTime.now().toIso8601String(),
         favorite: true,
-        note: '示例房贷方案',
-        tags: const ['房贷', '月供'],
+        note: 'Sample mortgage plan',
+        tags: const ['mortgage', 'payment'],
         result: sample,
       ),
     ]);
     await saveSavingsGoals([
       SavingsGoal(
         id: 'seed-goal-1',
-        name: '示例月供缓冲金',
+        name: 'Sample payment buffer',
         target: 15000,
         current: 5200,
         deadline: null,
@@ -166,7 +166,7 @@ class StorageService {
             id: 'seed-tx-1',
             amount: 5200,
             type: 'deposit',
-            note: '初始存入',
+            note: 'Opening deposit',
             at: DateTime.now().toIso8601String(),
           ),
         ],

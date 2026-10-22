@@ -154,7 +154,7 @@ class SavingsListScreen extends StatelessWidget {
                     centerSub: reached ? app.tr('savings.eta.done') : app.tr('savings.progress'),
                   ),
                 ),
-                // 提示挂在对应目标卡片内，多目标时不会混淆
+                // The note stays on its own goal card.
                 Container(
                   margin: const EdgeInsets.only(top: 4),
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),

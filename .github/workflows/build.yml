@@ -1,5 +1,5 @@
-# iOS 签名打包 ipa，完成后用 App Store Connect API（p8）上传。
-# 手动触发。仓库 Secrets：
+# Sign an iOS ipa, then upload it with the App Store Connect API (.p8).
+# Manual run. Repository secrets:
 # IOS_DIST_P12_BASE64、IOS_DIST_P12_PASSWORD、IOS_PROVISION_PROFILE_BASE64、
 # IOS_TEAM_ID、IOS_PROVISIONING_PROFILE_NAME、
 # APPSTORE_ISSUER_ID、APPSTORE_KEY_ID、APPSTORE_AUTH_KEY_BASE64
@@ -56,7 +56,7 @@ jobs:
         working-directory: loan_calculator_flutter/ios
         run: pod install
 
-      # 不用 flutter build ipa：它会把 xcodebuild 输出攒到结束才刷出来，并带 -allowProvisioningUpdates，CI 上容易干等半小时。
+      # Do not use flutter build ipa. It buffers xcodebuild output and passes -allowProvisioningUpdates, which can sit for half an hour on CI.
       - name: Archive and export ipa
         timeout-minutes: 85
         env:

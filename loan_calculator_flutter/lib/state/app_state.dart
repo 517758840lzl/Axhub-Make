@@ -12,22 +12,26 @@ import '../data/tags.dart';
 
 export '../data/format.dart' show uid;
 
-enum AppRoute {
-  calc,
-  calcResult,
-  amortization,
-  compare,
-  savings,
-  savingsDetail,
-  savingsNew,
-  profile,
-  profileEdit,
-  profileSettings,
-  profileData,
-  profileAboutUs,
-  profileAbout,
-  savedList,
-  savedDetail,
+class AppRoute {
+  const AppRoute._(this.name);
+
+  final String name;
+
+  static const calc = AppRoute._('calc');
+  static const calcResult = AppRoute._('calcResult');
+  static const amortization = AppRoute._('amortization');
+  static const compare = AppRoute._('compare');
+  static const savings = AppRoute._('savings');
+  static const savingsDetail = AppRoute._('savingsDetail');
+  static const savingsNew = AppRoute._('savingsNew');
+  static const profile = AppRoute._('profile');
+  static const profileEdit = AppRoute._('profileEdit');
+  static const profileSettings = AppRoute._('profileSettings');
+  static const profileData = AppRoute._('profileData');
+  static const profileAboutUs = AppRoute._('profileAboutUs');
+  static const profileAbout = AppRoute._('profileAbout');
+  static const savedList = AppRoute._('savedList');
+  static const savedDetail = AppRoute._('savedDetail');
 }
 
 const tabRoots = [
@@ -109,8 +113,8 @@ class AppState extends ChangeNotifier {
       _calculations = await _storage.getCalculations();
       _ledgerEntries = await _storage.getLedgerEntries();
       _savingsGoals = await _storage.getSavingsGoals();
-    } catch (error, stack) {
-      debugPrint('local store open failed: $error\n$stack');
+    } catch (_) {
+      // Local data stays empty when the store cannot open.
     } finally {
       _ready = true;
       notifyListeners();
@@ -207,7 +211,7 @@ class AppState extends ChangeNotifier {
     return _calculations.any((c) => calcFingerprint(c.result) == fp);
   }
 
-  /// 与原型一致：已有相同方案时返回其 id；否则写入已保存。quiet 时不提示「未重复添加」。
+  /// Matches the prototype: return the existing id when the plan is already saved. When quiet, skip the duplicate toast.
   Future<String?> savePendingResult({bool quietIfExists = false}) async {
     final result = _pendingResult;
     if (result == null) return null;
@@ -243,7 +247,7 @@ class AppState extends ChangeNotifier {
     await savePendingResult();
   }
 
-  /// 加入对比槽。只有 1 个时提示再选一个；满 2 个直接进入对比，不再弹提示。已满 3 个则只提示。
+  /// Add to the compare slot. One item asks for another. Two items open compare. A full slot of three only shows a notice.
   void addToCompare(String id, {bool openCompare = true}) {
     if (!_compareIds.contains(id)) {
       if (_compareIds.length >= 3) {

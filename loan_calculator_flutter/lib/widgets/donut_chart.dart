@@ -15,9 +15,9 @@ class DonutSegment {
   final double value;
   final Color color;
   final String label;
-  /// 环外明细金额文案；不进圆心
+  /// Amount caption outside the ring. It does not enter the center.
   final String? amountText;
-  /// 只出现在环下明细，不计入圆环
+  /// Shown only in the lines under the ring. Not part of the ring.
   final bool legendOnly;
 }
 
@@ -33,7 +33,7 @@ class DonutChart extends StatefulWidget {
   });
 
   final List<DonutSegment> segments;
-  /// 圆心主文案：宜短，如 39%
+  /// Center label. Keep it short, such as 39%.
   final String centerLabel;
   final String? centerSub;
   final double size;

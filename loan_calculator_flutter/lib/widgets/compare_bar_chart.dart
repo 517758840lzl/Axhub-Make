@@ -24,7 +24,7 @@ class CompareBarSeries {
   final double total;
 }
 
-/// 月供 / 总利息 / 还款总额分组柱状图（对齐 Web 对比页）
+/// Grouped bars for monthly payment, total interest, and total cost. Matches the web compare page.
 class CompareBarChart extends StatelessWidget {
   const CompareBarChart({
     super.key,

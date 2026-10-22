@@ -56,7 +56,7 @@ export function setMeta(meta: AppMeta) {
 
 export function getProfile(): UserProfile {
   return readJson<UserProfile>(KEYS.profile, {
-    nickname: '借款人',
+    nickname: 'Borrower',
     avatar: '🧑‍💼',
     createdAt: new Date().toISOString(),
   });
@@ -139,7 +139,7 @@ function relabelExampleSavings() {
   const next = goals.map((g) => {
     if (g.id !== 'seed-goal-1' || !isDefaultSavingsName(g.name)) return g;
     changed = true;
-    return { ...g, name: '示例月供缓冲金' };
+    return { ...g, name: 'Sample payment buffer' };
   });
   if (changed) saveSavingsGoals(next);
 }
@@ -157,7 +157,7 @@ export function seedIfNeeded() {
           termMonths: 36,
           mode: 'equal-payment',
           category: 'auto',
-          label: '示例车贷',
+          label: 'Sample auto',
           vehiclePrice: 180_000,
           downPayment: 54_000,
         });
@@ -167,8 +167,8 @@ export function seedIfNeeded() {
             id: 'seed-calc-2',
             createdAt: new Date().toISOString(),
             favorite: false,
-            note: '示例车贷方案',
-            tags: ['车贷'],
+            note: 'Sample auto plan',
+            tags: ['auto'],
             result: auto,
           },
         ];
@@ -190,7 +190,7 @@ export function seedIfNeeded() {
     termMonths: 360,
     mode: 'equal-payment',
     category: 'mortgage',
-    label: '示例房贷',
+    label: 'Sample mortgage',
   });
 
   const auto = computeLoan({
@@ -199,7 +199,7 @@ export function seedIfNeeded() {
     termMonths: 36,
     mode: 'equal-payment',
     category: 'auto',
-    label: '示例车贷',
+    label: 'Sample auto',
     vehiclePrice: 180_000,
     downPayment: 54_000,
   });
@@ -209,16 +209,16 @@ export function seedIfNeeded() {
       id: 'seed-calc-1',
       createdAt: new Date().toISOString(),
       favorite: true,
-      note: '示例房贷方案',
-      tags: ['房贷', '月供'],
+      note: 'Sample mortgage plan',
+      tags: ['mortgage', 'payment'],
       result: mortgage,
     },
     {
       id: 'seed-calc-2',
       createdAt: new Date().toISOString(),
       favorite: false,
-      note: '示例车贷方案',
-      tags: ['车贷'],
+      note: 'Sample auto plan',
+      tags: ['auto'],
       result: auto,
     },
   ]);
@@ -228,7 +228,7 @@ export function seedIfNeeded() {
   saveSavingsGoals([
     {
       id: 'seed-goal-1',
-      name: '示例月供缓冲金',
+      name: 'Sample payment buffer',
       target: 15000,
       current: 5200,
       deadline: null,
@@ -239,7 +239,7 @@ export function seedIfNeeded() {
           id: 'seed-tx-1',
           amount: 5200,
           type: 'deposit',
-          note: '初始存入',
+          note: 'Opening deposit',
           at: new Date().toISOString(),
         },
       ],

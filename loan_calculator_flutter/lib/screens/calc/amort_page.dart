@@ -365,7 +365,7 @@ class _AmortGrid extends StatelessWidget {
   final TextStyle headStyle;
   final List<_AmortLine> lines;
 
-  /// 不继承 Noto Sans SC，数字走系统字体，避免滑动时逐行做中文字形排版。
+  /// Do not inherit the text face. Numbers use the platform font so scrolling does not shape each row.
   static const _numStyle = TextStyle(
     inherit: false,
     fontSize: 12,

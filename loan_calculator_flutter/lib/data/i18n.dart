@@ -1,19 +1,17 @@
-/// 产品显示名。换名时改这一处。
+/// Product display name. Change it here when renaming.
 const String appTitle = 'LoanCalcMate';
 
-enum AppLocale { en, es }
+class AppLocale {
+  const AppLocale._(this.id);
 
-extension AppLocaleX on AppLocale {
-  String get id => switch (this) {
-        AppLocale.en => 'en',
-        AppLocale.es => 'es',
-      };
+  final String id;
 
-  static AppLocale fromId(String? id) => switch (id) {
-        'en' => AppLocale.en,
-        'es' => AppLocale.es,
-        _ => AppLocale.en,
-      };
+  String get name => id;
+
+  static const en = AppLocale._('en');
+  static const es = AppLocale._('es');
+
+  static AppLocale fromId(String? id) => id == 'es' ? es : en;
 }
 
 const appLocales = [
@@ -576,10 +574,7 @@ const _es = <String, String>{
 };
 
 String t(AppLocale locale, String key, [Map<String, String>? params]) {
-  final map = switch (locale) {
-    AppLocale.en => _en,
-    AppLocale.es => _es,
-  };
+  final map = locale == AppLocale.es ? _es : _en;
   var s = map[key] ?? _en[key] ?? key;
   if (params != null) {
     params.forEach((k, v) {
@@ -590,30 +585,25 @@ String t(AppLocale locale, String key, [Map<String, String>? params]) {
 }
 
 const defaultSavingsNames = [
-  '月供缓冲金',
   'Payment buffer',
   'Colchón de cuota',
 ];
 
 const exampleSavingsNames = [
-  '示例月供缓冲金',
   'Sample payment buffer',
   'Colchón de cuota de ejemplo',
 ];
 
 const _knownCopy = <String, String>{
-  '示例房贷方案': 'seed.mortgageNote',
-  '示例车贷方案': 'seed.autoNote',
   'Sample mortgage plan': 'seed.mortgageNote',
   'Sample auto plan': 'seed.autoNote',
   'Plan de hipoteca de ejemplo': 'seed.mortgageNote',
   'Plan de auto de ejemplo': 'seed.autoNote',
-  '借款人': 'settings.defaultNick',
   'Borrower': 'settings.defaultNick',
   'Prestatario': 'settings.defaultNick',
 };
 
-/// 种子文案和默认昵称随当前语言展示，用户自己写的文字保持原样。
+/// Seed copy and the default nickname follow the current language. Text the user wrote stays as typed.
 String displayKnownCopy(AppLocale locale, String text) {
   final key = _knownCopy[text.trim()];
   if (key == null) return text;

@@ -1,57 +1,47 @@
-# 贷款计算器 · Flutter（iOS / Android）
+# LoanCalcMate
 
-与 Make 原型 `src/prototypes/loan-calculator` 及 PRD `src/resources/prd/prd-01-loan-calculator.md` 对齐的 **原生壳**，Revolut 浅色视觉与三 Tab（计算 / 储蓄 / 我的）流程一致。
+iOS and Android app aligned with the Make prototype `src/prototypes/loan-calculator` and the PRD `src/resources/prd/prd-01-loan-calculator.md`. Light Revolut look, three tabs: Calc, Save, and Me.
 
-## 平台
+## Platforms
 
-- **仅 iOS、Android**（`flutter create --platforms=ios,android`；`main.dart` 会拒绝 Web/桌面）
-- 无 Web 目录
+- iOS and Android only. `main.dart` refuses web and desktop targets.
+- There is no web directory.
 
-## 运行
+## Run
 
 ```bash
-cd loan_calculator_flutter
 flutter pub get
-flutter devices          # 确认有 Android / iOS 设备
-flutter run -d <deviceId>
+flutter devices
+flutter run
 ```
 
-### 一直卡在 `Launching lib/main.dart…`
+### Stuck on `Launching lib/main.dart…`
 
-常见原因是 **Gradle 首次下载**失败（SSL / 网络），Debug Console 里可能只有一行黄字、没有后续日志。
+The first Gradle download can fail on TLS or a slow network. The debug console may show only one warning.
 
-1. 在终端执行（能看到完整报错）：
-   ```bash
-   cd loan_calculator_flutter
-   flutter run -v
-   ```
-2. 本项目已在 `android/` 配置 **Gradle 腾讯云 + Maven 阿里云** 镜像；改完后建议：
-   ```bash
-   flutter clean && flutter pub get && flutter run
-   ```
-3. 用 **Android Studio** 打开 `loan_calculator_flutter/android` 做一次 Gradle Sync。
-4. Cursor/VS Code 请 **打开文件夹** `loan_calculator_flutter`（不是 `loan-calculator-html`），选底部设备为 **sdk gphone64 arm64** 或真机，不要用 Chrome/Web。
-5. Problems 里若只有 `use_null_aware_elements` 的 **info**，不会阻止运行；若是红色 **error**，把完整文案发出来。
+1. Run `flutter run -v` in a terminal to see the full log.
+2. Android dependencies come from Google and Maven Central. Gradle comes from services.gradle.org.
+3. Open `loan_calculator_flutter/android` in Android Studio and sync Gradle once.
+4. Open the `loan_calculator_flutter` folder in the editor and pick an Android device or an iOS simulator. Do not pick Chrome.
+5. An info-level lint does not block the run. A red error does.
 
-## 数据
+## Data
 
-- 本地 `shared_preferences`，键前缀 `loan-calc:`（与浏览器原型 schema 一致，便于对照）
+Local `shared_preferences`, key prefix `loan-calc:`. The browser prototype uses the same schema.
 
-## 结构
+## Layout
 
-| 目录 | 说明 |
-|------|------|
-| `lib/data/` | 模型、计算、货币、标签、存储 |
-| `lib/state/app_state.dart` | 状态与路由 |
-| `lib/widgets/` | 与原型 CSS 对应的 UI 组件 |
-| `lib/screens/loan_screens.dart` | 全部页面 |
+| Path | Role |
+| --- | --- |
+| `lib/data/` | Models, calculation, currency, tags, storage |
+| `lib/state/app_state.dart` | State and routes |
+| `lib/widgets/` | UI pieces aligned with the prototype CSS |
+| `lib/screens/` | Screens |
 
-## 品牌
+## Brand
 
-- **桌面图标**：`assets/branding/app_icon.png`（紫蓝渐变 fintech 风格）；`dart run flutter_launcher_icons` 可重新生成 Android/iOS 图标
-- **启动页**：原生闪屏底色 `#F4F4F8` + Flutter **启动动画**（桌面同款 `app_icon.png` 显现、弹性缩放、标语淡入，约 1.6～2.2s 后进入主界面）
-- **品牌标**：`BrandLogo` 直接使用 `assets/branding/app_icon.png`，与桌面图标一致
+- Home-screen icon: `assets/branding/app_icon.png`. Regenerate with `dart run flutter_launcher_icons`.
+- Opening screen: system background `#F4F4F8`, then the Flutter animation.
+- `BrandLogo` uses the same `app_icon.png`.
 
-## 说明
-
-产品规则以 `src/resources/prd/prd-01-loan-calculator.md` 为准，Web 原型与本应用遵守同一套信息架构和业务规则。字体渲染和启动页可以按平台不同。
+Product rules follow the PRD. The web prototype and this app share the same information architecture. Font rendering and the opening screen can differ by platform.

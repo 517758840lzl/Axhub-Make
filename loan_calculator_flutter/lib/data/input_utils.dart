@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 
-/// 去掉千分位与全角符号，解析金额/数字输入。
+/// Strip grouping separators and full-width marks, then parse the amount.
 double? parseAmountString(String raw) {
   final s = raw.trim().replaceAll(',', '').replaceAll('，', '').replaceAll(' ', '');
   if (s.isEmpty || s == '.') return null;
@@ -38,7 +38,7 @@ class PositiveDecimalInputFormatter extends TextInputFormatter {
 
 const positiveDecimalInputFormatters = [PositiveDecimalInputFormatter()];
 
-/// 金额输入展示，如 1000000 → 1,000,000。保留小数点。
+/// Display form for an amount, such as 1000000 to 1,000,000. Keeps the decimal point.
 String formatGroupedAmount(String raw) {
   if (raw.isEmpty) return '';
   final dot = raw.indexOf('.');

@@ -1,11 +1,44 @@
 import 'currencies.dart';
 import 'i18n.dart';
 
-enum RepaymentMode { equalPayment, equalPrincipal }
+class RepaymentMode {
+  const RepaymentMode._(this.name);
 
-enum LoanCategory { mortgage, auto, personal, dual, other }
+  final String name;
 
-enum LedgerDirection { expense, income }
+  static const equalPayment = RepaymentMode._('equalPayment');
+  static const equalPrincipal = RepaymentMode._('equalPrincipal');
+}
+
+class LoanCategory {
+  const LoanCategory._(this.name);
+
+  final String name;
+
+  static const mortgage = LoanCategory._('mortgage');
+  static const auto = LoanCategory._('auto');
+  static const personal = LoanCategory._('personal');
+  static const dual = LoanCategory._('dual');
+  static const other = LoanCategory._('other');
+
+  static const values = [mortgage, auto, personal, dual, other];
+
+  static LoanCategory fromName(String raw) {
+    for (final item in values) {
+      if (item.name == raw) return item;
+    }
+    return mortgage;
+  }
+}
+
+class LedgerDirection {
+  const LedgerDirection._(this.name);
+
+  final String name;
+
+  static const expense = LedgerDirection._('expense');
+  static const income = LedgerDirection._('income');
+}
 
 class DualLoanPart {
   DualLoanPart({
@@ -78,10 +111,7 @@ class CalcInput {
 
   factory CalcInput.fromJson(Map<String, dynamic> j) {
     final catRaw = j['category'] as String? ?? 'mortgage';
-    final category = LoanCategory.values.firstWhere(
-      (e) => e.name == catRaw,
-      orElse: () => LoanCategory.mortgage,
-    );
+    final category = LoanCategory.fromName(catRaw);
     return CalcInput(
       principal: (j['principal'] as num).toDouble(),
       annualRatePercent: (j['annualRatePercent'] as num).toDouble(),
@@ -459,7 +489,7 @@ class AppSettings {
         currencyCode: resolveCurrencyCode(j['currencyCode'] as String?),
         decimals: j['decimals'] as int? ?? 2,
         theme: j['theme'] as String? ?? 'light',
-        locale: AppLocaleX.fromId(j['locale'] as String?),
+        locale: AppLocale.fromId(j['locale'] as String?),
       );
 
   AppSettings copyWith({

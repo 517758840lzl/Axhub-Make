@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// 状态栏/导航栏与画布一体（浅色底 + 深色图标）
+/// Status and navigation bars match the canvas: light background, dark icons.
 const revolutSystemUi = SystemUiOverlayStyle(
   statusBarColor: Colors.transparent,
   statusBarIconBrightness: Brightness.dark,
@@ -13,7 +13,7 @@ const revolutSystemUi = SystemUiOverlayStyle(
   systemNavigationBarContrastEnforced: false,
 );
 
-/// 与原型 `style.css` 中 `--rev-*` 一一对应
+/// Matches the `--rev-*` tokens in the prototype `style.css`.
 abstract final class RevolutColors {
   static const canvas = Color(0xFFF4F4F8);
   static const surface1 = Color(0xFFFFFFFF);
@@ -60,7 +60,7 @@ ThemeData buildRevolutTheme() {
       surface: RevolutColors.surface1,
     ),
   );
-  // Inter 无中文：回退字体会假粗体/负字距叠笔画，标题发糊。用 Noto Sans SC 覆盖全文。
+  // A fallback face fakes bold and tight tracking, which blurs titles. Noto Sans SC covers the text.
   final textTheme = GoogleFonts.notoSansScTextTheme(base.textTheme).apply(
     bodyColor: RevolutColors.text,
     displayColor: RevolutColors.text,

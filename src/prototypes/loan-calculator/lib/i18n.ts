@@ -1,6 +1,6 @@
 import type { AppLocale } from './types';
 
-/** 产品显示名。换名时改这一处。 */
+/** Product display name. Change it here when renaming. */
 export const appTitle = 'LoanCalcMate';
 
 export type { AppLocale };
@@ -642,8 +642,8 @@ export function htmlLang(locale: AppLocale): string {
   return 'en';
 }
 
-/** 各语言下的默认昵称；用于识别「仍是系统默认」从而随界面语言切换展示 */
-export const DEFAULT_NICKNAMES = ['借款人', 'Borrower', 'Prestatario'] as const;
+/** Default nicknames. A stored default follows the current language. */
+export const DEFAULT_NICKNAMES = ['Borrower', 'Prestatario'] as const;
 
 export function isDefaultNickname(nickname: string): boolean {
   const n = nickname.trim();
@@ -654,16 +654,14 @@ export function displayNickname(nickname: string, t: TranslateFn): string {
   return isDefaultNickname(nickname) ? t('settings.defaultNick') : nickname;
 }
 
-/** 用户新建时的默认名，随界面语言展示 */
+/** Default name for a new goal. Display follows the current language. */
 export const DEFAULT_SAVINGS_NAMES = [
-  '月供缓冲金',
   'Payment buffer',
   'Colchón de cuota',
 ] as const;
 
-/** 首次写入的那条示例目标，名称带「示例」 */
+/** The first sample goal written on a fresh install. */
 export const EXAMPLE_SAVINGS_NAMES = [
-  '示例月供缓冲金',
   'Sample payment buffer',
   'Colchón de cuota de ejemplo',
 ] as const;
@@ -682,15 +680,13 @@ export function displaySavingsName(name: string, t: TranslateFn): string {
 }
 
 const KNOWN_COPY: Record<string, MessageKey> = {
-  示例房贷方案: 'seed.mortgageNote',
-  示例车贷方案: 'seed.autoNote',
   'Sample mortgage plan': 'seed.mortgageNote',
   'Sample auto plan': 'seed.autoNote',
   'Plan de hipoteca de ejemplo': 'seed.mortgageNote',
   'Plan de auto de ejemplo': 'seed.autoNote',
 };
 
-/** 种子方案名随当前语言展示，用户自己写的文字保持原样。 */
+/** Seed plan names follow the current language. Text the user wrote stays as typed. */
 export function displayKnownCopy(text: string, t: TranslateFn): string {
   const key = KNOWN_COPY[text.trim()];
   return key ? t(key) : text;

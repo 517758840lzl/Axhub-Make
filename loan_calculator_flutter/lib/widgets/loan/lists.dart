@@ -48,7 +48,7 @@ class LoanTagFilter extends StatelessWidget {
   }
 }
 
-/// 记账列表行（对应 Web `.loan-list-item.loan-list-item--stack`）
+/// Ledger row. Matches the web `.loan-list-item.loan-list-item--stack`.
 class LoanListItemStack extends StatelessWidget {
   const LoanListItemStack({super.key, required this.children, this.showDivider = true});
 

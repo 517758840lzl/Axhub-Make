@@ -86,13 +86,13 @@ class _AppHostState extends State<_AppHost> {
 
   @override
   Widget build(BuildContext context) {
-    // 底层始终铺画布色，避免 Splash 切换瞬间露出系统黑底
+    // Keep the canvas color under the splash so the system black never flashes through.
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         final app = context.read<AppState>();
-        // 子页面回到上一页。已经在计算、储蓄、我的这三个标签页时，停在当前页。
+        // Sub-pages go back one step. On Calc, Save, or Me, stay on the current page.
         if (app.canPopRoute) app.pop();
       },
       child: ColoredBox(
@@ -139,7 +139,7 @@ class LoanRoot extends StatelessWidget {
         }
 
         final onSavingsList = app.route == AppRoute.savings && app.savingsGoals.isNotEmpty;
-        return LoanShell(
+        return LoanFrame(
           toast: app.toast,
           showTabBar: showTabBarForRoute(app.route),
           activeTab: app.activeTabIndex,
@@ -166,37 +166,23 @@ class LoanRoot extends StatelessWidget {
   }
 
   Widget _screenForRoute(AppState app) {
-    switch (app.route) {
-      case AppRoute.calc:
-        return const CalcHomeScreen();
-      case AppRoute.calcResult:
-        return const CalcResultScreen();
-      case AppRoute.amortization:
-        return const AmortizationScreen();
-      case AppRoute.compare:
-        return const CompareScreen();
-      case AppRoute.savings:
-        return const SavingsListScreen();
-      case AppRoute.savingsNew:
-        return const SavingsNewScreen();
-      case AppRoute.savingsDetail:
-        return const SavingsDetailScreen();
-      case AppRoute.profile:
-        return const ProfileHomeScreen();
-      case AppRoute.profileEdit:
-        return const ProfileEditScreen();
-      case AppRoute.profileSettings:
-        return const ProfileSettingsScreen();
-      case AppRoute.profileData:
-        return const ProfileDataScreen();
-      case AppRoute.profileAboutUs:
-        return const ProfileTextScreen(titleKey: 'aboutUs.title', bodyKey: 'aboutUs.body');
-      case AppRoute.profileAbout:
-        return const ProfilePrivacyScreen();
-      case AppRoute.savedList:
-        return const SavedListScreen();
-      case AppRoute.savedDetail:
-        return const SavedDetailScreen();
+    final route = app.route;
+    if (route == AppRoute.calcResult) return const CalcResultScreen();
+    if (route == AppRoute.amortization) return const AmortizationScreen();
+    if (route == AppRoute.compare) return const CompareScreen();
+    if (route == AppRoute.savings) return const SavingsListScreen();
+    if (route == AppRoute.savingsNew) return const SavingsNewScreen();
+    if (route == AppRoute.savingsDetail) return const SavingsDetailScreen();
+    if (route == AppRoute.profile) return const ProfileHomeScreen();
+    if (route == AppRoute.profileEdit) return const ProfileEditScreen();
+    if (route == AppRoute.profileSettings) return const ProfileSettingsScreen();
+    if (route == AppRoute.profileData) return const ProfileDataScreen();
+    if (route == AppRoute.profileAboutUs) {
+      return const ProfileTextScreen(titleKey: 'aboutUs.title', bodyKey: 'aboutUs.body');
     }
+    if (route == AppRoute.profileAbout) return const ProfilePrivacyScreen();
+    if (route == AppRoute.savedList) return const SavedListScreen();
+    if (route == AppRoute.savedDetail) return const SavedDetailScreen();
+    return const CalcHomeScreen();
   }
 }

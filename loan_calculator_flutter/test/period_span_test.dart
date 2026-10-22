@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:loan_calculator_flutter/screens/calc/amort_page.dart';
 
 void main() {
-  test('起始期大于结束期时拦住，并保留输入框里的数字', () {
+  test('blocks a start period after the end period and keeps the typed numbers', () {
     final span = resolvePeriodSpan(fromText: '1120', toText: '360', max: 360);
     expect(span.inverted, isTrue);
     expect(span.blocked, isTrue);
@@ -12,20 +12,20 @@ void main() {
     expect(span.toBad, isTrue);
   });
 
-  test('范围内结束期更小同样拦住', () {
+  test('blocks an end period that is smaller than the start', () {
     final span = resolvePeriodSpan(fromText: '20', toText: '10', max: 360);
     expect(span.inverted, isTrue);
     expect(span.blocked, isTrue);
   });
 
-  test('合法区间可以出明细', () {
+  test('accepts a valid range', () {
     final span = resolvePeriodSpan(fromText: '1', toText: '12', max: 360);
     expect(span.blocked, isFalse);
     expect(span.from, 1);
     expect(span.to, 12);
   });
 
-  test('起止都超过总期数时不算成最后一期', () {
+  test('does not clamp both ends to the last period when they are past the term', () {
     final span = resolvePeriodSpan(fromText: '400', toText: '500', max: 360);
     expect(span.inverted, isFalse);
     expect(span.outOfRange, isTrue);

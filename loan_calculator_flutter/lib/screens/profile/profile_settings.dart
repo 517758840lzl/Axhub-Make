@@ -43,7 +43,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               LoanSegment(
                 options: appLocales.map((e) => (e.$1.id, e.$2)).toList(),
                 selected: _locale.id,
-                onSelect: (v) => setState(() => _locale = AppLocaleX.fromId(v)),
+                onSelect: (v) => setState(() => _locale = AppLocale.fromId(v)),
               ),
               LoanLabel(app.tr('settings.decimals'), marginTop: 12),
               LoanSegment(

@@ -2,7 +2,7 @@ export type RepaymentMode = 'equal-payment' | 'equal-principal';
 
 export type LoanCategory = 'mortgage' | 'auto' | 'personal' | 'dual' | 'other';
 
-/** 通用双贷款中的单笔 */
+/** One part of a dual loan. */
 export interface DualLoanPart {
   principal: number;
   annualRatePercent: number;
@@ -18,11 +18,11 @@ export interface CalcInput {
   mode: RepaymentMode;
   category: LoanCategory;
   label?: string;
-  /** 车贷：车辆成交价 */
+  /** Older auto plans may still store the vehicle price. */
   vehiclePrice?: number;
-  /** 车贷：首付金额 */
+  /** Older auto plans may still store the down payment. */
   downPayment?: number;
-  /** 双贷款：两笔明细 */
+  /** Dual loan: the two parts. */
   parts?: DualLoanPart[];
 }
 
@@ -42,7 +42,7 @@ export interface CalcResult {
   totalInterest: number;
   totalPayment: number;
   schedule: AmortizationRow[];
-  /** 双贷款时各笔完整结果 */
+  /** Full result for each part of a dual loan. */
   partsResults?: CalcResult[];
 }
 
@@ -51,14 +51,14 @@ export interface SavedCalculation {
   createdAt: string;
   favorite: boolean;
   note: string;
-  /** 记账标签，如 房贷、月供 */
+  /** Ledger tags, such as mortgage or payment. */
   tags: string[];
   result: CalcResult;
 }
 
 export type LedgerDirection = 'expense' | 'income';
 
-/** 手动手收支条目（与贷款方案并列展示在记账 Tab） */
+/** A manual ledger entry. */
 export interface ManualLedgerEntry {
   id: string;
   createdAt: string;
@@ -94,18 +94,18 @@ export interface UserProfile {
   nickname: string;
   avatar: string;
   createdAt: string;
-  /** 未写入旧数据时按 private 展示 */
+  /** Older records without this field display as private. */
   gender?: ProfileGender;
 }
 
 export type AppLocale = 'en' | 'es';
 
 export interface AppSettings {
-  /** ISO 4217，如 CNY、USD */
+  /** ISO 4217 code, such as USD. */
   currencyCode: string;
   decimals: number;
   theme: 'dark' | 'light' | 'system';
-  /** 界面语言 */
+  /** Interface language. */
   locale: AppLocale;
 }
 

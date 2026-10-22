@@ -6,16 +6,16 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../theme/revolut_theme.dart';
 
-const loanShellMaxWidth = 430.0;
+const loanFrameMaxWidth = 430.0;
 
-/// Tab 栏高度：外层 8+8 + item 上下 6+6 + 图标 28 + 间距 3 + 文案约 13 ≈ 72
+/// Tab bar height: outer 8+8, item 6+6, icon 28, gap 3, label about 13, about 72.
 const loanTabBarHeight = 72.0;
 
-/// FAB 底边与 Tab 顶边的空隙
+/// Gap between the FAB bottom and the tab bar top.
 const loanFabTabGap = 16.0;
 
-class LoanShell extends StatelessWidget {
-  const LoanShell({
+class LoanFrame extends StatelessWidget {
+  const LoanFrame({
     super.key,
     required this.body,
     required this.showTabBar,
@@ -35,20 +35,20 @@ class LoanShell extends StatelessWidget {
   final List<String> tabLabels;
   final String? toast;
 
-  /// 浮在内容之上、Tab 之上（不占布局条带）
+  /// Floats above the content and the tab bar. It does not take a layout slot.
   final Widget? fab;
 
-  /// 路由变化时换 key，避免沿用上一页滚动位置（如结果页滑到底再进摊还）
+  /// New key on route change so the next page does not keep the previous scroll offset.
   final Key? scrollResetKey;
 
-  /// 子页面自己占满剩余高度（摊还明细），不要再套一层可滚矮盒子
+  /// A sub-page fills the remaining height itself. Do not wrap it in another short scroller.
   final bool expandBody;
 
   @override
   Widget build(BuildContext context) {
     final fabClearance = fab != null ? 52.0 + loanFabTabGap + 8 : 0.0;
-    // 键盘盖住屏幕底部。只把内容抬到键盘上方，标签栏留在原处，由键盘盖住。
-    // 底部安全区只加在标签栏内部，背景铺到屏幕底边。有手势条和没有的手机都按系统间距留白。
+    // The keyboard covers the bottom of the screen. Lift only the content. The tab bar stays put and sits under the keyboard.
+    // The bottom inset is inside the tab bar. The background reaches the screen edge.
     final keyboardLift = MediaQuery.viewInsetsOf(context).bottom;
     final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
     final tabReserve = showTabBar ? loanTabBarHeight + safeBottom : safeBottom;
@@ -64,7 +64,7 @@ class LoanShell extends StatelessWidget {
           right: false,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: loanShellMaxWidth),
+              constraints: const BoxConstraints(maxWidth: loanFrameMaxWidth),
               child: ColoredBox(
                 color: RevolutColors.canvas,
                 child: Stack(

@@ -1,17 +1,17 @@
 import 'models.dart';
 
 const tagMessageKey = <String, String>{
-  '房贷': 'tag.mortgage',
-  '车贷': 'tag.auto',
-  '消费贷': 'tag.consumer',
-  '月供': 'tag.payment',
-  '保险': 'tag.insurance',
-  '装修': 'tag.reno',
-  '教育': 'tag.edu',
-  '医疗': 'tag.medical',
-  '日常': 'tag.daily',
-  '其他': 'tag.other',
-  '组合贷': 'cat.dual',
+  'mortgage': 'tag.mortgage',
+  'auto': 'tag.auto',
+  'consumer': 'tag.consumer',
+  'payment': 'tag.payment',
+  'insurance': 'tag.insurance',
+  'reno': 'tag.reno',
+  'edu': 'tag.edu',
+  'medical': 'tag.medical',
+  'daily': 'tag.daily',
+  'other': 'tag.other',
+  'dual': 'cat.dual',
 };
 
 String tagLabel(String tag, String Function(String key, [Map<String, String>? params]) tr) {
@@ -20,27 +20,25 @@ String tagLabel(String tag, String Function(String key, [Map<String, String>? pa
 }
 
 const suggestedTags = [
-  '房贷',
-  '车贷',
-  '消费贷',
-  '月供',
-  '保险',
-  '装修',
-  '教育',
-  '医疗',
-  '日常',
-  '其他',
+  'mortgage',
+  'auto',
+  'consumer',
+  'payment',
+  'insurance',
+  'reno',
+  'edu',
+  'medical',
+  'daily',
+  'other',
 ];
 
-List<String> defaultTagsForCategory(LoanCategory category) => [
-      switch (category) {
-        LoanCategory.mortgage => '房贷',
-        LoanCategory.auto => '车贷',
-        LoanCategory.personal => '消费贷',
-        LoanCategory.dual => '房贷',
-        LoanCategory.other => '其他',
-      },
-    ];
+List<String> defaultTagsForCategory(LoanCategory category) {
+  if (category == LoanCategory.auto) return ['auto'];
+  if (category == LoanCategory.personal) return ['consumer'];
+  if (category == LoanCategory.dual) return ['mortgage'];
+  if (category == LoanCategory.other) return ['other'];
+  return ['mortgage'];
+}
 
 List<String> normalizeTagList(List<String>? tags) {
   if (tags == null || tags.isEmpty) return [];

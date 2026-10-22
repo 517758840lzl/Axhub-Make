@@ -40,7 +40,7 @@ export function sanitizeDecimalInput(raw: string): string {
   return out;
 }
 
-/** 金额输入的展示形式，如 1000000 → 1,000,000。小数点和末尾的点保留。 */
+/** Display form for an amount, such as 1000000 to 1,000,000. Keeps the decimal point. */
 export function formatGroupedAmount(raw: string): string {
   if (!raw) return '';
   const dot = raw.indexOf('.');
@@ -51,7 +51,7 @@ export function formatGroupedAmount(raw: string): string {
   return `${grouped}${frac}`;
 }
 
-/** 把带逗号的输入还原成纯数字，并算出格式化后光标应停的位置。 */
+/** Turn a grouped amount back into digits and place the caret after formatting. */
 export function editGroupedAmount(display: string, caret: number): { raw: string; caret: number } {
   const raw = sanitizeDecimalInput(display);
   const formatted = formatGroupedAmount(raw);
@@ -68,6 +68,15 @@ export function editGroupedAmount(display: string, caret: number): { raw: string
 
 export function currencyAmountUnit(settings: Pick<AppSettings, 'currencyCode'>): string {
   return getCurrency(settings.currencyCode).symbol;
+}
+
+/** User-facing date. Stored timestamps stay ISO-8601. */
+export function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
 export function formatPercent(value: number, decimals = 2): string {

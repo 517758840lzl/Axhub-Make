@@ -3,7 +3,7 @@ export type CurrencyOption = {
   symbol: string;
   name: string;
   locale: string;
-  /** 常用默认小数位 */
+  /** Usual default fraction digits */
   defaultDecimals: number;
 };
 
@@ -41,7 +41,7 @@ export const CURRENCY_OPTIONS: CurrencyOption[] = [
 
 const byCode = new Map(CURRENCY_OPTIONS.map((c) => [c.code, c]));
 
-/** 列表不展示 CNY，新用户与旧的 CNY 偏好都落在美元。 */
+/** The picker hides CNY. New users and a stored CNY preference resolve to USD. */
 export const DEFAULT_CURRENCY_CODE = 'USD';
 
 export const PICKER_CURRENCIES = CURRENCY_OPTIONS.filter((c) => c.code !== 'CNY');
