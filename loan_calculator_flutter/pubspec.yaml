@@ -12,7 +12,6 @@ dependencies:
   cupertino_icons: 1.0.9
   provider: 6.1.5+1
   shared_preferences: 2.4.0
-  google_fonts: 6.3.3
   intl: 0.20.3
   uuid: 4.6.0
   lucide_icons_flutter: 3.1.20

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
@@ -116,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         children: [
                           Text(
                             context.watch<AppState>().tr('home.title'),
-                            style: GoogleFonts.notoSansSc(
+                            style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0,
@@ -127,7 +126,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           const SizedBox(height: 8),
                           Text(
                             context.watch<AppState>().tr('splash.subtitle'),
-                            style: GoogleFonts.notoSansSc(
+                            style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               color: RevolutColors.textSecondary,

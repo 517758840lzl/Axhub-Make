@@ -1,6 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+/// iOS uses the system UI face. Android uses the platform sans face.
+String? get _systemFaceFamily => switch (defaultTargetPlatform) {
+      TargetPlatform.iOS => '.AppleSystemUIFont',
+      TargetPlatform.android => 'sans-serif',
+      _ => null,
+    };
 
 /// Status and navigation bars match the canvas: light background, dark icons.
 const revolutSystemUi = SystemUiOverlayStyle(
@@ -60,8 +67,8 @@ ThemeData buildRevolutTheme() {
       surface: RevolutColors.surface1,
     ),
   );
-  // A fallback face fakes bold and tight tracking, which blurs titles. Noto Sans SC covers the text.
-  final textTheme = GoogleFonts.notoSansScTextTheme(base.textTheme).apply(
+  final textTheme = base.textTheme.apply(
+    fontFamily: _systemFaceFamily,
     bodyColor: RevolutColors.text,
     displayColor: RevolutColors.text,
   );
@@ -78,7 +85,8 @@ ThemeData buildRevolutTheme() {
 }
 
 TextStyle monoStyle(BuildContext context, {double size = 14, FontWeight w = FontWeight.w600}) {
-  return GoogleFonts.jetBrainsMono(
+  return TextStyle(
+    fontFamily: _systemFaceFamily,
     fontSize: size,
     fontWeight: w,
     color: RevolutColors.text,
