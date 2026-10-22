@@ -29,7 +29,7 @@ class _ProfilePrivacyScreenState extends State<ProfilePrivacyScreen> with Widget
     WidgetsBinding.instance.addObserver(this);
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(RevolutColors.surface1)
+      ..setBackgroundColor(RevolutColors.canvas)
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
@@ -109,31 +109,25 @@ class _ProfilePrivacyScreenState extends State<ProfilePrivacyScreen> with Widget
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LoanTopBar(onBack: () => app.pop(), title: app.tr('about.title')),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: ColoredBox(
-                color: RevolutColors.surface1,
-                child: Stack(
-                  children: [
-                    WebViewWidget(controller: _controller),
-                    if (_loading)
-                      const Center(
-                        child: CircularProgressIndicator(color: RevolutColors.brandSolid),
-                      ),
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: LoanTopBar(onBack: () => app.pop(), title: app.tr('about.title')),
+        ),
+        Expanded(
+          child: Stack(
+            children: [
+              WebViewWidget(controller: _controller),
+              if (_loading)
+                const Center(
+                  child: CircularProgressIndicator(color: RevolutColors.brandSolid),
                 ),
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
