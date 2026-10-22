@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -14,27 +13,43 @@ class ProfilePrivacyScreen extends StatefulWidget {
   State<ProfilePrivacyScreen> createState() => _ProfilePrivacyScreenState();
 }
 
-class _ProfilePrivacyScreenState extends State<ProfilePrivacyScreen> {
-  static const _policyAsset = 'assets/privacy/privacy-policy.html';
+class _ProfilePrivacyScreenState extends State<ProfilePrivacyScreen> with WidgetsBindingObserver {
+  static const _policyUrl = 'https://ligacaovital.com/privacy-policy.html';
 
   late final WebViewController _controller;
   var _loading = true;
+  var _shown = false;
+  var _mainFrameFailed = false;
+  var _leftForGrant = false;
+  var _reloadQueued = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(RevolutColors.surface1)
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (_) {
+            _mainFrameFailed = false;
             if (mounted) setState(() => _loading = true);
           },
           onPageFinished: (_) {
-            if (mounted) setState(() => _loading = false);
+            if (!mounted || _mainFrameFailed) {
+              if (mounted) setState(() => _loading = false);
+              return;
+            }
+            setState(() {
+              _loading = false;
+              _shown = true;
+            });
           },
-          onWebResourceError: (_) {
+          onWebResourceError: (error) {
+            if (error.isForMainFrame == false) return;
+            _mainFrameFailed = true;
+            _shown = false;
             if (mounted) setState(() => _loading = false);
           },
           onNavigationRequest: (request) {
@@ -53,10 +68,42 @@ class _ProfilePrivacyScreenState extends State<ProfilePrivacyScreen> {
     _openPolicy();
   }
 
-  Future<void> _openPolicy() async {
-    final html = await rootBundle.loadString(_policyAsset);
-    if (!mounted) return;
-    await _controller.loadHtmlString(html);
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _leftForGrant = !_shown;
+      return;
+    }
+    if (state == AppLifecycleState.resumed && _leftForGrant && !_shown) {
+      _leftForGrant = false;
+      _reloadAfterGrant();
+    }
+  }
+
+  void _reloadAfterGrant() {
+    if (_reloadQueued || _shown) return;
+    _reloadQueued = true;
+    Future<void>.delayed(const Duration(milliseconds: 400), () {
+      _reloadQueued = false;
+      if (!mounted || _shown) return;
+      _openPolicy();
+    });
+  }
+
+  void _openPolicy() {
+    _mainFrameFailed = false;
+    if (mounted && !_loading) {
+      setState(() => _loading = true);
+    }
+    _controller.loadRequest(Uri.parse(_policyUrl));
   }
 
   @override
