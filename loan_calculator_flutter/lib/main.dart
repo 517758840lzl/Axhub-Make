@@ -12,8 +12,7 @@ Future<void> main() async {
   }
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
+    DeviceOrientation.portraitUp,
   ]);
   if (kIsWeb) {
     throw UnsupportedError('loan_calculator_flutter runs on iOS and Android. Use an iOS or Android device.');
