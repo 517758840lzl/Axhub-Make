@@ -32,7 +32,7 @@ P12_PASSWORD="$(printf '%s' "$IOS_DIST_P12_PASSWORD" | tr -d '\r\n')"
 decode_base64_to_file "$IOS_DIST_P12_BASE64" "$P12_PATH"
 decode_base64_to_file "$IOS_PROVISION_PROFILE_BASE64" "$PROFILE_PATH"
 
-if ! openssl pkcs12 -in "$P12_PATH" -noout -passin "pass:${P12_PASSWORD}" 2>/dev/null; then
+if ! openssl pkcs12 -in "$P12_PATH" -noout -passin "pass:${P12_PASSWORD}" -legacy 2>/dev/null; then
   echo "error: p12 does not match IOS_DIST_P12_PASSWORD (check base64 and password secret)"
   exit 1
 fi
@@ -40,8 +40,8 @@ echo "p12 password OK ($(wc -c <"$P12_PATH" | tr -d ' ') bytes)"
 
 # OpenSSL on Windows often produces PKCS#12 that openssl reads but macOS security import rejects.
 P12_APPLE="$WORKDIR/dist-apple.p12"
-openssl pkcs12 -in "$P12_PATH" -passin "pass:${P12_PASSWORD}" -nocerts -nodes -out "$WORKDIR/key.pem"
-openssl pkcs12 -in "$P12_PATH" -passin "pass:${P12_PASSWORD}" -clcerts -nokeys -out "$WORKDIR/cert.pem"
+openssl pkcs12 -in "$P12_PATH" -passin "pass:${P12_PASSWORD}" -legacy -nocerts -nodes -out "$WORKDIR/key.pem"
+openssl pkcs12 -in "$P12_PATH" -passin "pass:${P12_PASSWORD}" -legacy -clcerts -nokeys -out "$WORKDIR/cert.pem"
 openssl pkcs12 -export -legacy -inkey "$WORKDIR/key.pem" -in "$WORKDIR/cert.pem" \
   -passout "pass:${P12_PASSWORD}" -out "$P12_APPLE"
 P12_PATH="$P12_APPLE"
