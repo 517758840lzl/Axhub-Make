@@ -86,7 +86,7 @@ team = os.environ["IOS_TEAM_ID"]
 profile = os.environ["PROFILE_NAME"].replace("\\", "\\\\").replace('"', '\\"')
 path = Path("ios/Runner.xcodeproj/project.pbxproj")
 text = path.read_text()
-marker = "PRODUCT_BUNDLE_IDENTIFIER = com.amake.loanCalculatorFlutter;"
+marker = "PRODUCT_BUNDLE_IDENTIFIER = com.ligacaovital.loancalcmate;"
 count = text.count(marker)
 if count != 3:
     raise SystemExit(f"expected 3 app bundle id entries, found {count}")
@@ -99,7 +99,7 @@ insert = (
 )
 text = text.replace(marker, insert)
 text = text.replace(
-    "DEVELOPMENT_TEAM = 3FA7WCR8G7;",
+    "DEVELOPMENT_TEAM = MVV43HB5X4;",
     f"DEVELOPMENT_TEAM = {team};",
 )
 path.write_text(text)
