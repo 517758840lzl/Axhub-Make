@@ -1,4 +1,4 @@
-# LoanCalcMate
+# LoanCalcWise
 
 iOS and Android app aligned with the Make prototype `src/prototypes/loan-calculator` and the PRD `src/resources/prd/prd-01-loan-calculator.md`. Light Revolut look, three tabs: Calc, Save, and Me.
 

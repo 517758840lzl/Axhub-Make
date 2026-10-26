@@ -1,7 +1,7 @@
 name: loan_calculator_flutter
 description: Loan calculator for iOS and Android, aligned with the Make prototype.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.13.3
@@ -15,7 +15,6 @@ dependencies:
   intl: 0.20.3
   uuid: 4.6.0
   lucide_icons_flutter: 3.1.20
-  webview_flutter: 4.14.1
 
 dev_dependencies:
   flutter_test:

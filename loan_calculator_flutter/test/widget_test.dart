@@ -15,7 +15,7 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle(const Duration(seconds: 4));
 
-    expect(find.text('LoanCalcMate'), findsWidgets);
+    expect(find.text('LoanCalcWise'), findsWidgets);
     expect(find.text('Calc'), findsWidgets);
   });
 }

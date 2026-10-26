@@ -1,5 +1,5 @@
 /// Product display name. Change it here when renaming.
-const String appTitle = 'LoanCalcMate';
+const String appTitle = 'LoanCalcWise';
 
 class AppLocale {
   const AppLocale._(this.id);
@@ -242,7 +242,7 @@ const _en = <String, String>{
   'settings.decimals': 'Decimals',
   'settings.language': 'Language',
   'settings.save': 'Save',
-  'settings.defaultNick': 'Borrower',
+  'settings.defaultNick': 'Planner',
   'currency.label': 'Display currency',
   'currency.current': 'Now {symbol} {name}',
   'currency.pick': 'Choose currency',
@@ -264,8 +264,29 @@ const _en = <String, String>{
   'data.confirm': 'Clear all calculation and savings data? Preferences will be kept.',
   'data.cleared': 'Business data cleared',
   'aboutUs.title': 'About us',
-  'aboutUs.body': 'Dedicated to people preparing to borrow, this calculator builds repayment estimates you can check and plan comparisons you can set side by side. Enter an amount, annual rate, and term to see the monthly payment, total interest, and total amount due before you apply.\n\nIt covers home, auto, personal, and combined loans. A combined loan lists both parts side by side, with principal, rate, and monthly payment, plus the combined total. An auto loan can derive the amount from the vehicle price and down payment. Repayment methods are equal installments and equal principal: the former keeps each payment the same; the latter starts higher and usually costs less interest overall.\n\nThe amortization schedule lists principal, interest, and remaining principal for each period. Compare holds up to 3 plans; 2 are enough to contrast total interest and the monthly payment. A savings goal can be prefilled at about 3 times the monthly payment, then record later deposits and withdrawals.\n\nThe interface is available in English and Spanish. Amounts can be shown with common currency symbols. Switching currency changes the symbol and decimal places only; saved amounts are not converted at an exchange rate. Plans can be saved under Profile and opened again, and can be marked as favorites.',
+  'aboutUs.body':
+      'LoanCalcWise is an on-device loan payment estimate calculator for planning only. It does not offer credit, accept loan applications, or connect you to lenders. All figures are estimates based on what you enter.\n\n'
+      'Enter loan amount, annual rate, and term to see estimated monthly payment, total interest, and total repayment, plus an amortization schedule. The app covers home, auto, personal, and combined loan scenarios. For a combined loan, both parts appear side by side with principal, rate, and payment, plus a combined total. An auto scenario can derive the loan amount from vehicle price and down payment. Repayment methods include equal installments and equal principal.\n\n'
+      'Save plans under Profile, compare up to three side by side, and optionally track savings goals on your device. Data stays on your phone; we do not run accounts or upload your inputs.\n\n'
+      'The interface is available in English and Spanish. Currency symbols and decimal places can be changed in settings; saved amounts are not converted at an exchange rate.',
   'about.title': 'Privacy policy',
+  'privacy.body':
+      'Last updated: October 22, 2026\n\n'
+      'LIGACAO VITAL - COMERCIO E SERVICOS, (SU), LDA ("we") operates LoanCalcWise ("this app"). This policy explains what happens to information when you use the app.\n\n'
+      'LoanCalcWise is a loan estimate calculator. It does not offer credit, submit a loan application, or connect you to a lender. Results are estimates only.\n\n'
+      '1. Information we do not collect\n\n'
+      'We do not operate an account system, and we do not ask for your name, email, phone number, or identity documents. We do not collect the amounts, rates, terms, or plans you enter; saved calculations, comparison lists, or savings records; or advertising identifiers or usage analytics. The app does not include advertising or analytics software. We do not sell, rent, or share personal information, because we do not receive it. Calculations run on your device. We do not receive what you enter on a server in order to compute a result.\n\n'
+      '2. What stays on your device\n\n'
+      'Figures you type, saved plans, savings goals, a nickname, currency, and language are stored only on the phone. They are not uploaded to us. We have no server copy and cannot view or restore them. You can edit or delete plans and savings goals in the app. Clearing the app\'s data, or uninstalling the app, removes what was stored on that device.\n\n'
+      '3. Children\n\n'
+      'This app is not directed to children under 13. It does not ask for identity details and does not create an account. We do not knowingly collect personal information from children. A parent or guardian can delete saved data in the app, clear the app\'s data, or uninstall the app.\n\n'
+      '4. Security\n\n'
+      'Saved data stays in the app\'s storage on your phone and is not sent to us. Protection depends on your device settings, such as a screen lock and any backup service you use. We do not operate backups and cannot recover data if the phone is lost without a backup you control.\n\n'
+      '5. Changes\n\n'
+      'We may update this policy when the app or this text changes. The date at the top shows when this text was last revised. The policy shown in the app is the one that applies. Questions about a change can be sent to the email below.\n\n'
+      '6. Contact us\n\n'
+      'Operator: LIGACAO VITAL - COMERCIO E SERVICOS, (SU), LDA\nApp: LoanCalcWise\nEmail: office@ligacaovital.com\n\n'
+      'If you have a question about this policy or what stays on your device, contact us at the email above. Please include the app name so we can tell which product the question is about.',
   'toast.savedProfile': 'Saved to Profile',
   'toast.alreadySaved': 'This plan is already saved',
   'common.back': 'Back',
@@ -519,7 +540,7 @@ const _es = <String, String>{
   'settings.decimals': 'Decimales',
   'settings.language': 'Idioma',
   'settings.save': 'Guardar',
-  'settings.defaultNick': 'Prestatario',
+  'settings.defaultNick': 'Planificador',
   'currency.label': 'Moneda',
   'currency.current': 'Ahora {symbol} {name}',
   'currency.pick': 'Elegir moneda',
@@ -541,8 +562,29 @@ const _es = <String, String>{
   'data.confirm': '¿Borrar todos los cálculos y el ahorro? Se conservan las preferencias.',
   'data.cleared': 'Datos de negocio borrados',
   'aboutUs.title': 'Sobre nosotros',
-  'aboutUs.body': 'Dedicado a quien se prepara para pedir un préstamo, ofrece un cálculo de cuotas que se puede revisar y una comparación de planes que se puede contrastar. Introduce importe, tasa anual y plazo para ver la cuota, los intereses totales y el importe total antes de solicitarlo.\n\nCubre hipoteca, auto, crédito personal y combinado. El combinado muestra las dos partes en paralelo, con capital, tasa y cuota, además del total conjunto. El de auto puede calcular el importe a partir del precio del vehículo y la entrada. Los métodos son cuota fija y capital fijo: el primero mantiene el mismo pago; el segundo empieza más alto y suele generar menos intereses.\n\nLa amortización detalla capital, intereses y capital pendiente de cada período. La comparación admite hasta 3 planes; con 2 ya se contrastan los intereses totales y la cuota. La meta de ahorro puede rellenarse con unas 3 cuotas y registrar después ingresos y retiros.\n\nLa interfaz está en English y Español. Los importes pueden mostrarse con símbolos de monedas habituales. Cambiar de moneda solo ajusta el símbolo y los decimales; los importes guardados no se convierten por tipo de cambio. Los planes pueden guardarse en Perfil para abrirlos de nuevo y marcarse como favoritos.',
+  'aboutUs.body':
+      'LoanCalcWise es una calculadora de estimación de pagos de préstamo en el dispositivo, solo para planificar. No ofrece crédito, no acepta solicitudes de préstamo ni conecta con prestamistas. Todas las cifras son estimaciones según lo que introduces.\n\n'
+      'Introduce importe, tasa anual y plazo para ver la cuota estimada, intereses totales, importe total y tabla de amortización. Cubre escenarios de hipoteca, auto, personal y combinado. El combinado muestra ambas partes en paralelo; el de auto puede calcular el importe a partir del precio del vehículo y la entrada. Incluye cuota fija y capital fijo.\n\n'
+      'Guarda planes en Perfil, compara hasta tres y, si quieres, registra metas de ahorro en el dispositivo. Los datos permanecen en el teléfono; no hay cuentas ni subida de datos a nuestros servidores.\n\n'
+      'Interfaz en English y Español. La moneda y los decimales se cambian en ajustes; los importes guardados no se convierten por tipo de cambio.',
   'about.title': 'Política de privacidad',
+  'privacy.body':
+      'Última actualización: 22 de octubre de 2026\n\n'
+      'LIGACAO VITAL - COMERCIO E SERVICOS, (SU), LDA («nosotros») opera LoanCalcWise («esta app»). Esta política explica qué ocurre con la información cuando usas la app.\n\n'
+      'LoanCalcWise es una calculadora de estimación de préstamos. No ofrece crédito, no envía solicitudes de préstamo ni conecta con prestamistas. Los resultados son solo estimaciones.\n\n'
+      '1. Información que no recopilamos\n\n'
+      'No hay cuentas de usuario ni pedimos nombre, correo, teléfono ni documentos. No recopilamos importes, tasas, plazos ni planes guardados; listas de comparación ni metas de ahorro; ni identificadores publicitarios o analítica de uso. No hay publicidad ni software de analítica. No vendemos ni compartimos datos personales porque no los recibimos. Los cálculos se hacen en el dispositivo.\n\n'
+      '2. Qué permanece en el dispositivo\n\n'
+      'Lo que escribes, planes guardados, metas de ahorro, apodo, moneda e idioma se guardan solo en el teléfono. No se sube a nuestros servidores. Puedes editar o borrar planes y metas en la app. Borrar datos de la app o desinstalarla elimina lo guardado.\n\n'
+      '3. Menores\n\n'
+      'La app no está dirigida a menores de 13 años. No pide datos de identidad ni crea cuentas. Un padre o tutor puede borrar datos en la app, limpiar datos de la app o desinstalarla.\n\n'
+      '4. Seguridad\n\n'
+      'Los datos guardados permanecen en el almacenamiento de la app en el teléfono. La protección depende del bloqueo del dispositivo y de las copias de seguridad que uses. Nosotros no operamos esas copias ni podemos recuperar datos si se pierde el teléfono sin copia.\n\n'
+      '5. Cambios\n\n'
+      'Podemos actualizar esta política cuando cambie la app o este texto. La fecha superior indica la última revisión. La política mostrada en la app es la que aplica. Preguntas: correo abajo.\n\n'
+      '6. Contacto\n\n'
+      'Operador: LIGACAO VITAL - COMERCIO E SERVICOS, (SU), LDA\nApp: LoanCalcWise\nCorreo: office@ligacaovital.com\n\n'
+      'Si tienes preguntas sobre esta política o qué permanece en el dispositivo, escríbenos e indica el nombre de la app.',
   'toast.savedProfile': 'Guardado en Perfil',
   'toast.alreadySaved': 'Este plan ya está guardado',
   'common.back': 'Atrás',
@@ -601,6 +643,8 @@ const _knownCopy = <String, String>{
   'Plan de auto de ejemplo': 'seed.autoNote',
   'Borrower': 'settings.defaultNick',
   'Prestatario': 'settings.defaultNick',
+  'Planner': 'settings.defaultNick',
+  'Planificador': 'settings.defaultNick',
 };
 
 /// Seed copy and the default nickname follow the current language. Text the user wrote stays as typed.
