@@ -14,7 +14,7 @@ class ProfilePrivacyScreen extends StatefulWidget {
 }
 
 class _ProfilePrivacyScreenState extends State<ProfilePrivacyScreen> with WidgetsBindingObserver {
-  static const _policyUrl = 'https://ligacaovital.com/privacy-policy.html';
+  static const _policyUrl = 'https://www.ligacaovital.com/privacy-policy.html';
 
   late final WebViewController _controller;
   var _loading = true;
