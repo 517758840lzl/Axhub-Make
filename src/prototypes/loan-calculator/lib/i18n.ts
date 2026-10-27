@@ -1,7 +1,7 @@
 import type { AppLocale } from './types';
 
 /** Product display name. Change it here when renaming. */
-export const appTitle = 'LoanCalcMate';
+export const appTitle = 'LoanCalcWise';
 
 export type { AppLocale };
 

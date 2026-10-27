@@ -1,5 +1,5 @@
 /**
- * @name LoanCalcMate
+ * @name LoanCalcWise
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
